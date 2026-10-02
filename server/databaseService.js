@@ -311,17 +311,23 @@ function attachDatabaseToCampaign(databaseId, campaignId) {
     throw new Error('Database not found.');
   }
 
-  if (database.campaign_id && database.campaign_id !== Number(campaignId)) {
-    const existingCamp = db.prepare('SELECT name FROM campaigns WHERE id = ?').get(database.campaign_id);
-    throw new Error(`This database is already dedicated to campaign "${existingCamp ? existingCamp.name : database.campaign_id}". Each database is exclusive to 1 campaign.`);
-  }
-
   const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(campaignId);
   if (!campaign) {
     throw new Error('Campaign not found.');
   }
 
   const now = new Date().toISOString();
+
+  // A list can move to a new campaign. A live send keeps the list until that campaign is stopped.
+  if (database.campaign_id && Number(database.campaign_id) !== Number(campaignId)) {
+    const previous = db.prepare('SELECT id, name, status FROM campaigns WHERE id = ?').get(database.campaign_id);
+    if (previous && previous.status === 'RUNNING') {
+      throw new Error(`Stop "${previous.name}" before using this database on another campaign.`);
+    }
+    if (previous) {
+      db.prepare('UPDATE campaigns SET database_id = NULL, updated_at = ? WHERE id = ?').run(now, previous.id);
+    }
+  }
 
   // If campaign previously had a different database attached, free that database
   if (campaign.database_id && campaign.database_id !== Number(databaseId)) {
@@ -357,12 +363,51 @@ function attachDatabaseToCampaign(databaseId, campaignId) {
   });
 
   attachTx();
+  reopenUnusedDatabase(databaseId, campaignId);
 
+  const total = db.prepare('SELECT COUNT(*) as count FROM database_records WHERE database_id = ?').get(databaseId).count;
   return {
     success: true,
     message: `Database "${database.name}" successfully attached to campaign "${campaign.name}".`,
-    totalContacts: stats.total || 0
+    totalContacts: total || 0
   };
+}
+
+/**
+ * A database keeps one send status. A campaign that has never sent this list
+ * should not inherit SENT from the last campaign that used it.
+ */
+function reopenUnusedDatabase(databaseId, campaignId) {
+  const campaign = db.prepare('SELECT status FROM campaigns WHERE id = ?').get(campaignId);
+  if (!campaign || campaign.status === 'RUNNING') return false;
+
+  const activity = db.prepare('SELECT COUNT(*) as count FROM email_logs WHERE campaign_id = ?').get(campaignId).count;
+  if (activity > 0) return false;
+
+  const dirty = db.prepare(
+    "SELECT COUNT(*) as count FROM database_records WHERE database_id = ? AND status != 'PENDING'"
+  ).get(databaseId).count;
+  if (!dirty) return false;
+
+  const now = new Date().toISOString();
+  const reopenTx = db.transaction(() => {
+    db.prepare(`
+      UPDATE database_records
+      SET status = 'PENDING', sent_at = NULL, message_id = NULL, error_message = NULL, campaign_id = ?
+      WHERE database_id = ?
+    `).run(campaignId, databaseId);
+
+    const total = db.prepare('SELECT COUNT(*) as count FROM database_records WHERE database_id = ?').get(databaseId).count;
+    db.prepare(`
+      UPDATE campaigns
+      SET total_contacts = ?, sent_count = 0, failed_count = 0,
+          status = CASE WHEN status = 'COMPLETED' THEN 'DRAFT' ELSE status END,
+          updated_at = ?
+      WHERE id = ?
+    `).run(total, now, campaignId);
+  });
+  reopenTx();
+  return true;
 }
 
 module.exports = {
@@ -372,5 +417,6 @@ module.exports = {
   getDatabases,
   getDatabaseById,
   deleteDatabase,
-  attachDatabaseToCampaign
+  attachDatabaseToCampaign,
+  reopenUnusedDatabase
 };

@@ -1,6 +1,7 @@
 const db = require('./db');
 const authService = require('./authService');
 const templateService = require('./templateService');
+const databaseService = require('./databaseService');
 
 // In-memory registry of active campaign queue workers
 const activeJobs = new Map();
@@ -411,6 +412,11 @@ function startCampaign(campaignId, options = {}) {
     throw new Error('Please configure and save an email subject and body in Templates before starting dispatch.');
   }
 
+  // A list used by an older campaign still has SENT rows. This campaign has not sent them.
+  if (campaign.database_id) {
+    databaseService.reopenUnusedDatabase(campaign.database_id, id);
+  }
+
   // 1. Reset any stuck SENDING records back to PENDING so nothing is locked
   if (campaign.database_id) {
     db.prepare("UPDATE database_records SET status = 'PENDING' WHERE database_id = ? AND status = 'SENDING'").run(campaign.database_id);
@@ -537,6 +543,7 @@ function getCampaignQueueStatus(campaignId) {
   let failedCount = 0;
 
   if (campaign.database_id) {
+    databaseService.reopenUnusedDatabase(campaign.database_id, id);
     totalContacts = db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ?").get(campaign.database_id).count;
     pendingCount = db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ? AND status = 'PENDING'").get(campaign.database_id).count;
     sentCount = db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ? AND status = 'SENT'").get(campaign.database_id).count;

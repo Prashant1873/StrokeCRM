@@ -680,11 +680,11 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
                   >
                     <option value="">-- Attach Later / Pick Available Database --</option>
-                    {databases.filter(d => !d.is_attached).map(d => (
-                      <option key={d.id} value={d.id}>{d.name} ({d.row_count} contacts)</option>
+                    {databases.map(d => (
+                      <option key={d.id} value={d.id}>{d.name} ({d.row_count} contacts){d.is_attached && d.campaign_name ? ` — used in ${d.campaign_name}` : ''}</option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-slate-500 mt-1">Only unattached databases are shown. Each is dedicated to one campaign.</p>
+                  <p className="text-[10px] text-slate-500 mt-1">A list can be used again. This campaign starts from the first row, not from the last send.</p>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-300 block mb-1">3. Attach Template</label>
@@ -739,7 +739,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
     : 0;
 
   // Unattached databases available for 1:1 binding
-  const availableDatabases = databases.filter(d => !d.is_attached || d.campaign_id === selectedCampaignId);
+  const availableDatabases = databases.filter(d => !d.campaign_id || Number(d.campaign_id) !== Number(selectedCampaignId));
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6 text-left">
@@ -894,7 +894,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                         <option value="">-- Select Available Database --</option>
                         {availableDatabases.map(d => (
                           <option key={d.id} value={d.id}>
-                            {d.name} ({d.row_count} contacts)
+                            {d.name} ({d.row_count} contacts){d.is_attached && d.campaign_name ? ` — used in ${d.campaign_name}` : ''}
                           </option>
                         ))}
                       </select>
@@ -1389,14 +1389,14 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
                 >
                   <option value="">-- Attach Later / Pick Available Database --</option>
-                  {databases.filter(d => !d.is_attached).map(d => (
+                  {databases.map(d => (
                     <option key={d.id} value={d.id}>
-                      {d.name} ({d.row_count} contacts)
+                      {d.name} ({d.row_count} contacts){d.is_attached && d.campaign_name ? ` — used in ${d.campaign_name}` : ''}
                     </option>
                   ))}
                 </select>
                 <p className="text-[10px] text-slate-500 mt-1">
-                  Only unattached databases are shown. Each database is dedicated exclusively to one campaign.
+                  A list can be used again. This campaign starts from the first row, not from the last send.
                 </p>
               </div>
 

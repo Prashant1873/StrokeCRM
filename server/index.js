@@ -517,6 +517,7 @@ app.get('/api/campaigns', (req, res) => {
       let failedCount = c.failed_count || 0;
 
       if (c.database_id) {
+        databaseService.reopenUnusedDatabase(c.database_id, c.id);
         const stats = db.prepare(`
           SELECT 
             COUNT(*) as total,
@@ -564,7 +565,10 @@ app.post('/api/campaigns', (req, res) => {
         return res.status(400).json({ success: false, message: 'Selected database not found.' });
       }
       if (dbInfo.campaign_id) {
-        return res.status(400).json({ success: false, message: `Database "${dbInfo.name}" is already dedicated to another campaign.` });
+        const previous = db.prepare('SELECT name, status FROM campaigns WHERE id = ?').get(dbInfo.campaign_id);
+        if (previous && previous.status === 'RUNNING') {
+          return res.status(400).json({ success: false, message: `Stop "${previous.name}" before using this database on another campaign.` });
+        }
       }
       initialContacts = dbInfo.row_count || 0;
     }
@@ -639,6 +643,7 @@ app.get('/api/campaigns/:id', (req, res) => {
     }
 
     if (campaign.database_id) {
+      databaseService.reopenUnusedDatabase(campaign.database_id, campaign.id);
       const stats = db.prepare(`
         SELECT 
           COUNT(*) as total,
