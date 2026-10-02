@@ -149,6 +149,12 @@ try {
   if (!campaignColumns.includes('template_id')) {
     db.exec("ALTER TABLE campaigns ADD COLUMN template_id INTEGER REFERENCES templates(id) ON DELETE SET NULL");
   }
+  if (!campaignColumns.includes('cc_addresses')) {
+    db.exec("ALTER TABLE campaigns ADD COLUMN cc_addresses TEXT DEFAULT ''");
+  }
+  if (!campaignColumns.includes('bcc_addresses')) {
+    db.exec("ALTER TABLE campaigns ADD COLUMN bcc_addresses TEXT DEFAULT ''");
+  }
 } catch (e) {
   console.warn('Column migration notice:', e.message);
 }

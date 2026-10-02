@@ -56,6 +56,60 @@ async function interruptibleSleep(ms, jobId) {
   return true;
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Turns a comma, semicolon, or newline separated list into a unique address string.
+ * Empty input is allowed. Throws if any token is not an email.
+ */
+function normalizeAddressList(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return '';
+
+  const parts = text.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
+  const invalid = parts.filter(part => !EMAIL_RE.test(part));
+  if (invalid.length) {
+    const error = new Error(`Invalid email address${invalid.length > 1 ? 'es' : ''}: ${invalid.join(', ')}`);
+    error.code = 'INVALID_ADDRESS';
+    throw error;
+  }
+
+  const seen = new Set();
+  const unique = [];
+  for (const part of parts) {
+    const key = part.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(part);
+  }
+  return unique.join(', ');
+}
+
+/**
+ * CC/BCC for one send. Drops the recipient and any address already used on this message.
+ */
+function ccBccForRecipient(campaign, recipientEmail) {
+  const skip = new Set();
+  const recipient = String(recipientEmail || '').trim().toLowerCase();
+  if (recipient) skip.add(recipient);
+
+  const pick = (raw) => {
+    const kept = [];
+    for (const addr of String(raw || '').split(',').map(s => s.trim()).filter(Boolean)) {
+      const key = addr.toLowerCase();
+      if (skip.has(key)) continue;
+      skip.add(key);
+      kept.push(addr);
+    }
+    return kept.join(', ');
+  };
+
+  return {
+    cc: pick(campaign && campaign.cc_addresses),
+    bcc: pick(campaign && campaign.bcc_addresses)
+  };
+}
+
 /**
  * Sends a single email to a contact
  */
@@ -105,6 +159,10 @@ async function dispatchSingleEmail(account, contact, campaign) {
       'X-Campaign-ID': String(campaign.id)
     }
   };
+
+  const copied = ccBccForRecipient(campaign, contact.email);
+  if (copied.cc) mailOptions.cc = copied.cc;
+  if (copied.bcc) mailOptions.bcc = copied.bcc;
 
   const info = await transporter.sendMail(mailOptions);
   return {
@@ -593,5 +651,7 @@ module.exports = {
   pauseCampaign,
   stopCampaign,
   getCampaignQueueStatus,
-  sendTestEmail
+  sendTestEmail,
+  normalizeAddressList,
+  ccBccForRecipient
 };

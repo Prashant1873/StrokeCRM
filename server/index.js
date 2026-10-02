@@ -702,6 +702,32 @@ app.post('/api/campaigns/:id/attach-template', (req, res) => {
   }
 });
 
+// Update CC / BCC addresses for a campaign
+app.patch('/api/campaigns/:id/cc-bcc', (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const campaign = db.prepare('SELECT id FROM campaigns WHERE id = ?').get(id);
+    if (!campaign) {
+      return res.status(404).json({ success: false, message: 'Campaign not found.' });
+    }
+
+    const cc = queueService.normalizeAddressList(req.body.cc_addresses);
+    const bcc = queueService.normalizeAddressList(req.body.bcc_addresses);
+    db.prepare(`
+      UPDATE campaigns SET cc_addresses = ?, bcc_addresses = ?, updated_at = ? WHERE id = ?
+    `).run(cc, bcc, new Date().toISOString(), id);
+
+    res.json({
+      success: true,
+      message: 'CC/BCC addresses updated.',
+      cc_addresses: cc,
+      bcc_addresses: bcc
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
 // Save template directly to campaign
 app.post('/api/campaigns/:id/template', (req, res) => {
   try {
