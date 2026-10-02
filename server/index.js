@@ -428,6 +428,146 @@ app.post('/api/campaigns/:id/test-send', async (req, res) => {
   }
 });
 
+// ==========================================
+// A/B Testing Studio Endpoints (Phase 5)
+// ==========================================
+
+// Get A/B testing stats and comparison for a campaign
+app.get('/api/campaigns/:id/ab-stats', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(campaignId);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    // Cohort breakdown
+    const statsA = db.prepare(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sent,
+        SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed,
+        SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pending
+      FROM contacts 
+      WHERE campaign_id = ? AND assigned_variant = 'A'
+    `).get(campaignId);
+
+    const statsB = db.prepare(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sent,
+        SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed,
+        SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pending
+      FROM contacts 
+      WHERE campaign_id = ? AND assigned_variant = 'B'
+    `).get(campaignId);
+
+    // Spam scores for each variant
+    const spamA = templateService.checkSpam(campaign.subject_a || '', campaign.body_a || '');
+    const spamB = templateService.checkSpam(campaign.subject_b || '', campaign.body_b || '');
+
+    const rateA = statsA.sent > 0 ? Math.round((statsA.sent / (statsA.sent + statsA.failed)) * 100) : 100;
+    const rateB = statsB.sent > 0 ? Math.round((statsB.sent / (statsB.sent + statsB.failed)) * 100) : 100;
+
+    res.json({
+      campaignId,
+      campaignName: campaign.name,
+      is_ab_test: !!campaign.is_ab_test,
+      variantA: {
+        subject: campaign.subject_a || '',
+        body: campaign.body_a || '',
+        total: statsA.total || 0,
+        sent: statsA.sent || 0,
+        failed: statsA.failed || 0,
+        pending: statsA.pending || 0,
+        deliveryRate: rateA,
+        spamScore: spamA.score,
+        spamRating: spamA.rating,
+        wordCount: (campaign.body_a || '').split(/\s+/).filter(Boolean).length
+      },
+      variantB: {
+        subject: campaign.subject_b || '',
+        body: campaign.body_b || '',
+        total: statsB.total || 0,
+        sent: statsB.sent || 0,
+        failed: statsB.failed || 0,
+        pending: statsB.pending || 0,
+        deliveryRate: rateB,
+        spamScore: spamB.score,
+        spamRating: spamB.rating,
+        wordCount: (campaign.body_b || '').split(/\s+/).filter(Boolean).length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Perform 50/50 cohort splitting on all contacts in campaign
+app.post('/api/campaigns/:id/ab-split', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const contacts = db.prepare('SELECT id FROM contacts WHERE campaign_id = ? ORDER BY id ASC').all(campaignId);
+
+    if (contacts.length === 0) {
+      return res.status(400).json({ success: false, message: 'No contacts found in campaign to split.' });
+    }
+
+    const updateVariant = db.prepare('UPDATE contacts SET assigned_variant = ? WHERE id = ?');
+    let countA = 0;
+    let countB = 0;
+
+    const runSplit = db.transaction(() => {
+      contacts.forEach((contact, idx) => {
+        const variant = idx % 2 === 0 ? 'A' : 'B';
+        updateVariant.run(variant, contact.id);
+        if (variant === 'A') countA++; else countB++;
+      });
+
+      // Enable A/B test flag on campaign
+      db.prepare('UPDATE campaigns SET is_ab_test = 1, updated_at = ? WHERE id = ?')
+        .run(new Date().toISOString(), campaignId);
+    });
+
+    runSplit();
+
+    res.json({
+      success: true,
+      message: `Split ${contacts.length} leads 50/50 (${countA} assigned to Variant A, ${countB} assigned to Variant B).`,
+      countA,
+      countB
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Save A/B testing copy and settings
+app.post('/api/campaigns/:id/ab-save', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const { subject_a, body_a, subject_b, body_b, is_ab_test } = req.body;
+
+    db.prepare(`
+      UPDATE campaigns 
+      SET subject_a = ?, body_a = ?, subject_b = ?, body_b = ?, is_ab_test = ?, updated_at = ?
+      WHERE id = ?
+    `).run(
+      subject_a || '',
+      body_a || '',
+      subject_b || '',
+      body_b || '',
+      is_ab_test ? 1 : 0,
+      new Date().toISOString(),
+      campaignId
+    );
+
+    res.json({ success: true, message: 'A/B Test configuration saved successfully.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`[StrokeCRM] Server running on http://localhost:${PORT}`);
 });

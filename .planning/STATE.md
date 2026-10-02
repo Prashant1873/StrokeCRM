@@ -5,11 +5,11 @@
 See: `.planning/PROJECT.md` (updated 2026-10-03)
 
 **Core value:** Reliable, throttle-safe, and personalized bulk cold email dispatch directly from the user's Gmail account with dynamic Excel/CSV variable mapping and zero duplicate sends.  
-**Current focus:** Phase 4 complete. Ready for Phase 5 (A/B Testing Studio).
+**Current focus:** Phase 5 complete. Ready for Phase 6 (Day-Wise Analytics Dashboard & Craft Polish).
 
 ## Current Phase
 
-- **Active Phase**: Phase 5: A/B Testing Studio
+- **Active Phase**: Phase 6: Day-Wise Analytics Dashboard & Craft Polish
 - **Status**: Ready to plan and execute
 - **Blocked by**: None
 
@@ -19,7 +19,7 @@ See: `.planning/PROJECT.md` (updated 2026-10-03)
 - [x] Phase 2: Lead Ingestion & Variable Header Mapping (Completed 2026-10-03)
 - [x] Phase 3: Template Personalization Engine & Spam Preflight (Completed 2026-10-03)
 - [x] Phase 4: Resilient Queue & Pacing Dispatcher (Completed 2026-10-03)
-- [ ] Phase 5: A/B Testing Studio (0/1 plans)
+- [x] Phase 5: A/B Testing Studio (Completed 2026-10-03)
 - [ ] Phase 6: Day-Wise Analytics Dashboard & Polish (0/1 plans)
 
 ## Recent Decisions

@@ -102,21 +102,21 @@
 
 ## Phase 5: A/B Testing Studio
 
-- [ ] **Task 5.1**: Implement A/B testing backend logic
+- [x] **Task 5.1**: Implement A/B testing backend logic
   - *Acceptance Criteria*:
     - Campaign supports Variant A (Subject A, Body A) and Variant B (Subject B, Body B).
     - Alternates assignment evenly across contact list (Row 1 -> A, Row 2 -> B).
     - Logs which variant was delivered to each contact.
   - *Verification*: Ingest 10 contacts, assign variants, verify exact 5/5 distribution in DB.
 
-- [ ] **Task 5.2**: Build dedicated A/B Testing UI
+- [x] **Task 5.2**: Build dedicated A/B Testing UI
   - *Acceptance Criteria*:
     - Tabbed or split-view editor for Variant A vs Variant B.
     - Analytics card showing comparative delivery stats for Variant A vs Variant B.
   - *Verification*: User switches between variants, edits copy, and reviews side-by-side stats.
 
 ## Checkpoint 5: A/B Testing
-- [ ] A/B testing page functions seamlessly with 50/50 split and comparative performance cards.
+- [x] A/B testing page functions seamlessly with 50/50 split and comparative performance cards.
 
 ---
 
