@@ -18,7 +18,7 @@ export default function Sidebar({ currentRoute, navigate, isCollapsed, setIsColl
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', path: '#/dashboard', icon: LayoutDashboard, shortcut: '1' },
     { id: 'campaigns', label: 'Campaigns', path: '#/campaigns', icon: Send, shortcut: '2' },
-    { id: 'leads', label: 'Leads & Lists', path: '#/leads', icon: Users, shortcut: '3' },
+    { id: 'databases', label: 'Databases', path: '#/databases', icon: Database, shortcut: '3' },
     { id: 'templates', label: 'Templates & Spam', path: '#/templates', icon: FileText, shortcut: '4' },
     { id: 'abtesting', label: 'A/B Testing', path: '#/ab-testing', icon: Split, shortcut: '5' },
     { id: 'settings', label: 'Settings & Gmail', path: '#/settings', icon: Settings, shortcut: '6' },
@@ -28,7 +28,7 @@ export default function Sidebar({ currentRoute, navigate, isCollapsed, setIsColl
   const isItemActive = (item) => {
     if (item.id === 'dashboard' && currentRoute.name === 'dashboard') return true;
     if (item.id === 'campaigns' && currentRoute.name.startsWith('campaign')) return true;
-    if (item.id === 'leads' && currentRoute.name.startsWith('leads')) return true;
+    if (item.id === 'databases' && (currentRoute.name.startsWith('database') || currentRoute.name.startsWith('leads'))) return true;
     if (item.id === 'templates' && currentRoute.name.startsWith('template')) return true;
     if (item.id === 'abtesting' && currentRoute.name === 'abtesting') return true;
     if (item.id === 'settings' && currentRoute.name === 'settings') return true;

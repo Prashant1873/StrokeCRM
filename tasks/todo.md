@@ -312,3 +312,151 @@
 - [x] All interactive switches and step transitions feel fluid and responsive.
 - [x] Full WCAG 2.2 AA keyboard accessibility verified.
 - [x] End-to-end user journey tested: Navigate → Breadcrumb Trace → Upload Lead Wizard → Configure Template → Launch Campaign with Working Hours Switch → Live Monitoring.
+
+---
+
+## Phase 10: Isolated File-Backed Databases & Strict Triad Architecture (1 Campaign : 1 Database : 1 Template)
+
+- [x] **Task 10.1**: SQLite Isolated Database Schemas, File Vault & Migrations
+  - **Description**: Add `databases`, `database_records`, and `templates` tables in SQLite (`server/db.js`). Create physical vault `data/databases/` to store raw uploaded spreadsheet files verbatim. Update `campaigns` table with `database_id` and `template_id`. Migrate existing contacts cleanly.
+  - **Acceptance criteria**:
+    - [x] `data/databases/` directory created for disk persistence.
+    - [x] `databases` table stores unique name, file path, original filename, JSON headers, row counts, and 1:1 `campaign_id`.
+    - [x] `database_records` stores rows strictly keyed to `database_id`.
+    - [x] `templates` table stores reusable templates.
+  - **Verification**: Node script verifies database schema creation and table pragma foreign keys.
+  - **Dependencies**: None
+  - **Files likely touched**: `server/db.js`
+
+- [x] **Task 10.2**: Backend Database Service & Reusable Templates CRUD Endpoints
+  - **Description**: Implement `server/databaseService.js` to handle physical file uploads, schema detection, row storage, and database deletion. Implement REST endpoints in `server/index.js` for `/api/databases` and `/api/templates`.
+  - **Acceptance criteria**:
+    - [x] `POST /api/databases/upload`: accepts file, stores in `data/databases/`, writes schema and records.
+    - [x] `GET /api/databases`: lists all databases with attachment statuses and row counts.
+    - [x] `GET /api/databases/:id`: returns database metadata, column headers, and paginated records.
+    - [x] `DELETE /api/databases/:id`: deletes file and records.
+    - [x] `GET / POST / PUT / DELETE /api/templates`: full CRUD for reusable templates.
+  - **Verification**: Direct curl/API invocation tests for upload, list, get, and delete.
+  - **Dependencies**: Task 10.1
+  - **Files likely touched**: `server/databaseService.js`, `server/index.js`
+
+- [x] **Task 10.3**: Campaign Queue Isolation to Attached Database
+  - **Description**: Update `server/queueService.js` so that when a campaign runs, it retrieves pending rows strictly from `database_records` belonging to its attached `database_id`. Ensure the 1:1 lock prevents any other campaign from using the same database.
+  - **Acceptance criteria**:
+    - [x] Worker dispatches only from `database_records WHERE database_id = campaign.database_id`.
+    - [x] Starting a campaign without an attached database throws a clean validation error.
+  - **Verification**: Queue test verifying rows sent correspond exclusively to the attached database.
+  - **Dependencies**: Task 10.1, Task 10.2
+  - **Files likely touched**: `server/queueService.js`, `server/index.js`
+
+- [x] **Task 10.4**: Frontend Databases Hub UI & Navigation Nomenclature Overhaul
+  - **Description**: Update nomenclature across platform: rename "Leads" to "Databases" with `Database` icon in `Sidebar.jsx`, `router.js`, and `Breadcrumbs.jsx`. Build modern `DatabasesView.jsx` showing isolated database cards, headers chips, attachment badges, and an upload modal.
+  - **Acceptance criteria**:
+    - [x] Sidebar displays "Databases" navigation linking to `#/databases`.
+    - [x] Each database card displays file name, row count, verified email count, custom headers chips, and attachment badge (`🟢 Available` vs `🔒 Attached to [Campaign]`).
+    - [x] Users can inspect any database's rows and schema in a dedicated viewer modal.
+    - [x] "Upload New Database" modal uploads, maps, and saves the file with custom name.
+  - **Verification**: `npm --prefix client run build` succeeds; browser check displays Databases hub.
+  - **Dependencies**: Task 10.2
+  - **Files likely touched**: `client/src/components/Sidebar.jsx`, `client/src/router.js`, `client/src/components/Breadcrumbs.jsx`, `client/src/components/DatabasesView.jsx`, `client/src/App.jsx`
+
+- [x] **Task 10.5**: 3-Step Campaign Triad Setup & Cockpit (1 Campaign : 1 Database : 1 Template)
+  - **Description**: Overhaul `CampaignsView.jsx` to enforce the 1:1:1 Triad: Card 1 (Attached Database with custom header pills), Card 2 (Attached Template), Card 3 (Pacing & Dispatch Controls). Add a 3-step Campaign Creation Wizard.
+  - **Acceptance criteria**:
+    - [x] Campaign detail presents the Triad clearly: Attached Database + Attached Template + Dispatch Engine.
+    - [x] If no database is attached, user can select an available unattached database or upload one on the fly.
+    - [x] Template editor within the campaign exposes dynamic variable pills matching the attached database's columns.
+    - [x] Launching dispatches exclusively to the attached database.
+  - **Verification**: `npm --prefix client run build` succeeds; create campaign with attached database and template.
+  - **Dependencies**: Task 10.3, Task 10.4
+  - **Files likely touched**: `client/src/components/CampaignsView.jsx`
+
+- [x] **Task 10.6**: Templates Studio & Dashboard Metrics Updates & End-to-End Build Verification
+  - **Description**: Update `TemplatesView.jsx` to support reusable templates with sample variable testing from any database. Update `DashboardView.jsx` metrics to reflect "Databases" and active contacts. Verify complete production build with zero errors.
+  - **Acceptance criteria**:
+    - [x] TemplatesView allows creating/editing reusable templates and picking a database for live preview.
+    - [x] Dashboard displays accurate databases and campaign metrics.
+    - [x] Client build passes cleanly with 0 errors.
+  - **Verification**: `npm --prefix client run build` and `node -c server/index.js` pass with 0 errors.
+  - **Dependencies**: Task 10.5
+  - **Files likely touched**: `client/src/components/TemplatesView.jsx`, `client/src/components/DashboardView.jsx`
+
+## Checkpoint 10: 1:1:1 Triad Architecture Verified
+- [x] Each uploaded database is physically and logically isolated.
+- [x] Disparate headers in different files never collide.
+- [x] 1 Campaign = 1 Database = 1 Template strictly enforced.
+
+---
+
+## Phase 11: Real-Time Audit Log & Cockpit Live Synchronization
+
+- [x] **Task 11.1**: Resolve Foreign Key Constraint in `email_logs`
+  - **Description**: Migrate `email_logs` schema to remove the restrictive `contact_id REFERENCES contacts(id)` constraint and add `database_record_id`. Update `queueService.js` to insert logs safely for isolated database records.
+  - **Verification**: Node query tests confirm records insert with `database_record_id` without constraint errors.
+
+- [x] **Task 11.2**: Synchronize Campaign Counters & Live Status
+  - **Description**: Ensure `sent_count`, `failed_count`, `pending_count`, and `total_contacts` in `campaigns`, `databaseService.js`, and `GET /api/campaigns` are dynamically computed from `database_records` rather than frozen or mismatched.
+  - **Verification**: `/api/campaigns` and `/api/campaigns/:id/status` return accurate counts matching SQLite rows.
+
+- [x] **Task 11.3**: Upgrade Real-Time Audit Log & Timestamp Formatting in Campaign Cockpit
+  - **Description**: In `CampaignsView.jsx`, add `formatLogTime` with both formatted local date/time (`Oct 3, 02:44:18 AM`) and relative time badges (`(40m ago)`, `(just now)`). Display status icons, status pills, subject, recipient, and variant badges. Ensure the 2s polling loop updates all cockpit cards reactively.
+  - **Verification**: `npm --prefix client run build` succeeds; audit log displays verified records with live timestamps.
+
+## Checkpoint 11: Real-Time Audit Log & Cockpit Integrity
+- [x] Real-time audit log stream displays dispatches with accurate timestamps and relative times.
+- [x] Counts ("sent", "pending", "failed", "progress percent") are 100% synchronized with attached database.
+- [x] All cockpit cards update reactively every 2 seconds without manual page refreshes.
+
+---
+
+## Phase 12: Campaign Dispatch Pause & Resume Resilience
+
+- [x] **Task 12.1**: Fix queue worker pause/resume state machine & crash recovery
+  - **Description**: Add `try...finally` block in `runCampaignWorker` so worker state transitions atomically. Reset in-flight `SENDING` records back to `PENDING` upon pause. On backend startup, automatically reconcile any orphaned `RUNNING` campaigns to `PAUSED` and any stuck `SENDING` rows to `PENDING`.
+  - **Verification**: Node server starts cleanly; pause returns immediate success and safely clears sleep countdown.
+
+- [x] **Task 12.2**: Dedicated `/api/campaigns/:id/resume` endpoint with default bypass
+  - **Description**: Expose dedicated `POST /api/campaigns/:id/resume` endpoint. Default `bypassHours` correctly to prevent accidental locking outside working hours during explicit manual resumes.
+  - **Verification**: HTTP test calls confirm `GET /status`, `POST /pause`, and `POST /resume` transition states reliably.
+
+- [x] **Task 12.3**: Cockpit UI Pause/Resume Reactive Controls
+  - **Description**: Update `CampaignsView.jsx` to bind `handleResume()` directly to the "Resume Dispatch" action instead of inappropriately routing to Preflight. Ensure `targetId` resolves safely, and reset stale `queueStatus` when switching campaigns.
+  - **Verification**: `npm --prefix client run build` succeeds; live cockpit reacts to pause and resume clicks immediately.
+
+## Checkpoint 12: Pause & Resume Dispatch Verified
+- [x] Pause immediately interrupts jitter delays and resets countdown to 0.
+- [x] Resume picks up where dispatch stopped without duplicate sends.
+- [x] Cockpit action button toggles accurately between "Pause Queue" and "Resume Dispatch".
+
+---
+
+## Phase 13: Campaigns & Templates Hub-and-Spoke Directory & Lifecycle Management
+
+- [x] **Task 13.1**: Backend API Hardening & Deletion Cascades
+  - **Description**: In `server/index.js`, update `DELETE /api/campaigns/:id` so attached database records are preserved while the database is cleanly detached and returned to the unattached pool. In `server/templateService.js`, add `duplicateTemplate(id)` and expose `POST /api/templates/:id/duplicate`. Ensure `DELETE /api/templates/:id` unbinds any campaign references cleanly.
+  - **Verification**: Run node script to test template duplication and campaign deletion safeguards.
+
+- [ ] **Task 13.2**: Campaigns Directory (`#/campaigns`) with Stacked Detail Cards & Inline Controls
+  - **Description**: In `client/src/components/CampaignsView.jsx`, implement the Campaigns Directory view when route is `#/campaigns`. Display all campaigns in stacked cards showing status badge, bound database, bound template, progress bar, sent/pending counts, inline Start/Pause dispatch buttons, "Open Cockpit" primary CTA, and "Delete Campaign" modal.
+  - **Verification**: `npm --prefix client run build` succeeds; visiting `#/campaigns` shows all campaigns with working actions.
+
+- [ ] **Task 13.3**: Dedicated Campaign Cockpit Sub-View (`#/campaigns/:id`) with Back-Tracing
+  - **Description**: Ensure `#/campaigns/:id` opens the deep-linked single Campaign Cockpit with live radar, delivery metrics, Triad cards, and audit stream. Add an explicit "← Back to Campaigns" button and breadcrumb path.
+  - **Verification**: Clicking "Open Cockpit" on any card opens its cockpit; clicking "← Back to Campaigns" returns to the directory.
+
+- [ ] **Task 13.4**: Saved Templates Library (`#/templates`) with Card Grid & "+ New Template" Modal
+  - **Description**: In `client/src/components/TemplatesView.jsx`, render the Saved Template Collection when route is `#/templates`. Display templates in rich cards showing subject preview with formatted `{{variable}}` pills, body excerpt, detected variables list, spam rating, and actions (Open Composer, Duplicate, Delete). Add "+ New Template" modal prompting for name & starter preset.
+  - **Verification**: `npm --prefix client run build` succeeds; clicking "+ New Template" creates template and navigates into Composer.
+
+- [ ] **Task 13.5**: Dedicated Template Composer Studio Sub-View (`#/templates/:id`)
+  - **Description**: When route is `#/templates/:id` (or `#/templates/new`), render the full Studio Composer with subject/body editor, variable chips, lead switcher, live preview pane, and spam analysis radar. Add "← Back to Saved Templates" button.
+  - **Verification**: Editing a template updates it, saves changes, and allows returning to the collection.
+
+## Checkpoint 13: Hub-and-Spoke Navigation & Management Verified
+- [ ] Opening Campaigns or Templates from the sidebar presents a complete card-based overview instead of jumping directly into a single item.
+- [ ] Full campaign and template deletion with safety confirmations.
+- [ ] Breadcrumbs and backward navigation trace cleanly between directories and detail studios.
+
+
+
+

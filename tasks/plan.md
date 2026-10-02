@@ -103,6 +103,32 @@ StrokeCRM is a free, self-hosted, privacy-first cold email outreach CRM running 
 
 ---
 
+### Phase 13: Campaigns & Templates Hub-and-Spoke Directory & Lifecycle Management
+- [ ] Task 13.1: Backend API Hardening & Deletion Cascades
+  - Update `DELETE /api/campaigns/:id` to cleanly unbind attached databases without deleting the user's underlying spreadsheet records or disk file.
+  - Add `POST /api/templates/:id/duplicate` endpoint to clone templates.
+- [ ] Task 13.2: Campaigns Directory (`#/campaigns`) with Stacked Detail Cards & Lifecycle Actions
+  - When clicking "Campaigns" in the sidebar, render the Campaigns Directory view listing all campaigns vertically in rich cards.
+  - Each card shows Title, Status badge, Bound Database tag, Bound Template tag, Delivery stats progress bar, quick dispatch controls (Start/Pause), "Open Cockpit" primary CTA, and "Delete Campaign" action.
+  - "+ New Campaign" CTA launches the 3-Step Triad creation wizard.
+- [ ] Task 13.3: Campaign Cockpit Sub-View (`#/campaigns/:id`) with Backward Tracing
+  - Deep-linked detail page dedicated to live dispatch, pacing radar, and Triad configuration.
+  - Prominent "← Back to Campaigns" crumb and button.
+- [ ] Task 13.4: Saved Templates Library (`#/templates`) with Card Grid & "+ New Template" Modal
+  - When clicking "Templates" in the sidebar, open the Saved Template Collection listing all templates in card format.
+  - Card displays Name, Subject preview with variable pills, body snippet, detected variables, spam score rating, and actions (Open Composer, Duplicate, Delete).
+  - Clicking "+ New Template" triggers a modal for Name and starter preset, then routes directly into the Composer.
+- [ ] Task 13.5: Template Studio Composer Sub-View (`#/templates/:id`)
+  - Dedicated editor for selected template with variable insertion pills, sample database switcher, live preview, and spam radar.
+  - "← Back to Saved Templates" return crumb.
+
+### Checkpoint 13: Hub-and-Spoke Navigation & Management Verified
+- [ ] Opening Campaigns or Templates from the sidebar presents a complete card-based overview instead of jumping directly into a single item.
+- [ ] Full campaign and template deletion with safety confirmations.
+- [ ] Breadcrumbs and backward navigation trace cleanly between directories and detail studios.
+
+---
+
 ## Risks and Mitigations
 
 | Risk | Impact | Mitigation |
@@ -110,3 +136,5 @@ StrokeCRM is a free, self-hosted, privacy-first cold email outreach CRM running 
 | Form / upload state loss during backward navigation | High | Colocate state in parent route controller or lightweight client store so stepping backward preserves uploaded sheets and mapped fields. |
 | Browser back button exiting app instead of sub-step | Med | Synchronize view stack with `window.location.hash` and pushState so native back buttons cleanly step back through breadcrumbs. |
 | Inadvertent bypass of working hours causing Gmail spam flag | High | Default the "Enforce Working Hours" switch to ON with explicit visual confirmation when toggling OFF to 24/7 immediate mode. |
+| Deleting a campaign accidentally purging attached database records | High | Cleanly unbind the database (`UPDATE databases SET campaign_id = NULL, is_attached = 0`) so the original spreadsheet and records remain intact in Databases hub. |
+

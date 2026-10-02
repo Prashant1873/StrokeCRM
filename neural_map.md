@@ -8,27 +8,34 @@ flowchart TD
         Router["App Router & History Stack (Hash/URL Indexed)"]
         Breadcrumbs["Breadcrumb Tracker & Back-Trace Engine"]
         Dashboard["Analytics & Daily Cap Monitor"]
-        CampaignMgr["Campaign Cockpit & Step Wizard"]
+        DatabaseHub["Databases Hub: Isolated File Uploads, Schemas & Inspection"]
+        TemplatesLibrary["Templates Library: Saved Collection & Management (#/templates)"]
+        TemplateStudio["Templates Studio: Composer, Variable Ingestion & Spam Radar (#/templates/:id)"]
+        CampaignsHub["Campaigns Directory: Card-List Overview & Management (#/campaigns)"]
+        CampaignCockpit["Campaign Cockpit: Live Pacing Radar, 1:1 Triad & Queue (#/campaigns/:id)"]
         PreflightControls["Preflight Gates (Working Hours Toggle, Jitter, Test Mail)"]
         ABTesting["A/B Testing Studio"]
-        ContactManager["Leads Wizard: Upload -> Map -> Validate"]
-        TemplateEditor["Template Engine & Spam Preflight"]
         Settings["Gmail Auth & Throttle Settings"]
 
         Router --> Breadcrumbs
         Router --> Dashboard
-        Router --> CampaignMgr
-        Router --> ContactManager
-        Router --> TemplateEditor
+        Router --> DatabaseHub
+        Router --> TemplatesLibrary
+        TemplatesLibrary --> TemplateStudio
+        Router --> CampaignsHub
+        CampaignsHub --> CampaignCockpit
+        CampaignCockpit --> PreflightControls
         Router --> ABTesting
         Router --> Settings
-        CampaignMgr --> PreflightControls
     end
 
-    subgraph Core ["Application Core & Dispatch Engine"]
-        Parser["Excel / CSV Parser & Sanitizer"]
-        Merger["Handlebars / Liquid Variable Interpolator"]
-        Queue["Persistent Dispatch Queue & State Tracker (SQLite)"]
+    subgraph Core ["Application Core & Dispatch Engine (Strict 1:1 Triad)"]
+        DiskStore["File Vault: data/databases/ (Verbatim File Preservation)"]
+        DbEngine["SQLite Isolated Datasets & Column Schemas"]
+        TemplateStore["Reusable Template Registry"]
+        TriadBinder["Campaign Triad Binder: [1 DB + 1 Template + Config]"]
+        Merger["Handlebars / Liquid Dynamic Interpolator"]
+        Queue["Campaign-Scoped Dispatch Queue (Strict Isolated Rows)"]
         Scheduler["Adaptive Pacing & Randomized Jitter Engine"]
         ABEngine["Cohort Splitter & Stats Aggregator"]
     end
@@ -41,13 +48,14 @@ flowchart TD
         ReplyDetector["Gmail Thread Reply Poller (Watch/History API)"]
     end
 
-    ContactManager -->|Upload raw records| Parser
-    Parser -->|Row schemas| Queue
-    TemplateEditor -->|Subject & Body variants| Merger
-    PreflightControls -->|Start campaign (bypassHours & options)| Queue
-    ABTesting -->|Define Variant A / B| ABEngine
-    ABEngine -->|Assign variant to rows| Queue
-
+    DatabaseHub -->|Upload raw sheet| DiskStore
+    DiskStore -->|Extracted schemas & rows| DbEngine
+    TemplateEditor -->|Create / Edit| TemplateStore
+    CampaignMgr -->|Bind [1 DB + 1 Template]| TriadBinder
+    DbEngine --> TriadBinder
+    TemplateStore --> TriadBinder
+    TriadBinder -->|Scoped campaign records| Queue
+    Queue --> Merger
     Queue -->|Next eligible dispatch| Scheduler
     Scheduler -->|Throttle & randomize interval| QuotaMonitor
     QuotaMonitor -->|Within daily quota| Dispatcher

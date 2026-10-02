@@ -171,9 +171,127 @@ function checkSpam(subject = '', body = '') {
   };
 }
 
+/**
+ * Reusable Templates CRUD
+ */
+function getTemplates() {
+  const db = require('./db');
+  return db.prepare('SELECT * FROM templates ORDER BY updated_at DESC').all();
+}
+
+function getTemplateById(id) {
+  const db = require('./db');
+  return db.prepare('SELECT * FROM templates WHERE id = ?').get(id);
+}
+
+function createTemplate({ name, subject_a, body_a, subject_b = '', body_b = '', is_ab_test = 0 }) {
+  const db = require('./db');
+  const now = new Date().toISOString();
+  const info = db.prepare(`
+    INSERT INTO templates (name, subject_a, body_a, subject_b, body_b, is_ab_test, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    name || 'Untitled Template',
+    subject_a || '',
+    body_a || '',
+    subject_b || '',
+    body_b || '',
+    is_ab_test ? 1 : 0,
+    now,
+    now
+  );
+  return getTemplateById(info.lastInsertRowid);
+}
+
+function updateTemplate(id, { name, subject_a, body_a, subject_b = '', body_b = '', is_ab_test = 0 }) {
+  const db = require('./db');
+  const now = new Date().toISOString();
+  db.prepare(`
+    UPDATE templates 
+    SET name = ?, subject_a = ?, body_a = ?, subject_b = ?, body_b = ?, is_ab_test = ?, updated_at = ?
+    WHERE id = ?
+  `).run(
+    name || 'Untitled Template',
+    subject_a || '',
+    body_a || '',
+    subject_b || '',
+    body_b || '',
+    is_ab_test ? 1 : 0,
+    now,
+    id
+  );
+  return getTemplateById(id);
+}
+
+function deleteTemplate(id) {
+  const db = require('./db');
+  // Check if any campaign is currently using this template
+  db.prepare('UPDATE campaigns SET template_id = NULL WHERE template_id = ?').run(id);
+  db.prepare('DELETE FROM templates WHERE id = ?').run(id);
+  return { success: true, message: 'Template deleted.' };
+}
+
+function attachTemplateToCampaign(templateId, campaignId) {
+  const db = require('./db');
+  const template = getTemplateById(templateId);
+  if (!template) throw new Error('Template not found');
+
+  db.prepare(`
+    UPDATE campaigns 
+    SET template_id = ?,
+        subject_a = ?, body_a = ?,
+        subject_b = ?, body_b = ?,
+        is_ab_test = ?,
+        updated_at = ?
+    WHERE id = ?
+  `).run(
+    templateId,
+    template.subject_a,
+    template.body_a,
+    template.subject_b,
+    template.body_b,
+    template.is_ab_test,
+    new Date().toISOString(),
+    campaignId
+  );
+  return { success: true, message: `Template "${template.name}" attached to campaign.` };
+}
+
+function duplicateTemplate(id) {
+  const db = require('./db');
+  const original = getTemplateById(id);
+  if (!original) throw new Error('Template not found');
+
+  const now = new Date().toISOString();
+  const newName = `${original.name} (Copy)`;
+
+  const result = db.prepare(`
+    INSERT INTO templates (name, subject_a, body_a, subject_b, body_b, is_ab_test, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    newName,
+    original.subject_a || '',
+    original.body_a || '',
+    original.subject_b || '',
+    original.body_b || '',
+    original.is_ab_test ? 1 : 0,
+    now,
+    now
+  );
+
+  return getTemplateById(result.lastInsertRowid);
+}
+
 module.exports = {
   interpolate,
   extractVariables,
   checkSpam,
-  SPAM_KEYWORDS
+  SPAM_KEYWORDS,
+  getTemplates,
+  getTemplateById,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  duplicateTemplate,
+  attachTemplateToCampaign
 };

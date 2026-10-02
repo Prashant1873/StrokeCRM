@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AppShell from './components/AppShell';
 import DashboardView from './components/DashboardView';
 import CampaignsView from './components/CampaignsView';
-import LeadsView from './components/LeadsView';
+import DatabasesView from './components/DatabasesView';
 import TemplatesView from './components/TemplatesView';
 import ABTestingView from './components/ABTestingView';
 import SettingsView from './components/SettingsView';
@@ -32,7 +32,7 @@ export default function App() {
     refreshAuthStatus();
   }, []);
 
-  // Backward compatibility adapter for components calling setActiveTab('leads')
+  // Backward compatibility adapter for tab navigations
   const handleSetActiveTab = (tabId) => {
     switch (tabId) {
       case 'dashboard':
@@ -41,8 +41,9 @@ export default function App() {
       case 'campaigns':
         navigate('#/campaigns');
         break;
+      case 'databases':
       case 'leads':
-        navigate('#/leads');
+        navigate('#/databases');
         break;
       case 'templates':
         navigate('#/templates');
@@ -58,7 +59,7 @@ export default function App() {
     }
   };
 
-  // Resolve entity name for breadcrumbs if inside a campaign or lead
+  // Resolve entity name for breadcrumbs if inside a campaign or database
   const entityNames = {
     campaignName: activeCampaignData?.name || (currentRoute.params?.id ? `Campaign #${currentRoute.params.id}` : null),
   };
@@ -95,8 +96,8 @@ export default function App() {
             />
           )}
 
-          {currentRoute.name.startsWith('leads') && (
-            <LeadsView 
+          {(currentRoute.name.startsWith('database') || currentRoute.name.startsWith('leads')) && (
+            <DatabasesView 
               setActiveTab={handleSetActiveTab} 
               navigate={navigate}
               currentRoute={currentRoute}

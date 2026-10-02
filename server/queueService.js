@@ -5,6 +5,15 @@ const templateService = require('./templateService');
 // In-memory registry of active campaign queue workers
 const activeJobs = new Map();
 
+// Crash resilience: clean up any orphaned RUNNING campaigns and SENDING records on boot
+try {
+  db.prepare("UPDATE database_records SET status = 'PENDING' WHERE status = 'SENDING'").run();
+  db.prepare("UPDATE contacts SET status = 'PENDING' WHERE status = 'SENDING'").run();
+  db.prepare("UPDATE campaigns SET status = 'PAUSED' WHERE status = 'RUNNING'").run();
+} catch (e) {
+  console.warn('[StrokeCRM] Startup queue cleanup note:', e.message);
+}
+
 /**
  * Returns a random integer between min and max inclusive
  */
@@ -112,10 +121,12 @@ async function runCampaignWorker(campaignId) {
   const jobId = Number(campaignId);
   const job = activeJobs.get(jobId);
   if (!job) return;
+  job.isWorkerRunning = true;
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  while (!job.isPaused && !job.isStopped) {
+  try {
+    while (!job.isPaused && !job.isStopped) {
     // 1. Refresh campaign & account state
     const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(jobId);
     if (!campaign) break;
@@ -163,12 +174,22 @@ async function runCampaignWorker(campaignId) {
     }
     job.isWaitingSchedule = false;
 
-    // 5. Fetch next pending contact
-    const contact = db.prepare(`
-      SELECT * FROM contacts 
-      WHERE campaign_id = ? AND status = 'PENDING' 
-      ORDER BY id ASC LIMIT 1
-    `).get(jobId);
+    // 5. Fetch next pending contact strictly from attached database
+    const isIsolated = !!campaign.database_id;
+    let contact;
+    if (isIsolated) {
+      contact = db.prepare(`
+        SELECT * FROM database_records 
+        WHERE database_id = ? AND status = 'PENDING' 
+        ORDER BY id ASC LIMIT 1
+      `).get(campaign.database_id);
+    } else {
+      contact = db.prepare(`
+        SELECT * FROM contacts 
+        WHERE campaign_id = ? AND status = 'PENDING' 
+        ORDER BY id ASC LIMIT 1
+      `).get(jobId);
+    }
 
     if (!contact) {
       job.lastLog = 'All contacts in campaign processed!';
@@ -177,8 +198,9 @@ async function runCampaignWorker(campaignId) {
       break;
     }
 
-    // Mark as SENDING atomically
-    db.prepare("UPDATE contacts SET status = 'SENDING' WHERE id = ?").run(contact.id);
+    // Mark as SENDING atomically in respective table
+    const targetTable = isIsolated ? 'database_records' : 'contacts';
+    db.prepare(`UPDATE ${targetTable} SET status = 'SENDING' WHERE id = ?`).run(contact.id);
     job.currentContactEmail = contact.email;
     job.lastLog = `Sending to ${contact.email}...`;
 
@@ -190,60 +212,126 @@ async function runCampaignWorker(campaignId) {
 
       // Record success
       db.prepare(`
-        UPDATE contacts 
+        UPDATE ${targetTable} 
         SET status = 'SENT', sent_at = ?, message_id = ?, error_message = NULL 
         WHERE id = ?
       `).run(nowIso, result.messageId, contact.id);
 
       db.prepare(`
-        INSERT INTO email_logs (campaign_id, contact_id, recipient_email, variant, subject, status, sent_at, sent_date, message_id)
-        VALUES (?, ?, ?, ?, ?, 'SENT', ?, ?, ?)
-      `).run(jobId, contact.id, contact.email, result.variant, result.subject, nowIso, todayStr, result.messageId);
+        INSERT INTO email_logs (campaign_id, contact_id, database_record_id, recipient_email, variant, subject, status, sent_at, sent_date, message_id)
+        VALUES (?, ?, ?, ?, ?, ?, 'SENT', ?, ?, ?)
+      `).run(
+        jobId,
+        isIsolated ? null : contact.id,
+        isIsolated ? contact.id : null,
+        contact.email,
+        result.variant,
+        result.subject,
+        nowIso,
+        todayStr,
+        result.messageId
+      );
 
-      // Update counters
-      db.prepare(`
-        UPDATE campaigns 
-        SET sent_count = sent_count + 1, updated_at = ?
-        WHERE id = ?
-      `).run(nowIso, jobId);
+      // Update counters directly from true state
+      if (isIsolated) {
+        const stats = db.prepare(`
+          SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sent,
+            SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed
+          FROM database_records WHERE database_id = ?
+        `).get(campaign.database_id);
+
+        db.prepare(`
+          UPDATE campaigns 
+          SET sent_count = ?, failed_count = ?, total_contacts = ?, updated_at = ?
+          WHERE id = ?
+        `).run(stats.sent || 0, stats.failed || 0, stats.total || 0, nowIso, jobId);
+      } else {
+        db.prepare(`
+          UPDATE campaigns 
+          SET sent_count = sent_count + 1, updated_at = ?
+          WHERE id = ?
+        `).run(nowIso, jobId);
+      }
 
       job.lastLog = `✓ Sent to ${contact.email}`;
     } catch (err) {
       // Record failure
       db.prepare(`
-        UPDATE contacts 
+        UPDATE ${targetTable} 
         SET status = 'FAILED', sent_at = ?, error_message = ? 
         WHERE id = ?
       `).run(nowIso, err.message, contact.id);
 
-      db.prepare(`
-        INSERT INTO email_logs (campaign_id, contact_id, recipient_email, variant, status, error_message, sent_at, sent_date)
-        VALUES (?, ?, ?, ?, 'FAILED', ?, ?, ?)
-      `).run(jobId, contact.id, contact.email, contact.assigned_variant || 'A', err.message, nowIso, todayStr);
+      try {
+        db.prepare(`
+          INSERT INTO email_logs (campaign_id, contact_id, database_record_id, recipient_email, variant, status, error_message, sent_at, sent_date)
+          VALUES (?, ?, ?, ?, ?, 'FAILED', ?, ?, ?)
+        `).run(
+          jobId,
+          isIsolated ? null : contact.id,
+          isIsolated ? contact.id : null,
+          contact.email,
+          contact.assigned_variant || 'A',
+          err.message,
+          nowIso,
+          todayStr
+        );
+      } catch (logErr) {
+        console.error('[StrokeCRM Log Failure]:', logErr.message);
+      }
 
-      db.prepare(`
-        UPDATE campaigns 
-        SET failed_count = failed_count + 1, updated_at = ?
-        WHERE id = ?
-      `).run(nowIso, jobId);
+      if (isIsolated) {
+        const stats = db.prepare(`
+          SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sent,
+            SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed
+          FROM database_records WHERE database_id = ?
+        `).get(campaign.database_id);
+
+        db.prepare(`
+          UPDATE campaigns 
+          SET sent_count = ?, failed_count = ?, total_contacts = ?, updated_at = ?
+          WHERE id = ?
+        `).run(stats.sent || 0, stats.failed || 0, stats.total || 0, nowIso, jobId);
+      } else {
+        db.prepare(`
+          UPDATE campaigns 
+          SET failed_count = failed_count + 1, updated_at = ?
+          WHERE id = ?
+        `).run(nowIso, jobId);
+      }
 
       job.lastLog = `✗ Failed sending to ${contact.email}: ${err.message}`;
     }
 
     // 7. Humanized Pacing Jitter Delay
-    const delaySec = getRandomDelay(minDelay, maxDelay);
-    const delayMs = delaySec * 1000;
-    job.nextSendAt = Date.now() + delayMs;
-    job.delayDurationSec = delaySec;
+      // Check if paused before sleeping
+      if (job.isPaused || job.isStopped) {
+        break;
+      }
 
-    // Interruptible sleep
-    const finishedSleep = await interruptibleSleep(delayMs, jobId);
-    if (!finishedSleep) {
-      break;
+      // 7. Humanized Pacing Jitter Delay
+      const delaySec = getRandomDelay(minDelay, maxDelay);
+      const delayMs = delaySec * 1000;
+      job.nextSendAt = Date.now() + delayMs;
+      job.delayDurationSec = delaySec;
+
+      // Interruptible sleep
+      const finishedSleep = await interruptibleSleep(delayMs, jobId);
+      if (!finishedSleep) {
+        break;
+      }
+    }
+  } finally {
+    job.isWorkerRunning = false;
+    job.nextSendAt = null;
+    if (job.isStopped) {
+      activeJobs.delete(jobId);
     }
   }
-
-  activeJobs.delete(jobId);
 }
 
 /**
@@ -265,38 +353,61 @@ function startCampaign(campaignId, options = {}) {
     throw new Error('Please configure and save an email subject and body in Templates before starting dispatch.');
   }
 
-  const pendingCount = db.prepare("SELECT COUNT(*) as count FROM contacts WHERE campaign_id = ? AND status = 'PENDING'").get(id).count;
+  // 1. Reset any stuck SENDING records back to PENDING so nothing is locked
+  if (campaign.database_id) {
+    db.prepare("UPDATE database_records SET status = 'PENDING' WHERE database_id = ? AND status = 'SENDING'").run(campaign.database_id);
+  } else {
+    db.prepare("UPDATE contacts SET status = 'PENDING' WHERE campaign_id = ? AND status = 'SENDING'").run(id);
+  }
+
+  // 2. Count pending records
+  let pendingCount = 0;
+  if (campaign.database_id) {
+    const dbInfo = db.prepare('SELECT id, name FROM databases WHERE id = ?').get(campaign.database_id);
+    if (!dbInfo) {
+      throw new Error('The attached database cannot be found. Please attach an active database to this campaign.');
+    }
+    pendingCount = db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ? AND status = 'PENDING'").get(campaign.database_id).count;
+  } else {
+    pendingCount = db.prepare("SELECT COUNT(*) as count FROM contacts WHERE campaign_id = ? AND status = 'PENDING'").get(id).count;
+  }
+
   if (pendingCount === 0) {
-    throw new Error('This campaign has 0 pending leads. Please upload leads in the Leads tab first or reset contacts.');
+    throw new Error('This campaign has 0 pending contacts. All contacts have already been processed.');
   }
 
   // Set DB status to RUNNING
   db.prepare("UPDATE campaigns SET status = 'RUNNING', updated_at = ? WHERE id = ?")
     .run(new Date().toISOString(), id);
 
-  // Check if already active
+  // 3. Register or reactivate job in activeJobs
   let job = activeJobs.get(id);
-  if (job) {
-    job.isPaused = false;
-    job.isStopped = false;
-    job.isWaitingSchedule = false;
-    if (options.bypassHours) {
-      job.bypassHours = true;
-    }
-  } else {
+  const shouldBypass = options.bypassHours !== undefined ? !!options.bypassHours : true;
+
+  if (!job) {
     job = {
       campaignId: id,
       isPaused: false,
       isStopped: false,
       isWaitingSchedule: false,
-      bypassHours: !!options.bypassHours,
+      isWorkerRunning: false,
+      bypassHours: shouldBypass,
       nextSendAt: null,
       delayDurationSec: 0,
       currentContactEmail: null,
-      lastLog: 'Initializing queue worker...'
+      lastLog: 'Starting dispatch worker...'
     };
     activeJobs.set(id, job);
-    // Launch non-blocking worker
+  } else {
+    job.isPaused = false;
+    job.isStopped = false;
+    job.isWaitingSchedule = false;
+    job.bypassHours = shouldBypass;
+    job.lastLog = 'Resuming dispatch worker...';
+  }
+
+  // Ensure worker is actively executing
+  if (!job.isWorkerRunning) {
     runCampaignWorker(id).catch(err => {
       console.error(`[StrokeCRM Worker Error ${id}]:`, err);
     });
@@ -313,8 +424,17 @@ function pauseCampaign(campaignId) {
   const job = activeJobs.get(id);
   if (job) {
     job.isPaused = true;
+    job.nextSendAt = null;
     job.lastLog = 'Queue paused by user.';
   }
+
+  const campaign = db.prepare('SELECT database_id FROM campaigns WHERE id = ?').get(id);
+  if (campaign && campaign.database_id) {
+    db.prepare("UPDATE database_records SET status = 'PENDING' WHERE database_id = ? AND status = 'SENDING'").run(campaign.database_id);
+  } else {
+    db.prepare("UPDATE contacts SET status = 'PENDING' WHERE campaign_id = ? AND status = 'SENDING'").run(id);
+  }
+
   db.prepare("UPDATE campaigns SET status = 'PAUSED', updated_at = ? WHERE id = ?")
     .run(new Date().toISOString(), id);
   return { success: true, message: 'Campaign paused.' };
@@ -325,13 +445,19 @@ function pauseCampaign(campaignId) {
  */
 function stopCampaign(campaignId) {
   const id = Number(campaignId);
+  const campaign = db.prepare('SELECT database_id FROM campaigns WHERE id = ?').get(id);
   const job = activeJobs.get(id);
   if (job) {
     job.isStopped = true;
+    job.isPaused = false;
+    job.nextSendAt = null;
     job.lastLog = 'Queue stopped by user.';
     activeJobs.delete(id);
   }
-  // Reset any stuck SENDING records back to PENDING
+  // Reset any stuck SENDING records back to PENDING in both tables
+  if (campaign && campaign.database_id) {
+    db.prepare("UPDATE database_records SET status = 'PENDING' WHERE database_id = ? AND status = 'SENDING'").run(campaign.database_id);
+  }
   db.prepare("UPDATE contacts SET status = 'PENDING' WHERE campaign_id = ? AND status = 'SENDING'").run(id);
   db.prepare("UPDATE campaigns SET status = 'DRAFT', updated_at = ? WHERE id = ?")
     .run(new Date().toISOString(), id);
@@ -347,15 +473,45 @@ function getCampaignQueueStatus(campaignId) {
   if (!campaign) return null;
 
   const job = activeJobs.get(id);
-  const pendingCount = db.prepare("SELECT COUNT(*) as count FROM contacts WHERE campaign_id = ? AND status = 'PENDING'").get(id).count;
-  const sentCount = db.prepare("SELECT COUNT(*) as count FROM contacts WHERE campaign_id = ? AND status = 'SENT'").get(id).count;
-  const failedCount = db.prepare("SELECT COUNT(*) as count FROM contacts WHERE campaign_id = ? AND status = 'FAILED'").get(id).count;
+  let totalContacts = 0;
+  let pendingCount = 0;
+  let sentCount = 0;
+  let failedCount = 0;
 
-  // Recent 10 logs
+  if (campaign.database_id) {
+    totalContacts = db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ?").get(campaign.database_id).count;
+    pendingCount = db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ? AND status = 'PENDING'").get(campaign.database_id).count;
+    sentCount = db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ? AND status = 'SENT'").get(campaign.database_id).count;
+    failedCount = db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ? AND status = 'FAILED'").get(campaign.database_id).count;
+  } else {
+    totalContacts = db.prepare("SELECT COUNT(*) as count FROM contacts WHERE campaign_id = ?").get(id).count;
+    pendingCount = db.prepare("SELECT COUNT(*) as count FROM contacts WHERE campaign_id = ? AND status = 'PENDING'").get(id).count;
+    sentCount = db.prepare("SELECT COUNT(*) as count FROM contacts WHERE campaign_id = ? AND status = 'SENT'").get(id).count;
+    failedCount = db.prepare("SELECT COUNT(*) as count FROM contacts WHERE campaign_id = ? AND status = 'FAILED'").get(id).count;
+  }
+
+  // Auto-sync campaign counters in database
+  db.prepare(`
+    UPDATE campaigns 
+    SET total_contacts = ?, sent_count = ?, failed_count = ?
+    WHERE id = ?
+  `).run(totalContacts, sentCount, failedCount, id);
+
+  // If all contacts are processed and was running or paused, mark as COMPLETED
+  let campaignStatus = campaign.status;
+  if (pendingCount === 0 && totalContacts > 0 && campaignStatus !== 'DRAFT') {
+    campaignStatus = 'COMPLETED';
+    db.prepare("UPDATE campaigns SET status = 'COMPLETED' WHERE id = ?").run(id);
+  } else if (campaignStatus === 'RUNNING' && (!job || !job.isWorkerRunning)) {
+    campaignStatus = 'PAUSED';
+    db.prepare("UPDATE campaigns SET status = 'PAUSED' WHERE id = ?").run(id);
+  }
+
+  // Recent 25 logs
   const recentLogs = db.prepare(`
     SELECT * FROM email_logs 
     WHERE campaign_id = ? 
-    ORDER BY id DESC LIMIT 10
+    ORDER BY id DESC LIMIT 25
   `).all(id);
 
   let secondsRemaining = 0;
@@ -363,29 +519,29 @@ function getCampaignQueueStatus(campaignId) {
     secondsRemaining = Math.max(0, Math.round((job.nextSendAt - Date.now()) / 1000));
   }
 
-  const isRunning = !!(job && !job.isPaused && !job.isStopped && !job.isWaitingSchedule);
-  const isPaused = (job && job.isPaused) || campaign.status === 'PAUSED';
-  const isWaitingSchedule = !!(job && job.isWaitingSchedule) || campaign.status === 'WAITING_SCHEDULE';
+  const isRunning = !!(job && job.isWorkerRunning && !job.isPaused && !job.isStopped && !job.isWaitingSchedule);
+  const isPaused = (job && job.isPaused) || campaignStatus === 'PAUSED';
+  const isWaitingSchedule = !!(job && job.isWaitingSchedule) || campaignStatus === 'WAITING_SCHEDULE';
 
   let currentLog = 'Idle';
   if (job && job.lastLog) {
     currentLog = job.lastLog;
-  } else if (campaign.status === 'COMPLETED') {
+  } else if (campaignStatus === 'COMPLETED') {
     currentLog = 'All contacts processed.';
-  } else if (campaign.status === 'PAUSED') {
+  } else if (campaignStatus === 'PAUSED') {
     currentLog = 'Queue paused.';
-  } else if (campaign.status === 'WAITING_SCHEDULE') {
+  } else if (campaignStatus === 'WAITING_SCHEDULE') {
     currentLog = 'Waiting for scheduled sending window.';
   }
 
   return {
     campaignId: id,
     name: campaign.name,
-    status: campaign.status,
+    status: campaignStatus,
     isRunning,
     isPaused,
     isWaitingSchedule,
-    totalContacts: campaign.total_contacts,
+    totalContacts,
     pendingCount,
     sentCount,
     failedCount,

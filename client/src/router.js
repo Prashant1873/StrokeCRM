@@ -7,10 +7,10 @@ export const ROUTES = [
   { pattern: /^#\/campaigns$/, name: 'campaigns', path: '#/campaigns', title: 'Campaigns' },
   { pattern: /^#\/campaigns\/([^/]+)$/, name: 'campaign-detail', title: 'Campaign Cockpit' },
   { pattern: /^#\/campaigns\/([^/]+)\/preflight$/, name: 'campaign-preflight', title: 'Launch Preflight' },
-  { pattern: /^#\/leads$/, name: 'leads', path: '#/leads', title: 'Leads & Lists' },
-  { pattern: /^#\/leads\/upload$/, name: 'leads-upload', title: 'Upload Spreadsheet' },
-  { pattern: /^#\/leads\/map$/, name: 'leads-map', title: 'Map Variables' },
-  { pattern: /^#\/leads\/preview$/, name: 'leads-preview', title: 'Preview & Validate' },
+  { pattern: /^#\/databases$/, name: 'databases', path: '#/databases', title: 'Databases' },
+  { pattern: /^#\/databases\/upload$/, name: 'databases-upload', title: 'Upload Database' },
+  { pattern: /^#\/databases\/([^/]+)$/, name: 'database-detail', title: 'Database Inspector' },
+  { pattern: /^#\/leads$/, name: 'databases', path: '#/databases', title: 'Databases' },
   { pattern: /^#\/templates$/, name: 'templates', path: '#/templates', title: 'Templates & Spam Preflight' },
   { pattern: /^#\/templates\/([^/]+)$/, name: 'template-detail', title: 'Edit Template' },
   { pattern: /^#\/ab-testing$/, name: 'abtesting', path: '#/ab-testing', title: 'A/B Testing Studio' },
@@ -54,15 +54,26 @@ export function parseRoute(hash = window.location.hash) {
     };
   }
 
-  // Leads sub-routes
-  if (pathPart === '#/leads/upload') {
-    return { name: 'leads-upload', path: pathPart, params: {}, query: queryParams, raw: cleanHash };
+  // Database detail: #/databases/:id
+  const dbMatch = pathPart.match(/^#\/databases\/([^/]+)$/);
+  if (dbMatch) {
+    return {
+      name: 'database-detail',
+      path: pathPart,
+      params: { id: dbMatch[1] },
+      query: queryParams,
+      raw: cleanHash,
+    };
   }
-  if (pathPart === '#/leads/map') {
-    return { name: 'leads-map', path: pathPart, params: {}, query: queryParams, raw: cleanHash };
+
+  // Database sub-routes
+  if (pathPart === '#/databases/upload') {
+    return { name: 'databases-upload', path: pathPart, params: {}, query: queryParams, raw: cleanHash };
   }
-  if (pathPart === '#/leads/preview') {
-    return { name: 'leads-preview', path: pathPart, params: {}, query: queryParams, raw: cleanHash };
+
+  // Legacy Leads sub-routes fallback
+  if (pathPart.startsWith('#/leads')) {
+    return { name: 'databases', path: '#/databases', params: {}, query: queryParams, raw: cleanHash };
   }
 
   // Template detail: #/templates/:id
@@ -81,8 +92,8 @@ export function parseRoute(hash = window.location.hash) {
   if (pathPart === '#/campaigns') {
     return { name: 'campaigns', path: pathPart, params: {}, query: queryParams, raw: cleanHash };
   }
-  if (pathPart === '#/leads') {
-    return { name: 'leads', path: pathPart, params: {}, query: queryParams, raw: cleanHash };
+  if (pathPart === '#/databases' || pathPart === '#/leads') {
+    return { name: 'databases', path: '#/databases', params: {}, query: queryParams, raw: cleanHash };
   }
   if (pathPart === '#/templates') {
     return { name: 'templates', path: pathPart, params: {}, query: queryParams, raw: cleanHash };
@@ -108,18 +119,16 @@ export function getParentPath(currentRoute) {
       return `#/campaigns/${params.id || ''}`;
     case 'campaign-detail':
       return '#/campaigns';
-    case 'leads-preview':
-      return '#/leads/map';
-    case 'leads-map':
-      return '#/leads/upload';
-    case 'leads-upload':
-      return '#/leads';
+    case 'database-detail':
+    case 'databases-upload':
+      return '#/databases';
     case 'template-detail':
       return '#/templates';
     default:
       return '#/dashboard';
   }
 }
+
 
 /**
  * Custom React hook for subscribing to route changes and controlling navigation

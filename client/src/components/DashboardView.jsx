@@ -15,7 +15,8 @@ import {
   BarChart2,
   Calendar,
   Layers,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Database
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -167,11 +168,11 @@ export default function DashboardView({ authStatus, setActiveTab }) {
           </button>
 
           <button
-            onClick={() => setActiveTab('leads')}
+            onClick={() => setActiveTab ? setActiveTab('databases') : null}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Import Leads</span>
+            <Database className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Databases</span>
           </button>
 
           <button

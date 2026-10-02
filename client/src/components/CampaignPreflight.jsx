@@ -44,7 +44,7 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
       const campRes = await fetch(`/api/campaigns/${campaignId}`);
       if (campRes.ok) {
         const campData = await campRes.json();
-        setCampaign(campData);
+        setCampaign(campData.campaign || campData);
       } else {
         // Fallback: fetch all campaigns and match
         const allRes = await fetch('/api/campaigns');

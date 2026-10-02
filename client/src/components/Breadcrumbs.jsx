@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ChevronRight, ArrowLeft, Home, Send, Users, FileText, Split, Settings, ShieldCheck, Zap } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Home, Send, Users, FileText, Split, Settings, ShieldCheck, Zap, Database } from 'lucide-react';
 
 /**
  * Breadcrumbs Component
@@ -57,19 +57,17 @@ export default function Breadcrumbs({ currentRoute, navigate, goBack, canGoBack,
       return crumbs;
     }
 
-    // Leads domain
-    if (name.startsWith('leads')) {
-      crumbs.push({ label: 'Leads & Lists', path: '#/leads', icon: Users });
+    // Databases domain
+    if (name.startsWith('database') || name.startsWith('leads')) {
+      crumbs.push({ label: 'Databases', path: '#/databases', icon: Database });
 
-      if (name === 'leads-upload') {
-        crumbs.push({ label: 'Step 1: Upload', path: '#/leads/upload' });
-      } else if (name === 'leads-map') {
-        crumbs.push({ label: 'Step 1: Upload', path: '#/leads/upload' });
-        crumbs.push({ label: 'Step 2: Map Variables', path: '#/leads/map' });
-      } else if (name === 'leads-preview') {
-        crumbs.push({ label: 'Step 1: Upload', path: '#/leads/upload' });
-        crumbs.push({ label: 'Step 2: Map', path: '#/leads/map' });
-        crumbs.push({ label: 'Step 3: Preview & Confirm', path: '#/leads/preview' });
+      if (name === 'databases-upload') {
+        crumbs.push({ label: 'Upload Database', path: '#/databases/upload' });
+      } else if (name === 'database-detail' && params.id) {
+        crumbs.push({
+          label: entityNames.databaseName || `Database #${params.id}`,
+          path: `#/databases/${params.id}`,
+        });
       }
       return crumbs;
     }

@@ -5,6 +5,7 @@ const multer = require('multer');
 const db = require('./db');
 const authService = require('./authService');
 const leadService = require('./leadService');
+const databaseService = require('./databaseService');
 const templateService = require('./templateService');
 const queueService = require('./queueService');
 
@@ -249,8 +250,171 @@ Elena,Rostova,elena.r@quantumflow.dev,QuantumFlow,Lead Architect,Developer Tools
 });
 
 // ==========================================
-// Template & Spam Analysis Endpoints (Phase 3)
+// Isolated Databases Endpoints (Phase 10)
 // ==========================================
+
+// Parse uploaded spreadsheet without saving (preview headers and rows)
+app.post('/api/databases/parse', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No spreadsheet file uploaded.' });
+    }
+    const parsed = databaseService.parseSpreadsheet(req.file.buffer, req.file.originalname);
+    res.json({ success: true, data: parsed });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// Upload and persist isolated Database file
+app.post('/api/databases/upload', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Spreadsheet file is required.' });
+    }
+
+    let fieldMapping = {};
+    if (req.body.fieldMapping) {
+      try {
+        fieldMapping = typeof req.body.fieldMapping === 'string' 
+          ? JSON.parse(req.body.fieldMapping) 
+          : req.body.fieldMapping;
+      } catch {}
+    }
+
+    const deduplicate = req.body.deduplicate !== 'false' && req.body.deduplicate !== false;
+
+    const result = databaseService.createDatabase({
+      buffer: req.file.buffer,
+      filename: req.file.originalname,
+      customName: req.body.name,
+      fieldMapping,
+      deduplicate
+    });
+
+    res.json({ success: true, database: result, message: 'Database imported and isolated successfully!' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// List all isolated databases
+app.get('/api/databases', (req, res) => {
+  try {
+    const list = databaseService.getDatabases();
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get a single database with its custom headers & paginated records
+app.get('/api/databases/:id', (req, res) => {
+  try {
+    const { limit = 50, offset = 0, search = '' } = req.query;
+    const data = databaseService.getDatabaseById(req.params.id, {
+      limit: Number(limit),
+      offset: Number(offset),
+      search: String(search || '')
+    });
+    if (!data) {
+      return res.status(404).json({ error: 'Database not found' });
+    }
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Download verbatim uploaded spreadsheet file from disk
+app.get('/api/databases/:id/download', (req, res) => {
+  try {
+    const dbRow = db.prepare('SELECT filename, file_path FROM databases WHERE id = ?').get(req.params.id);
+    if (!dbRow || !dbRow.file_path || !fs.existsSync(dbRow.file_path)) {
+      return res.status(404).json({ error: 'Database file not found on disk.' });
+    }
+    res.download(dbRow.file_path, dbRow.filename);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete an isolated database
+app.delete('/api/databases/:id', (req, res) => {
+  try {
+    const result = databaseService.deleteDatabase(req.params.id);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// ==========================================
+// Reusable Templates Endpoints (Phase 10)
+// ==========================================
+
+// List all reusable templates
+app.get('/api/templates', (req, res) => {
+  try {
+    const templates = templateService.getTemplates();
+    res.json(templates);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get single template
+app.get('/api/templates/:id', (req, res) => {
+  try {
+    const template = templateService.getTemplateById(req.params.id);
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+    res.json(template);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create new template
+app.post('/api/templates', (req, res) => {
+  try {
+    const template = templateService.createTemplate(req.body);
+    res.json({ success: true, template });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// Update existing template
+app.put('/api/templates/:id', (req, res) => {
+  try {
+    const template = templateService.updateTemplate(req.params.id, req.body);
+    res.json({ success: true, template });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// Delete template
+app.delete('/api/templates/:id', (req, res) => {
+  try {
+    const result = templateService.deleteTemplate(req.params.id);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// Duplicate a template
+app.post('/api/templates/:id/duplicate', (req, res) => {
+  try {
+    const cloned = templateService.duplicateTemplate(req.params.id);
+    res.json({ success: true, template: cloned, message: 'Template duplicated.' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
 
 // Run real-time spam analysis on subject and body
 app.post('/api/templates/spam-check', (req, res) => {
@@ -259,13 +423,30 @@ app.post('/api/templates/spam-check', (req, res) => {
   res.json(analysis);
 });
 
-// Render template preview with a lead's data and run spam analysis
+// Render template preview with sample lead data (supports pulling sample from database)
 app.post('/api/templates/preview', (req, res) => {
   try {
-    const { subject, body, contactId, sampleData } = req.body;
+    const { subject, body, databaseId, contactId, sampleData } = req.body;
     let rowData = sampleData;
 
-    if (contactId) {
+    if (!rowData && databaseId) {
+      const rec = db.prepare('SELECT custom_fields, email, first_name, company FROM database_records WHERE database_id = ? LIMIT 1').get(databaseId);
+      if (rec) {
+        let custom = {};
+        try { custom = JSON.parse(rec.custom_fields || '{}'); } catch {}
+        rowData = {
+          ...custom,
+          email: rec.email,
+          Email: rec.email,
+          first_name: rec.first_name,
+          FirstName: rec.first_name,
+          company: rec.company,
+          Company: rec.company
+        };
+      }
+    }
+
+    if (!rowData && contactId) {
       const contact = db.prepare('SELECT * FROM contacts WHERE id = ?').get(contactId);
       if (contact) {
         let custom = {};
@@ -283,7 +464,6 @@ app.post('/api/templates/preview', (req, res) => {
     }
 
     if (!rowData) {
-      // Default fallback mock lead if no contact selected
       rowData = {
         FirstName: 'Sarah',
         LastName: 'Connor',
@@ -310,41 +490,219 @@ app.post('/api/templates/preview', (req, res) => {
   }
 });
 
-// List all campaigns
+// ==========================================
+// Campaigns & Triad Management Endpoints
+// ==========================================
+
+// List all campaigns with attached database & template metadata
 app.get('/api/campaigns', (req, res) => {
   try {
-    const campaigns = db.prepare('SELECT * FROM campaigns ORDER BY id DESC').all();
-    res.json(campaigns);
+    const campaigns = db.prepare(`
+      SELECT 
+        c.*,
+        d.name as database_name,
+        d.filename as database_filename,
+        d.row_count as database_row_count,
+        d.headers as database_headers,
+        t.name as template_name
+      FROM campaigns c
+      LEFT JOIN databases d ON c.database_id = d.id
+      LEFT JOIN templates t ON c.template_id = t.id
+      ORDER BY c.id DESC
+    `).all();
+
+    const enriched = campaigns.map(c => {
+      let totalContacts = c.total_contacts || 0;
+      let sentCount = c.sent_count || 0;
+      let failedCount = c.failed_count || 0;
+
+      if (c.database_id) {
+        const stats = db.prepare(`
+          SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sent,
+            SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed
+          FROM database_records WHERE database_id = ?
+        `).get(c.database_id);
+
+        if (stats) {
+          totalContacts = stats.total || 0;
+          sentCount = stats.sent || 0;
+          failedCount = stats.failed || 0;
+        }
+      }
+
+      return {
+        ...c,
+        total_contacts: totalContacts,
+        sent_count: sentCount,
+        failed_count: failedCount,
+        database_headers: c.database_headers ? JSON.parse(c.database_headers) : []
+      };
+    });
+
+    res.json(enriched);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Get campaign by ID with its lead columns/sample contact
+// Create new campaign with optional attached database and template
+app.post('/api/campaigns', (req, res) => {
+  try {
+    const { name, database_id, template_id } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Campaign name is required.' });
+    }
+
+    const now = new Date().toISOString();
+    let initialContacts = 0;
+
+    if (database_id) {
+      const dbInfo = db.prepare('SELECT * FROM databases WHERE id = ?').get(database_id);
+      if (!dbInfo) {
+        return res.status(400).json({ success: false, message: 'Selected database not found.' });
+      }
+      if (dbInfo.campaign_id) {
+        return res.status(400).json({ success: false, message: `Database "${dbInfo.name}" is already dedicated to another campaign.` });
+      }
+      initialContacts = dbInfo.row_count || 0;
+    }
+
+    let subject_a = '';
+    let body_a = '';
+    let subject_b = '';
+    let body_b = '';
+    let is_ab_test = 0;
+
+    if (template_id) {
+      const tmpl = templateService.getTemplateById(template_id);
+      if (tmpl) {
+        subject_a = tmpl.subject_a;
+        body_a = tmpl.body_a;
+        subject_b = tmpl.subject_b;
+        body_b = tmpl.body_b;
+        is_ab_test = tmpl.is_ab_test;
+      }
+    }
+
+    const result = db.prepare(`
+      INSERT INTO campaigns (
+        name, status, created_at, updated_at, database_id, template_id,
+        total_contacts, subject_a, body_a, subject_b, body_b, is_ab_test
+      ) VALUES (?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      name.trim(),
+      now,
+      now,
+      database_id || null,
+      template_id || null,
+      initialContacts,
+      subject_a,
+      body_a,
+      subject_b,
+      body_b,
+      is_ab_test
+    );
+
+    const campaignId = result.lastInsertRowid;
+
+    if (database_id) {
+      databaseService.attachDatabaseToCampaign(database_id, campaignId);
+    }
+
+    res.json({ success: true, campaignId, message: 'Campaign created successfully.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get campaign by ID with its attached database columns and template
 app.get('/api/campaigns/:id', (req, res) => {
   try {
-    const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(req.params.id);
+    const campaign = db.prepare(`
+      SELECT 
+        c.*,
+        d.name as database_name,
+        d.filename as database_filename,
+        d.row_count as database_row_count,
+        d.headers as database_headers,
+        t.name as template_name
+      FROM campaigns c
+      LEFT JOIN databases d ON c.database_id = d.id
+      LEFT JOIN templates t ON c.template_id = t.id
+      WHERE c.id = ?
+    `).get(req.params.id);
+
     if (!campaign) {
       return res.status(404).json({ error: 'Campaign not found' });
     }
 
-    // Get sample contact for column pills
-    const sampleContact = db.prepare('SELECT * FROM contacts WHERE campaign_id = ? LIMIT 1').get(campaign.id);
-    let sampleHeaders = ['FirstName', 'LastName', 'Email', 'Company'];
-    if (sampleContact && sampleContact.custom_fields) {
-      try {
-        const parsed = JSON.parse(sampleContact.custom_fields);
-        sampleHeaders = Object.keys(parsed);
-      } catch {}
+    if (campaign.database_id) {
+      const stats = db.prepare(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sent,
+          SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed
+        FROM database_records WHERE database_id = ?
+      `).get(campaign.database_id);
+
+      if (stats) {
+        campaign.total_contacts = stats.total || 0;
+        campaign.sent_count = stats.sent || 0;
+        campaign.failed_count = stats.failed || 0;
+      }
     }
 
-    res.json({ campaign, sampleHeaders, sampleContact });
+    let sampleHeaders = ['FirstName', 'LastName', 'Email', 'Company'];
+    if (campaign.database_headers) {
+      try {
+        sampleHeaders = JSON.parse(campaign.database_headers);
+      } catch {}
+    } else {
+      const sampleContact = db.prepare('SELECT * FROM contacts WHERE campaign_id = ? LIMIT 1').get(campaign.id);
+      if (sampleContact && sampleContact.custom_fields) {
+        try {
+          sampleHeaders = Object.keys(JSON.parse(sampleContact.custom_fields));
+        } catch {}
+      }
+    }
+
+    res.json({ campaign, sampleHeaders });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Save template to campaign
+// Attach a database to campaign (1:1 exclusivity)
+app.post('/api/campaigns/:id/attach-database', (req, res) => {
+  try {
+    const { databaseId } = req.body;
+    if (!databaseId) {
+      return res.status(400).json({ success: false, message: 'Database ID is required.' });
+    }
+    const result = databaseService.attachDatabaseToCampaign(databaseId, req.params.id);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// Attach a template to campaign
+app.post('/api/campaigns/:id/attach-template', (req, res) => {
+  try {
+    const { templateId } = req.body;
+    if (!templateId) {
+      return res.status(400).json({ success: false, message: 'Template ID is required.' });
+    }
+    const result = templateService.attachTemplateToCampaign(templateId, req.params.id);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// Save template directly to campaign
 app.post('/api/campaigns/:id/template', (req, res) => {
   try {
     const { subject_a, body_a, subject_b, body_b, is_ab_test } = req.body;
@@ -367,6 +725,38 @@ app.post('/api/campaigns/:id/template', (req, res) => {
   }
 });
 
+// Delete a campaign
+app.delete('/api/campaigns/:id', (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const campaign = db.prepare('SELECT status, database_id FROM campaigns WHERE id = ?').get(id);
+    if (!campaign) {
+      return res.status(404).json({ success: false, message: 'Campaign not found.' });
+    }
+    if (campaign.status === 'RUNNING') {
+      return res.status(400).json({ success: false, message: 'Cannot delete a currently RUNNING campaign. Stop it first.' });
+    }
+
+    // Stop active in-memory job if present
+    queueService.stopCampaign(id);
+
+    // Safely unbind attached database without wiping out user's database records
+    if (campaign.database_id) {
+      db.prepare('UPDATE databases SET campaign_id = NULL, is_attached = 0 WHERE id = ?').run(campaign.database_id);
+      db.prepare('UPDATE database_records SET campaign_id = NULL WHERE database_id = ?').run(campaign.database_id);
+    }
+
+    db.prepare('DELETE FROM email_logs WHERE campaign_id = ?').run(id);
+    db.prepare('DELETE FROM contacts WHERE campaign_id = ?').run(id);
+    db.prepare('DELETE FROM campaigns WHERE id = ?').run(id);
+
+    res.json({ success: true, message: 'Campaign deleted successfully.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+
 // ==========================================
 // Campaign Dispatch & Queue Endpoints (Phase 4)
 // ==========================================
@@ -375,7 +765,9 @@ app.post('/api/campaigns/:id/template', (req, res) => {
 app.post('/api/campaigns/:id/start', (req, res) => {
   try {
     const { bypassHours } = req.body || {};
-    const result = queueService.startCampaign(req.params.id, { bypassHours: !!bypassHours });
+    const result = queueService.startCampaign(req.params.id, { 
+      bypassHours: bypassHours !== undefined ? !!bypassHours : true 
+    });
     res.json(result);
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -386,6 +778,19 @@ app.post('/api/campaigns/:id/start', (req, res) => {
 app.post('/api/campaigns/:id/pause', (req, res) => {
   try {
     const result = queueService.pauseCampaign(req.params.id);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// Resume campaign dispatch
+app.post('/api/campaigns/:id/resume', (req, res) => {
+  try {
+    const { bypassHours } = req.body || {};
+    const result = queueService.startCampaign(req.params.id, { 
+      bypassHours: bypassHours !== undefined ? !!bypassHours : true 
+    });
     res.json(result);
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
