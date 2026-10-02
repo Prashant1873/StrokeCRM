@@ -5,6 +5,7 @@ const multer = require('multer');
 const db = require('./db');
 const authService = require('./authService');
 const leadService = require('./leadService');
+const templateService = require('./templateService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -244,6 +245,126 @@ Elena,Rostova,elena.r@quantumflow.dev,QuantumFlow,Lead Architect,Developer Tools
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename="strokecrm_sample_leads.csv"');
   res.status(200).send(sampleCsv);
+});
+
+// ==========================================
+// Template & Spam Analysis Endpoints (Phase 3)
+// ==========================================
+
+// Run real-time spam analysis on subject and body
+app.post('/api/templates/spam-check', (req, res) => {
+  const { subject, body } = req.body;
+  const analysis = templateService.checkSpam(subject || '', body || '');
+  res.json(analysis);
+});
+
+// Render template preview with a lead's data and run spam analysis
+app.post('/api/templates/preview', (req, res) => {
+  try {
+    const { subject, body, contactId, sampleData } = req.body;
+    let rowData = sampleData;
+
+    if (contactId) {
+      const contact = db.prepare('SELECT * FROM contacts WHERE id = ?').get(contactId);
+      if (contact) {
+        let custom = {};
+        try { custom = JSON.parse(contact.custom_fields || '{}'); } catch {}
+        rowData = {
+          ...custom,
+          email: contact.email,
+          Email: contact.email,
+          first_name: contact.first_name,
+          FirstName: contact.first_name,
+          company: contact.company,
+          Company: contact.company
+        };
+      }
+    }
+
+    if (!rowData) {
+      // Default fallback mock lead if no contact selected
+      rowData = {
+        FirstName: 'Sarah',
+        LastName: 'Connor',
+        Email: 'sarah@cyberdyne.io',
+        Company: 'Cyberdyne Systems',
+        Role: 'Head of AI',
+        City: 'San Francisco'
+      };
+    }
+
+    const renderedSubject = templateService.interpolate(subject || '', rowData);
+    const renderedBody = templateService.interpolate(body || '', rowData);
+    const spamAnalysis = templateService.checkSpam(subject || '', body || '');
+
+    res.json({
+      success: true,
+      renderedSubject,
+      renderedBody,
+      spamAnalysis,
+      variablesUsed: templateService.extractVariables(`${subject} ${body}`)
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// List all campaigns
+app.get('/api/campaigns', (req, res) => {
+  try {
+    const campaigns = db.prepare('SELECT * FROM campaigns ORDER BY id DESC').all();
+    res.json(campaigns);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get campaign by ID with its lead columns/sample contact
+app.get('/api/campaigns/:id', (req, res) => {
+  try {
+    const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(req.params.id);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    // Get sample contact for column pills
+    const sampleContact = db.prepare('SELECT * FROM contacts WHERE campaign_id = ? LIMIT 1').get(campaign.id);
+    let sampleHeaders = ['FirstName', 'LastName', 'Email', 'Company'];
+    if (sampleContact && sampleContact.custom_fields) {
+      try {
+        const parsed = JSON.parse(sampleContact.custom_fields);
+        sampleHeaders = Object.keys(parsed);
+      } catch {}
+    }
+
+    res.json({ campaign, sampleHeaders, sampleContact });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Save template to campaign
+app.post('/api/campaigns/:id/template', (req, res) => {
+  try {
+    const { subject_a, body_a, subject_b, body_b, is_ab_test } = req.body;
+    db.prepare(`
+      UPDATE campaigns 
+      SET subject_a = ?, body_a = ?, subject_b = ?, body_b = ?, is_ab_test = ?, updated_at = ?
+      WHERE id = ?
+    `).run(
+      subject_a || '',
+      body_a || '',
+      subject_b || '',
+      body_b || '',
+      is_ab_test ? 1 : 0,
+      new Date().toISOString(),
+      req.params.id
+    );
+
+    res.json({ success: true, message: 'Template saved to campaign successfully.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
 app.listen(PORT, () => {

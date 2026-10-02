@@ -50,19 +50,19 @@
 
 ## Phase 3: Template Personalization Engine & Spam Preflight
 
-- [ ] **Task 3.1**: Build Handlebars-compatible template merger & variable extractor
+- [x] **Task 3.1**: Build Handlebars-compatible template merger & variable extractor
   - *Acceptance Criteria*:
     - Supports syntax `{{ColumnName}}` and default fallback `{{ColumnName | "default"}}`.
     - Handles case-insensitive column matching.
   - *Verification*: Unit test template with sample row data and verify interpolated string.
 
-- [ ] **Task 3.2**: Implement spam trigger word detector
+- [x] **Task 3.2**: Implement spam trigger word detector
   - *Acceptance Criteria*:
     - Checks subject and body against curated database of 150+ spam buzzwords (e.g., "100% free", "guaranteed", "urgent action").
     - Returns risk rating (Low, Medium, High) and list of matched words.
   - *Verification*: Feeding a spam-heavy text triggers high risk warning with flagged terms.
 
-- [ ] **Task 3.3**: Build Template Composer UI with live preview and tag pills
+- [x] **Task 3.3**: Build Template Composer UI with live preview and tag pills
   - *Acceptance Criteria*:
     - Clickable column pills to insert variables at cursor position into Subject or Body.
     - Real-time side-by-side preview showing rendered email for row 1, row 2, etc.
@@ -70,7 +70,7 @@
   - *Verification*: User inserts pills, types copy, cycles between leads to see live preview.
 
 ## Checkpoint 3: Template Engine
-- [ ] Accurate variable interpolation across dynamic spreadsheet columns with live preview and spam scoring.
+- [x] Accurate variable interpolation across dynamic spreadsheet columns with live preview and spam scoring.
 
 ---
 
