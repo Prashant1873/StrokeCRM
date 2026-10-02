@@ -377,62 +377,6 @@ export default function DashboardView({ authStatus, setActiveTab }) {
           </button>
         </div>
       </div>
-
-      {/* Quick Launchpad Roadmap */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-white mb-4">Complete Outreach Workflow</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div 
-            onClick={() => setActiveTab('settings')}
-            className="p-4 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-all group"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-indigo-400">1. Connect</span>
-              {authStatus?.connected ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              ) : (
-                <AlertCircle className="w-4 h-4 text-amber-400" />
-              )}
-            </div>
-            <h3 className="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors">Gmail Account</h3>
-            <p className="text-xs text-slate-400 mt-1">Configure your Google App Password for instant, free SMTP dispatch.</p>
-          </div>
-
-          <div 
-            onClick={() => setActiveTab('leads')}
-            className="p-4 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-all group"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-indigo-400">2. Ingest</span>
-              {overview.totalLeads > 0 && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-            </div>
-            <h3 className="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors">Import Leads</h3>
-            <p className="text-xs text-slate-400 mt-1">Upload .xlsx or .csv contacts and auto-map custom variable headers.</p>
-          </div>
-
-          <div 
-            onClick={() => setActiveTab('templates')}
-            className="p-4 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-all group"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-indigo-400">3. Compose</span>
-            </div>
-            <h3 className="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors">Templates & Spam Check</h3>
-            <p className="text-xs text-slate-400 mt-1">Insert variables like {"{{FirstName}}"} and scan copy for spam buzzwords.</p>
-          </div>
-
-          <div 
-            onClick={() => setActiveTab('abtesting')}
-            className="p-4 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-all group"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-indigo-400">4. Experiment</span>
-            </div>
-            <h3 className="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors">A/B Testing</h3>
-            <p className="text-xs text-slate-400 mt-1">Split test two subject angles across 50/50 cohorts to maximize replies.</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

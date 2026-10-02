@@ -18,7 +18,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-export default function TemplatesView({ setActiveTab }) {
+export default function TemplatesView({ setActiveTab, navigate, currentRoute }) {
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState(null);
   const [contacts, setContacts] = useState([]);
@@ -231,10 +231,18 @@ Founder`);
           </button>
 
           <button
-            onClick={() => setActiveTab('campaigns')}
+            onClick={() => {
+              if (navigate && selectedCampaignId) {
+                navigate(`#/campaigns/${selectedCampaignId}/preflight`);
+              } else if (navigate) {
+                navigate('#/campaigns');
+              } else {
+                setActiveTab('campaigns');
+              }
+            }}
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
           >
-            <span>Proceed to Dispatch</span>
+            <span>Proceed to Preflight & Dispatch</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>

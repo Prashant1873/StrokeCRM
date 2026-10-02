@@ -76,15 +76,49 @@ StrokeCRM will be built in 6 structured phases: from project foundation & dual G
 
 ---
 
+## Milestone v1.1: Interactive Navigation, Step Cockpit & UX Overhaul
+
+### Phase 7: Traceable Routing, Breadcrumb System & App Shell Architecture
+**Goal**: Overhaul app navigation with URL path indexing (hash-based or pushState), browser history stack support, traceable hierarchical breadcrumbs with 1-click ancestors navigation, and an updated app shell.
+**Depends on**: Phase 6
+**Requirements**: [NAV-01, NAV-02, NAV-03]
+**Success Criteria**:
+1. URL reflects active page, campaign ID, and step (e.g., `#/campaigns/:id/preflight` or `#/leads/import/map`).
+2. Browser Back and Forward buttons navigate through app view history without resetting state or reloading.
+3. Breadcrumb trail at top of screen displays full hierarchy with clickable parent steps and a dedicated "Back" button (`Esc` shortcut).
+
+### Phase 8: Multi-Step Wizards & Contextual Preflight Option Controls
+**Goal**: Transform key workflows (Campaign Launch, Lead Ingestion, Template Crafting) into clear step-by-step wizards with granular contextual toggles and controls.
+**Depends on**: Phase 7
+**Requirements**: [STEP-01, STEP-02, STEP-03]
+**Success Criteria**:
+1. Campaign start page provides an interactive Preflight gate with a toggle to **"Enforce Working Hours (9 AM - 6 PM)"** vs **"Immediate 24/7 Dispatch"** (with live bypass support).
+2. Campaign start preflight provides instant pacing jitter sliders, quota health indicator, and mandatory/optional "Send Test Email to Me First" validation.
+3. Leads workflow provides a 3-step wizard (Upload → Map Columns → Validate & Preview) with smooth backward/forward traversal preserving uploaded data.
+
+### Phase 9: Frontend-Skill Polish, Apple Fluid Motion & WCAG 2.2 AA Hardening
+**Goal**: Apply frontend-skill standards: Apple fluid spring physics, zero pointer latency, high-contrast dark cockpit aesthetic, and complete WCAG 2.2 AA accessibility.
+**Depends on**: Phase 8
+**Requirements**: [CRAFT-01, CRAFT-02, CRAFT-03]
+**Success Criteria**:
+1. All toggles, modals, and drawers use critically damped spring animations (damping 1.0, 0.35s duration) with zero pointer lag.
+2. Full keyboard navigation across all menus, breadcrumbs, and step switches with high-contrast visible focus rings (`focus-visible:ring-2`).
+3. Zero layout shifts, consistent 4px/8px grid alignment, and dark cockpit visual language with zero AI generic purple slop.
+
+---
+
 ## Progress
 
-**Execution Order:** Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6
+**Execution Order:** Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7 → Phase 8 → Phase 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Scaffolding & Dual Gmail Auth | 0/1 | Not started | - |
-| 2. Lead Ingestion & Variable Mapping | 0/1 | Not started | - |
-| 3. Template Engine & Spam Guard | 0/1 | Not started | - |
-| 4. Queue & Pacing Dispatcher | 0/1 | Not started | - |
-| 5. A/B Testing Studio | 0/1 | Not started | - |
-| 6. Day-Wise Dashboard & Polish | 0/1 | Not started | - |
+| 1. Scaffolding & Dual Gmail Auth | 1/1 | Completed | 2026-10-03 |
+| 2. Lead Ingestion & Variable Mapping | 1/1 | Completed | 2026-10-03 |
+| 3. Template Engine & Spam Guard | 1/1 | Completed | 2026-10-03 |
+| 4. Queue & Pacing Dispatcher | 1/1 | Completed | 2026-10-03 |
+| 5. A/B Testing Studio | 1/1 | Completed | 2026-10-03 |
+| 6. Day-Wise Dashboard & Polish | 1/1 | Completed | 2026-10-03 |
+| 7. Traceable Routing & Breadcrumbs | 1/1 | Completed | 2026-10-03 |
+| 8. Step Wizards & Contextual Controls | 1/1 | Completed | 2026-10-03 |
+| 9. Frontend-Skill Polish & Fluid Motion | 1/1 | Completed | 2026-10-03 |

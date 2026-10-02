@@ -8,18 +8,26 @@ import {
   Trash2, 
   Download, 
   ArrowRight, 
+  ArrowLeft,
   Search, 
   FileCheck, 
   RefreshCw,
   SlidersHorizontal,
   Mail,
   Building,
-  User
+  User,
+  ShieldCheck,
+  Check,
+  Database
 } from 'lucide-react';
+import Switch from './common/Switch';
 
-export default function LeadsView({ setActiveTab }) {
-  // Tab within Leads: 'import' | 'contacts'
-  const [activeSubTab, setActiveSubTab] = useState('import');
+export default function LeadsView({ setActiveTab, navigate, currentRoute }) {
+  // Tab within Leads: 'wizard' | 'contacts'
+  const [activeSubTab, setActiveSubTab] = useState('wizard');
+
+  // Wizard Step: 1 = Upload, 2 = Map & Options, 3 = Preview & Confirm
+  const [currentStep, setCurrentStep] = useState(1);
 
   // File upload & parsing state
   const [file, setFile] = useState(null);
@@ -27,11 +35,13 @@ export default function LeadsView({ setActiveTab }) {
   const [parseError, setParseError] = useState(null);
   const [parsedData, setParsedData] = useState(null); // { filename, headers, detectedFields, sampleRows, allRows, totalRows, validEmailCount, invalidEmailCount }
 
-  // Column mapping state
+  // Step 2: Column mapping & Options
   const [campaignName, setCampaignName] = useState(`Outreach - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`);
   const [emailCol, setEmailCol] = useState('');
   const [firstNameCol, setFirstNameCol] = useState('');
   const [companyCol, setCompanyCol] = useState('');
+  const [deduplicateEmails, setDeduplicateEmails] = useState(true);
+  const [fallbackMissingNames, setFallbackMissingNames] = useState(true);
 
   // Import state
   const [isImporting, setIsImporting] = useState(false);
@@ -44,6 +54,20 @@ export default function LeadsView({ setActiveTab }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const fileInputRef = useRef(null);
+
+  // Synchronize wizard step with URL route if present
+  useEffect(() => {
+    if (currentRoute?.name === 'leads-upload') {
+      setActiveSubTab('wizard');
+      setCurrentStep(1);
+    } else if (currentRoute?.name === 'leads-map') {
+      setActiveSubTab('wizard');
+      setCurrentStep(2);
+    } else if (currentRoute?.name === 'leads-preview') {
+      setActiveSubTab('wizard');
+      setCurrentStep(3);
+    }
+  }, [currentRoute?.name]);
 
   // Fetch existing contacts
   const fetchContacts = async () => {
@@ -87,6 +111,9 @@ export default function LeadsView({ setActiveTab }) {
         setEmailCol(json.data.detectedFields.email || (json.data.headers[0] || ''));
         setFirstNameCol(json.data.detectedFields.firstName || '');
         setCompanyCol(json.data.detectedFields.company || '');
+        // Advance to Step 2
+        setCurrentStep(2);
+        if (navigate) navigate('#/leads/map');
       } else {
         setParseError(json.message);
       }
@@ -117,6 +144,8 @@ export default function LeadsView({ setActiveTab }) {
       const payload = {
         campaignName,
         rows: parsedData.allRows,
+        deduplicate: deduplicateEmails,
+        fallbackNames: fallbackMissingNames,
         fieldMapping: {
           email: emailCol,
           firstName: firstNameCol,
@@ -134,10 +163,6 @@ export default function LeadsView({ setActiveTab }) {
       if (data.success) {
         setImportResult(data);
         fetchContacts();
-        // Switch to contacts view after 1.5s
-        setTimeout(() => {
-          setActiveSubTab('contacts');
-        }, 1200);
       } else {
         alert('Import failed: ' + data.message);
       }
@@ -154,6 +179,7 @@ export default function LeadsView({ setActiveTab }) {
       fetchContacts();
       setParsedData(null);
       setFile(null);
+      setCurrentStep(1);
     }
   };
 
@@ -171,8 +197,14 @@ export default function LeadsView({ setActiveTab }) {
     );
   });
 
+  const steps = [
+    { num: 1, title: 'Upload Spreadsheet', path: '#/leads/upload' },
+    { num: 2, title: 'Map Variables & Rules', path: '#/leads/map' },
+    { num: 3, title: 'Validate & Ingest', path: '#/leads/preview' },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6 text-left">
+    <div className="max-w-7xl mx-auto py-8 space-y-6 text-left">
       {/* Header and Subtabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div>
@@ -183,114 +215,200 @@ export default function LeadsView({ setActiveTab }) {
             </span>
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Ingest customer spreadsheets (.xlsx, .xls, .csv), auto-detect variables, and prepare outreach cohorts.
+            Indexed 3-step lead ingestion wizard with variable mapping, duplicate protection, and validation.
           </p>
         </div>
 
         <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-lg border border-slate-800">
           <button
-            onClick={() => setActiveSubTab('import')}
+            onClick={() => {
+              setActiveSubTab('wizard');
+              if (navigate) navigate(steps[currentStep - 1].path);
+            }}
             className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all ${
-              activeSubTab === 'import'
+              activeSubTab === 'wizard'
                 ? 'bg-indigo-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Upload Spreadsheet
+            Ingestion Wizard
           </button>
           <button
-            onClick={() => setActiveSubTab('contacts')}
+            onClick={() => {
+              setActiveSubTab('contacts');
+              if (navigate) navigate('#/leads');
+            }}
             className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all ${
               activeSubTab === 'contacts'
                 ? 'bg-indigo-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Contact Database ({totalContacts})
+            Database ({totalContacts})
           </button>
         </div>
       </div>
 
-      {activeSubTab === 'import' ? (
+      {activeSubTab === 'wizard' ? (
         <div className="space-y-6">
-          {/* Dropzone & Quick Test Bar */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold text-white">Import Excel or CSV Spreadsheet</h2>
-              <button
-                onClick={handleDownloadSample}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-400 hover:text-indigo-300 bg-indigo-950/40 border border-indigo-800/40 transition-colors"
-                title="Download 5 ready-to-test sample leads with rich headers"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Download Sample CSV
-              </button>
-            </div>
+          {/* Wizard Step Progression Bar */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-sm">
+            <div className="grid grid-cols-3 gap-3">
+              {steps.map((s) => {
+                const isCurrent = currentStep === s.num;
+                const isComplete = currentStep > s.num;
+                const isClickable = s.num === 1 || (s.num <= 2 && parsedData) || (s.num === 3 && parsedData);
 
-            {/* Drop Zone */}
-            <div
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-700 hover:border-indigo-500/80 rounded-xl p-8 text-center cursor-pointer transition-all bg-slate-950/50 hover:bg-indigo-950/10 group"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={(e) => handleFileChange(e.target.files?.[0])}
-                className="hidden"
-              />
-              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform">
-                {isParsing ? (
-                  <RefreshCw className="w-6 h-6 animate-spin text-indigo-400" />
-                ) : (
-                  <UploadCloud className="w-6 h-6 text-indigo-400" />
-                )}
-              </div>
-              <h3 className="text-sm font-semibold text-white">
-                {file ? file.name : 'Click to upload or drag & drop'}
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Supports Excel (.xlsx, .xls) and CSV (.csv) with any custom headers.
-              </p>
+                return (
+                  <button
+                    key={s.num}
+                    type="button"
+                    disabled={!isClickable}
+                    onClick={() => {
+                      setCurrentStep(s.num);
+                      if (navigate) navigate(s.path);
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
+                      isCurrent
+                        ? 'bg-indigo-600/15 border-indigo-500/50 text-white'
+                        : isComplete
+                        ? 'bg-slate-950/60 border-slate-800/80 text-emerald-400 hover:border-slate-700'
+                        : 'bg-slate-950/30 border-slate-800/40 text-slate-500 cursor-not-allowed'
+                    }`}
+                  >
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                      isComplete 
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                        : isCurrent 
+                        ? 'bg-indigo-600 text-white shadow-sm' 
+                        : 'bg-slate-800 text-slate-500'
+                    }`}>
+                      {isComplete ? <Check className="w-3.5 h-3.5" /> : s.num}
+                    </div>
+                    <div className="min-w-0 truncate">
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+                        Step {s.num}
+                      </div>
+                      <div className="text-xs font-bold truncate text-slate-200">
+                        {s.title}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-
-            {parseError && (
-              <div className="mt-4 p-3.5 rounded-lg bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{parseError}</span>
-              </div>
-            )}
           </div>
 
-          {/* Parsed Inspection & Mapping View */}
-          {parsedData && (
+          {/* STEP 1: Upload Dropzone */}
+          {currentStep === 1 && (
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-white">Step 1: Upload Contact Spreadsheet</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Upload your leads in .xlsx, .xls, or .csv format. Headers will be extracted dynamically.
+                  </p>
+                </div>
+                <button
+                  onClick={handleDownloadSample}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-400 hover:text-indigo-300 bg-indigo-950/40 border border-indigo-800/40 transition-colors"
+                  title="Download ready-to-test sample leads CSV"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Sample CSV</span>
+                </button>
+              </div>
+
+              {/* Drop Zone */}
+              <div
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-slate-700 hover:border-indigo-500/80 rounded-xl p-12 text-center cursor-pointer transition-all bg-slate-950/50 hover:bg-indigo-950/10 group"
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={(e) => handleFileChange(e.target.files?.[0])}
+                  className="hidden"
+                />
+                <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform">
+                  {isParsing ? (
+                    <RefreshCw className="w-7 h-7 animate-spin text-indigo-400" />
+                  ) : (
+                    <UploadCloud className="w-7 h-7 text-indigo-400" />
+                  )}
+                </div>
+                <h3 className="text-sm font-semibold text-white">
+                  {file ? file.name : 'Click to select or drag & drop spreadsheet'}
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  Supports Excel (.xlsx, .xls) and CSV (.csv) with unlimited custom variables.
+                </p>
+              </div>
+
+              {parseError && (
+                <div className="p-3.5 rounded-lg bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{parseError}</span>
+                </div>
+              )}
+
+              {parsedData && (
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-xs text-emerald-400 font-medium">
+                    ✓ Spreadsheet loaded: {parsedData.filename} ({parsedData.totalRows} rows)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentStep(2);
+                      if (navigate) navigate('#/leads/map');
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-md transition-all"
+                  >
+                    <span>Proceed to Step 2 (Map Variables)</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* STEP 2: Map Variables & Duplicate Rules */}
+          {currentStep === 2 && parsedData && (
             <div className="space-y-6">
-              {/* Summary Stats Cards */}
+              {/* Header Stats */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-                  <span className="text-xs font-medium text-slate-400 uppercase">Total Rows Detected</span>
+                  <span className="text-xs font-medium text-slate-400 uppercase">Rows Ingested</span>
                   <div className="text-2xl font-bold text-white mt-1">{parsedData.totalRows}</div>
                 </div>
 
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-                  <span className="text-xs font-medium text-emerald-400 uppercase">Valid Email Formats</span>
+                  <span className="text-xs font-medium text-emerald-400 uppercase">Valid Email Headers</span>
                   <div className="text-2xl font-bold text-emerald-400 mt-1">{parsedData.validEmailCount}</div>
                 </div>
 
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-                  <span className="text-xs font-medium text-slate-400 uppercase">Custom Header Columns</span>
+                  <span className="text-xs font-medium text-slate-400 uppercase">Variable Headers</span>
                   <div className="text-2xl font-bold text-indigo-400 mt-1">{parsedData.headers.length}</div>
                 </div>
               </div>
 
               {/* Column Mapping Card */}
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
-                  <h3 className="text-sm font-semibold text-white">Column Header Mapping</h3>
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
+                    <h3 className="text-sm font-semibold text-white">Step 2: Column Header Mapping</h3>
+                  </div>
+                  <span className="text-xs text-slate-400 font-mono">
+                    File: {parsedData.filename}
+                  </span>
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-slate-300 mb-1.5">Campaign Name</label>
@@ -347,34 +465,84 @@ export default function LeadsView({ setActiveTab }) {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between">
-                  <p className="text-xs text-slate-400">
-                    All remaining headers ({parsedData.headers.filter(h => h !== emailCol && h !== firstNameCol && h !== companyCol).map(h => `{{${h}}}`).join(', ') || 'none'}) will be preserved for dynamic email templating.
-                  </p>
+                {/* Additional Step 2 Option Switches */}
+                <div className="border-t border-slate-800/80 pt-4 space-y-2">
+                  <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Ingestion Safeguard Options
+                  </h4>
+
+                  <Switch
+                    id="dedup-switch"
+                    checked={deduplicateEmails}
+                    onChange={setDeduplicateEmails}
+                    label="Deduplicate Recipient Emails"
+                    description="Automatically skips duplicate email entries in the spreadsheet to prevent double-messaging prospects."
+                    badge="Safety"
+                  />
+
+                  <Switch
+                    id="fallback-names-switch"
+                    checked={fallbackMissingNames}
+                    onChange={setFallbackMissingNames}
+                    label="Auto-fallback Empty First Names to 'there'"
+                    description="If recipient first name is missing or blank, automatically uses 'there' so {{FirstName}} renders naturally as 'Hi there'."
+                  />
+                </div>
+
+                {/* Navigation Bar between steps */}
+                <div className="border-t border-slate-800 pt-4 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentStep(1);
+                      if (navigate) navigate('#/leads/upload');
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back to Step 1 (Upload)</span>
+                  </button>
 
                   <button
-                    onClick={handleConfirmImport}
-                    disabled={isImporting || !emailCol}
+                    type="button"
+                    onClick={() => {
+                      setCurrentStep(3);
+                      if (navigate) navigate('#/leads/preview');
+                    }}
+                    disabled={!emailCol}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 shadow-md shadow-indigo-600/20 transition-all"
                   >
-                    {isImporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileCheck className="w-3.5 h-3.5" />}
-                    <span>Confirm & Import {parsedData.validEmailCount} Leads</span>
+                    <span>Proceed to Step 3 (Preview & Validate)</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Data Preview Table */}
+          {/* STEP 3: Preview & Confirm */}
+          {currentStep === 3 && parsedData && (
+            <div className="space-y-6">
+              {/* Preview Table Card */}
               <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
                 <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white">Spreadsheet Preview (First 10 Rows)</h3>
-                  <span className="text-xs text-slate-400">Showing 10 of {parsedData.totalRows} records</span>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Step 3: Lead List Preflight Inspection</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Review parsed contact records and email validity before committing to database.
+                    </p>
+                  </div>
+                  <span className="text-xs text-slate-400 font-mono">
+                    Showing 10 of {parsedData.totalRows} leads
+                  </span>
                 </div>
+
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs text-slate-300">
                     <thead className="bg-slate-950/80 text-slate-400 font-semibold border-b border-slate-800">
                       <tr>
                         <th className="py-2.5 px-4 w-12">#</th>
-                        <th className="py-2.5 px-4">Status</th>
+                        <th className="py-2.5 px-4">Validity</th>
                         {parsedData.headers.map(h => (
                           <th key={h} className="py-2.5 px-4 whitespace-nowrap">
                             <span className={h === emailCol ? 'text-indigo-400 font-bold' : ''}>
@@ -400,8 +568,8 @@ export default function LeadsView({ setActiveTab }) {
                             )}
                           </td>
                           {parsedData.headers.map(h => (
-                            <td key={h} className="py-2.5 px-4 whitespace-nowrap font-sans text-slate-300">
-                              {String(row[h] || '')}
+                            <td key={h} className="py-2.5 px-4 whitespace-nowrap text-slate-200">
+                              {row[h] || <span className="text-slate-600 font-sans italic">blank</span>}
                             </td>
                           ))}
                         </tr>
@@ -409,123 +577,135 @@ export default function LeadsView({ setActiveTab }) {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Import Confirmation Bar */}
+                <div className="p-4 bg-slate-950/60 border-t border-slate-800 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentStep(2);
+                      if (navigate) navigate('#/leads/map');
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back to Step 2 (Mapping)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmImport}
+                    disabled={isImporting || !emailCol}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 shadow-lg shadow-emerald-600/30 transition-all"
+                  >
+                    {isImporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileCheck className="w-3.5 h-3.5" />}
+                    <span>Confirm & Ingest {parsedData.validEmailCount} Leads</span>
+                  </button>
+                </div>
               </div>
+
+              {/* Import Result Notification */}
+              {importResult && (
+                <div className="p-5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                    <div>
+                      <div className="font-bold text-sm">Successfully Ingested {importResult.importedCount} Contacts!</div>
+                      <div className="text-xs text-emerald-300/80">
+                        Campaign &quot;{campaignName}&quot; created with ready queue.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => navigate ? navigate('#/campaigns') : setActiveTab('campaigns')}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow transition-all"
+                    >
+                      Open Campaign Cockpit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSubTab('contacts')}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold transition-colors"
+                    >
+                      View Database
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
       ) : (
-        /* Saved Contacts Database View */
-        <div className="space-y-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+        /* Subtab 2: Contacts Database Table */
+        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm space-y-4 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
               <input
                 type="text"
-                placeholder="Search leads by name, email, or company..."
+                placeholder="Search by email, name, or company..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                className="w-full pl-9 pr-3.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
               />
             </div>
 
-            <div className="flex items-center gap-3 self-end sm:self-auto">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={fetchContacts}
+                className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                title="Refresh contacts"
+              >
+                <RefreshCw className={`w-4 h-4 ${contactsLoading ? 'animate-spin text-indigo-400' : ''}`} />
+              </button>
               <button
                 onClick={handleClearContacts}
-                disabled={contacts.length === 0}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-900/40 transition-colors disabled:opacity-40"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-900/40 rounded-lg transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Clear Contacts
-              </button>
-
-              <button
-                onClick={() => setActiveTab('templates')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors shadow-sm"
-              >
-                <span>Compose Template</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>Clear All</span>
               </button>
             </div>
           </div>
 
-          {/* Contacts Table */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
-            {filteredContacts.length === 0 ? (
-              <div className="p-12 text-center">
-                <Users className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                <h4 className="text-sm font-semibold text-white">No Contacts In Database</h4>
-                <p className="text-xs text-slate-400 mt-1 mb-4">
-                  Upload an Excel or CSV file in the "Upload Spreadsheet" tab to populate your leads.
-                </p>
-                <button
-                  onClick={() => setActiveSubTab('import')}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500"
-                >
-                  Upload Leads Now
-                </button>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
-                    <tr>
-                      <th className="py-3 px-4">Contact</th>
-                      <th className="py-3 px-4">Company</th>
-                      <th className="py-3 px-4">Campaign</th>
-                      <th className="py-3 px-4">Dispatch Status</th>
-                      <th className="py-3 px-4">Custom Variables</th>
+          <div className="overflow-x-auto border border-slate-800/80 rounded-lg">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950/80 text-slate-400 font-semibold border-b border-slate-800">
+                <tr>
+                  <th className="py-2.5 px-4 w-12">#</th>
+                  <th className="py-2.5 px-4">Recipient Email</th>
+                  <th className="py-2.5 px-4">First Name</th>
+                  <th className="py-2.5 px-4">Company</th>
+                  <th className="py-2.5 px-4">Campaign</th>
+                  <th className="py-2.5 px-4">Added</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-mono">
+                {filteredContacts.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-500 font-sans">
+                      {searchQuery ? 'No contacts match your search query.' : 'No contacts in database yet. Use Ingestion Wizard to upload a spreadsheet.'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredContacts.map((c, idx) => (
+                    <tr key={c.id || idx} className="hover:bg-slate-800/40 transition-colors font-sans">
+                      <td className="py-2.5 px-4 text-slate-500 font-mono">{idx + 1}</td>
+                      <td className="py-2.5 px-4 font-mono font-medium text-indigo-300">{c.email}</td>
+                      <td className="py-2.5 px-4 text-slate-300">{c.first_name || '—'}</td>
+                      <td className="py-2.5 px-4 text-slate-300">{c.company || '—'}</td>
+                      <td className="py-2.5 px-4 text-slate-400">{c.campaign_name || `ID #${c.campaign_id}`}</td>
+                      <td className="py-2.5 px-4 text-slate-500 font-mono text-[11px]">
+                        {new Date(c.created_at).toLocaleDateString()}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    {filteredContacts.map(c => {
-                      let customFields = {};
-                      try {
-                        customFields = JSON.parse(c.custom_fields || '{}');
-                      } catch {}
-                      const extraKeys = Object.keys(customFields).filter(k => k.toLowerCase() !== 'email' && k.toLowerCase() !== 'firstname' && k.toLowerCase() !== 'company');
-
-                      return (
-                        <tr key={c.id} className="hover:bg-slate-800/40 transition-colors">
-                          <td className="py-3 px-4">
-                            <div className="font-semibold text-white">{c.first_name || '—'}</div>
-                            <div className="text-[11px] text-slate-400 flex items-center gap-1 font-mono">
-                              <Mail className="w-3 h-3 text-slate-500" />
-                              {c.email}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-1 text-slate-300">
-                              <Building className="w-3 h-3 text-slate-500" />
-                              {c.company || '—'}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-slate-400">
-                            {c.campaign_name || 'Default'}
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-slate-800 text-amber-400 border border-slate-700">
-                              {c.status}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex flex-wrap gap-1 max-w-xs">
-                              {extraKeys.slice(0, 3).map(k => (
-                                <span key={k} className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px] text-slate-400 font-mono">
-                                  {k}: {String(customFields[k])}
-                                </span>
-                              ))}
-                              {extraKeys.length > 3 && (
-                                <span className="text-[10px] text-slate-500">+{extraKeys.length - 3} more</span>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

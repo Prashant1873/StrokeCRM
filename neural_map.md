@@ -4,13 +4,25 @@ This document visualizes and maps the logical subsystems, state flows, and data 
 
 ```mermaid
 flowchart TD
-    subgraph UI ["Frontend / User Control Center"]
+    subgraph UI ["Frontend / User Control Center (Hierarchical & Traceable)"]
+        Router["App Router & History Stack (Hash/URL Indexed)"]
+        Breadcrumbs["Breadcrumb Tracker & Back-Trace Engine"]
         Dashboard["Analytics & Daily Cap Monitor"]
-        CampaignMgr["Campaign & Sequence Builder"]
-        ABTesting["A/B Testing & Variant Splitter"]
-        ContactManager["Excel/CSV Data Ingestion & Field Mapper"]
-        TemplateEditor["Template Engine & Variable Highlighter"]
+        CampaignMgr["Campaign Cockpit & Step Wizard"]
+        PreflightControls["Preflight Gates (Working Hours Toggle, Jitter, Test Mail)"]
+        ABTesting["A/B Testing Studio"]
+        ContactManager["Leads Wizard: Upload -> Map -> Validate"]
+        TemplateEditor["Template Engine & Spam Preflight"]
         Settings["Gmail Auth & Throttle Settings"]
+
+        Router --> Breadcrumbs
+        Router --> Dashboard
+        Router --> CampaignMgr
+        Router --> ContactManager
+        Router --> TemplateEditor
+        Router --> ABTesting
+        Router --> Settings
+        CampaignMgr --> PreflightControls
     end
 
     subgraph Core ["Application Core & Dispatch Engine"]
@@ -32,7 +44,7 @@ flowchart TD
     ContactManager -->|Upload raw records| Parser
     Parser -->|Row schemas| Queue
     TemplateEditor -->|Subject & Body variants| Merger
-    CampaignMgr -->|Start campaign| Queue
+    PreflightControls -->|Start campaign (bypassHours & options)| Queue
     ABTesting -->|Define Variant A / B| ABEngine
     ABEngine -->|Assign variant to rows| Queue
 

@@ -144,3 +144,171 @@
 
 ## Checkpoint 6: Production Verification
 - [x] End-to-end verification of entire StrokeCRM workflow from Gmail setup to lead dispatch and analytics tracking.
+
+---
+
+## Phase 7: Traceable Routing, Breadcrumb System & App Shell Architecture
+
+- [x] **Task 7.1**: Build URL-Indexed Route & History Controller
+  - **Description**: Implement a lightweight, zero-dependency browser hash router and navigation state controller that synchronizes the current view, campaign ID, and step with `window.location.hash`, enabling native browser Back/Forward traversal, deep linking, and bookmarkable views.
+  - **Acceptance criteria**:
+    - [x] Navigating between pages/subpages updates URL hash (e.g. `#/campaigns`, `#/campaigns/:id`, `#/campaigns/:id/preflight`, `#/leads/upload`, `#/leads/map`).
+    - [x] Browser Back and Forward buttons navigate backward and forward in view history without page refresh.
+    - [x] Directly pasting or refreshing an indexed URL loads the exact corresponding view and entity.
+  - **Verification**:
+    - [x] Build succeeds: `npm --prefix client run build`
+    - [x] Manual check: Navigate Dashboard → Campaigns → Preflight, press browser Back button twice, verify return to Dashboard.
+  - **Dependencies**: Phase 6
+  - **Files likely touched**:
+    - `client/src/App.jsx`
+    - `client/src/router.js` (new)
+  - **Estimated scope**: Medium: 2-3 files
+
+- [x] **Task 7.2**: Build Traceable Breadcrumbs Component with Clickable Hierarchy
+  - **Description**: Create a persistent, high-density breadcrumb component at the top of the main viewport showing the active path hierarchy (`Home > Campaigns > [Campaign Name] > Launch Preflight`), supporting one-click jumps to any ancestor level and a dedicated "Back" button with keyboard shortcut (`Esc`).
+  - **Acceptance criteria**:
+    - [x] Displays indexed crumbs trail with icons and labels reflecting current deep route.
+    - [x] Clicking any parent breadcrumb crumb instantly navigates back to that exact parent page.
+    - [x] Dedicated Back button pops navigation stack to previous step or parent directory.
+    - [x] Pressing `Esc` when in a nested sub-page/step triggers back navigation.
+  - **Verification**:
+    - [x] Build succeeds: `npm --prefix client run build`
+    - [x] Manual check: Click into nested campaign preflight, click middle crumb "Campaigns", verify instant return to campaigns list.
+  - **Dependencies**: Task 7.1
+  - **Files likely touched**:
+    - `client/src/components/Breadcrumbs.jsx` (new)
+    - `client/src/App.jsx`
+  - **Estimated scope**: Small: 2 files
+
+- [x] **Task 7.3**: Overhaul App Shell with Collapsible Cockpit Navigation & Active Indicators
+  - **Description**: Redesign the outer layout shell to support both modern high-density navigation (collapsible sidebar or sleek navbar with badge counters and path highlights) and unified header breadcrumb controls.
+  - **Acceptance criteria**:
+    - [x] Modern dark cockpit aesthetic (`#0b0f17` background, slate-800 borders, emerald/indigo accents).
+    - [x] Active route indicator highlighting current section with zero layout shift.
+    - [x] Displays live Gmail connection pill and active queue badge in the shell.
+  - **Verification**:
+    - [x] Build succeeds: `npm --prefix client run build`
+    - [x] Manual check: Check visual responsiveness, verify collapse/expand toggles smoothly with no visual clipping.
+  - **Dependencies**: Task 7.1, Task 7.2
+  - **Files likely touched**:
+    - `client/src/components/Navbar.jsx`
+    - `client/src/components/AppShell.jsx` (new)
+    - `client/src/App.jsx`
+  - **Estimated scope**: Medium: 3 files
+
+## Checkpoint 7: Navigation & Breadcrumbs
+- [x] Deep URL paths work (`#/campaigns/:id/preflight`, `#/leads/upload`, etc.)
+- [x] Browser Back and Forward buttons navigate without state loss
+- [x] Clicking any breadcrumb ancestor navigates to that level
+
+---
+
+## Phase 8: Multi-Step Wizards & Contextual Preflight Option Controls
+
+- [x] **Task 8.1**: Build Campaign Launch Preflight Cockpit with Working Hours Toggle
+  - **Description**: Build an interactive preflight launch screen before starting a campaign, featuring a dedicated switch to "Enforce Working Hours (9 AM - 6 PM)" vs "Immediate 24/7 Dispatch", instant jitter interval tuning sliders, preflight safety checklists (quota, Gmail auth), and "Send Test to Me" verification.
+  - **Acceptance criteria**:
+    - [x] Interactive toggle switch: "Enforce Working Hours (9:00 AM - 6:00 PM)" (default ON). When switched OFF, confirms 24/7 immediate dispatch.
+    - [x] Passes `{ bypassHours: true/false }` to `/api/campaigns/:id/start`.
+    - [x] Pacing jitter selector/slider (e.g. 30s-90s) with real-time estimated completion calculation.
+    - [x] Preflight health card: Gmail verified badge, remaining daily quota counter, spam preflight score.
+    - [x] "Send Test Email to Me" button with instant result pill right inside preflight.
+  - **Verification**:
+    - [x] Build succeeds: `npm --prefix client run build`
+    - [x] Manual check: Toggle Working Hours OFF, click Start Campaign, verify backend receives `{ bypassHours: true }` and dispatches immediately.
+  - **Dependencies**: Phase 7
+  - **Files likely touched**:
+    - `client/src/components/CampaignPreflight.jsx` (new)
+    - `client/src/components/CampaignsView.jsx`
+  - **Estimated scope**: Medium: 2-3 files
+
+- [x] **Task 8.2**: Build 3-Step Lead Ingestion Wizard (Upload → Map → Preview)
+  - **Description**: Restructure lead ingestion into a clear, indexed 3-step wizard with step progression pills, options to skip or update duplicates, fallback defaults configuration, and seamless backward/forward navigation that preserves uploaded spreadsheet state.
+  - **Acceptance criteria**:
+    - [x] Step 1: Upload spreadsheet (`.xlsx`, `.csv`) with drag-and-drop and size/type validation.
+    - [x] Step 2: Interactive column header to template variable mapping with duplicate-handling switch.
+    - [x] Step 3: Verified leads preview table with email validity badges and row counts.
+    - [x] Stepping back from Step 3 to Step 2 or Step 1 preserves the parsed file data.
+  - **Verification**:
+    - [x] Build succeeds: `npm --prefix client run build`
+    - [x] Manual check: Upload file, proceed to step 2, click Back to step 1, proceed forward to step 2; confirm file is preserved.
+  - **Dependencies**: Phase 7
+  - **Files likely touched**:
+    - `client/src/components/LeadsView.jsx`
+    - `client/src/components/LeadWizard.jsx` (new)
+  - **Estimated scope**: Medium: 2-3 files
+
+- [x] **Task 8.3**: Build Template Preflight Step View with Variable Pills & Spam Scanner
+  - **Description**: Enhance template creation and review with indexed steps: Subject & Body Composer, Dynamic Handlebars insertion pills, real-time spam scoring preflight, and side-by-side per-lead row rendering preview.
+  - **Acceptance criteria**:
+    - [x] Step options: toggle spam highlighting on/off with alternative phrasing suggestions.
+    - [x] Dynamic variable pills clickable to insert into subject or body at cursor position.
+    - [x] Live preview toggle cycling across contacts to verify fallback tokens (`{{FirstName | "there"}}`).
+  - **Verification**:
+    - [x] Build succeeds: `npm --prefix client run build`
+    - [x] Manual check: Compose template with spam words, verify visual warning updates instantly as user types.
+  - **Dependencies**: Phase 7
+  - **Files likely touched**:
+    - `client/src/components/TemplatesView.jsx`
+  - **Estimated scope**: Small: 1-2 files
+
+## Checkpoint 8: Step Controls & Preflight Cockpit
+- [x] Campaign Start preflight switch for working hours works end-to-end with backend queue.
+- [x] Lead ingestion wizard allows back-and-forth navigation without losing parsed data.
+- [x] All step options and preflight checks function smoothly.
+
+---
+
+## Phase 9: Frontend-Skill Polish, Apple Fluid Motion & WCAG 2.2 AA Hardening
+
+- [x] **Task 9.1**: Implement Apple Fluid Motion & Spring Physics on Interactive Elements
+  - **Description**: Integrate fluid physics per `frontend-skill`: zero pointer latency on pointer-down, critically damped springs (damping 1.0, 0.35s duration) on toggle switches, modals, and breadcrumbs, with interruptible transitions.
+  - **Acceptance criteria**:
+    - [x] Toggle switches (including Working Hours toggle) feature tactile, fluid spring animation.
+    - [x] Modals, drawers, and step transitions settle smoothly with zero bounce/overshoot (damping 1.0).
+    - [x] Zero pointer latency: active press states trigger immediately on `pointerdown`.
+  - **Verification**:
+    - [x] Build succeeds: `npm --prefix client run build`
+    - [x] Manual check: Click and drag switches, verify snappy 60fps response and smooth spring settlement.
+  - **Dependencies**: Phase 8
+  - **Files likely touched**:
+    - `client/src/components/common/Switch.jsx` (new)
+    - `client/src/components/common/Modal.jsx` (new)
+    - `client/src/index.css`
+  - **Estimated scope**: Medium: 3 files
+
+- [x] **Task 9.2**: Anti-Slop Visual Craft & Optical Density Review
+  - **Description**: Conduct rigorous visual craft audit per `frontend-skill` Section 1 & 2: eliminate any generic styling, ensure intentional typographic scale, enforce 4px/8px optical grid rhythm, and polish dark cockpit contrast.
+  - **Acceptance criteria**:
+    - [x] Consistent color tokens: dark cockpit `#0b0f17`, slate-900 panels, slate-800 borders, emerald/indigo accents.
+    - [x] Zero arbitrary glassmorphism and zero generic purple AI gradient meshes.
+    - [x] Clear typographic hierarchy with readable line lengths and distinct label weights.
+  - **Verification**:
+    - [x] Build succeeds: `npm --prefix client run build`
+    - [x] Visual inspection: All components conform to cockpit theme with balanced whitespace.
+  - **Dependencies**: Task 9.1
+  - **Files likely touched**:
+    - `client/src/index.css`
+    - `client/src/App.css`
+    - `client/src/components/*`
+  - **Estimated scope**: Medium: 3-4 files
+
+- [x] **Task 9.3**: WCAG 2.2 AA Keyboard Navigation & State Resilience Scan
+  - **Description**: Implement and audit full keyboard navigation (`Tab`, `Shift+Tab`, `Space`, `Enter`, `Escape`), visible high-contrast focus rings (`focus-visible:ring-2 focus-visible:ring-indigo-500`), semantic ARIA attributes for all toggles/breadcrumbs, and empty/error state resilience.
+  - **Acceptance criteria**:
+    - [x] Every button, switch, breadcrumb link, and input is fully accessible via keyboard.
+    - [x] High-contrast focus rings visible on all interactive elements during keyboard navigation.
+    - [x] All toggles have programmatic `role="switch"` and `aria-checked` states.
+    - [x] Zero-state, error-state, and loading-state handling across all views.
+  - **Verification**:
+    - [x] Build succeeds: `npm --prefix client run build`
+    - [x] Manual keyboard check: Complete entire campaign preflight & launch using only keyboard (`Tab`, `Space`, `Enter`, `Esc`).
+  - **Dependencies**: Task 9.1, Task 9.2
+  - **Files likely touched**:
+    - `client/src/components/*`
+  - **Estimated scope**: Medium: 3-4 files
+
+## Checkpoint 9: Impeccable Delivery & Final Verification
+- [x] All interactive switches and step transitions feel fluid and responsive.
+- [x] Full WCAG 2.2 AA keyboard accessibility verified.
+- [x] End-to-end user journey tested: Navigate → Breadcrumb Trace → Upload Lead Wizard → Configure Template → Launch Campaign with Working Hours Switch → Live Monitoring.

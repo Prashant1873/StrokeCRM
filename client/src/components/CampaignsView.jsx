@@ -15,8 +15,9 @@ import {
   FileText,
   AlertTriangle
 } from 'lucide-react';
+import CampaignPreflight from './CampaignPreflight';
 
-export default function CampaignsView({ setActiveTab }) {
+export default function CampaignsView({ setActiveTab, navigate, currentRoute, onCampaignSelected }) {
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState(null);
   const [queueStatus, setQueueStatus] = useState(null);
@@ -75,6 +76,21 @@ export default function CampaignsView({ setActiveTab }) {
     }, 2000);
     return () => clearInterval(interval);
   }, [selectedCampaignId]);
+
+  // Sync selected campaign with route params
+  useEffect(() => {
+    if (currentRoute?.params?.id) {
+      setSelectedCampaignId(Number(currentRoute.params.id));
+    }
+  }, [currentRoute?.params?.id]);
+
+  const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId) || campaigns[0] || null;
+
+  useEffect(() => {
+    if (selectedCampaign && onCampaignSelected) {
+      onCampaignSelected(selectedCampaign);
+    }
+  }, [selectedCampaign?.id, selectedCampaign?.name, onCampaignSelected]);
 
   const handleStart = async (bypassHours = false) => {
     if (!selectedCampaignId) return;
@@ -158,6 +174,26 @@ export default function CampaignsView({ setActiveTab }) {
     }
   };
 
+  const onStartClick = () => {
+    if (!selectedCampaign || selectedCampaign.total_contacts === 0 || (queueStatus && queueStatus.pendingCount === 0)) {
+      setFeedback({
+        type: 'error',
+        message: 'Cannot start campaign: There are 0 pending leads in this campaign. Upload leads in Leads tab first.'
+      });
+      return;
+    }
+    if (queueStatus?.isPaused) {
+      handleStart(false);
+    } else {
+      if (navigate) {
+        navigate(`#/campaigns/${selectedCampaign.id}/preflight`);
+      } else {
+        handleStart(false);
+      }
+    }
+  };
+
+  // Safe early returns AFTER all hooks are evaluated
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto py-16 text-center text-slate-400">
@@ -167,7 +203,18 @@ export default function CampaignsView({ setActiveTab }) {
     );
   }
 
-  if (campaigns.length === 0) {
+  // If viewing preflight route, render CampaignPreflight
+  if (currentRoute?.name === 'campaign-preflight') {
+    return (
+      <CampaignPreflight 
+        campaignId={currentRoute.params?.id || selectedCampaignId}
+        navigate={navigate}
+        goBack={() => navigate ? navigate(`#/campaigns/${selectedCampaignId || ''}`) : null}
+      />
+    );
+  }
+
+  if (campaigns.length === 0 || !selectedCampaign) {
     return (
       <div className="max-w-4xl mx-auto py-16 px-4 text-center">
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-12">
@@ -179,8 +226,8 @@ export default function CampaignsView({ setActiveTab }) {
             Upload your lead spreadsheet first to automatically generate your first campaign.
           </p>
           <button
-            onClick={() => setActiveTab('leads')}
-            className="px-5 py-2.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/20 transition-all"
+            onClick={() => setActiveTab ? setActiveTab('leads') : navigate ? navigate('#/leads') : null}
+            className="px-5 py-2.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
           >
             Upload Leads Spreadsheet Now
           </button>
@@ -189,21 +236,9 @@ export default function CampaignsView({ setActiveTab }) {
     );
   }
 
-  const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId) || campaigns[0];
   const progressPercent = selectedCampaign.total_contacts > 0 
     ? Math.min(100, Math.round((selectedCampaign.sent_count / selectedCampaign.total_contacts) * 100))
     : 0;
-
-  const onStartClick = () => {
-    if (selectedCampaign.total_contacts === 0 || (queueStatus && queueStatus.pendingCount === 0)) {
-      setFeedback({
-        type: 'error',
-        message: 'Cannot start campaign: There are 0 pending leads in this campaign. Upload leads in Leads tab first.'
-      });
-      return;
-    }
-    handleStart(false);
-  };
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6 text-left">
@@ -340,6 +375,16 @@ export default function CampaignsView({ setActiveTab }) {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => navigate ? navigate(`#/campaigns/${selectedCampaign.id}/preflight`) : null}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
+              title="Configure Working Hours switch, pacing jitter, and test email preflight"
+            >
+              <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden sm:inline">Preflight Controls</span>
+            </button>
+
             {!queueStatus?.isRunning ? (
               <button
                 type="button"

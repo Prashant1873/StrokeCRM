@@ -16,3 +16,19 @@ This document records high-value user inputs, design ideas, and creative directi
   - Deliverability & spam-word preflight checker.
   - AI icebreaker / personalized snippet generation per recipient row.
   - Multi-account rotation (send across multiple Gmail accounts to scale safely).
+
+---
+
+## 2. Interactive Navigation & Step-Driven Cockpit Overhaul (Logged: 2026-10-03)
+- **Hierarchical Navigation & Indexed Traceability**:
+  - Replace flat tab switching with deeply indexed page paths and visual breadcrumbs (`Campaigns > [Campaign Name] > Launch Preflight`).
+  - Enable seamless backward tracing (back-button friendly, route history stack, breadcrumb jumps).
+- **Contextual Step-by-Step Option Controls**:
+  - Interactive preflight modals and step-by-step launch gates.
+  - Dedicated toggle switches at critical execution checkpoints:
+    - "Enforce Working Hours (9 AM - 6 PM)" switch directly on the campaign start screen (with one-click bypass mode).
+    - Pacing jitter override sliders (instant tuning before firing).
+    - Mandatory or optional "Send test email to myself first" validation gate.
+    - Quota ceiling threshold safety alerts before batch ignition.
+- **Frontend-Skill Guided Craft**:
+  - Anti-slop design aesthetic with dark cockpit theme, Apple-like fluid spring physics on switches/drawers, zero UI lag, and WCAG AA accessible contrast.
