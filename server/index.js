@@ -374,7 +374,8 @@ app.post('/api/campaigns/:id/template', (req, res) => {
 // Start campaign dispatch
 app.post('/api/campaigns/:id/start', (req, res) => {
   try {
-    const result = queueService.startCampaign(req.params.id);
+    const { bypassHours } = req.body || {};
+    const result = queueService.startCampaign(req.params.id, { bypassHours: !!bypassHours });
     res.json(result);
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });

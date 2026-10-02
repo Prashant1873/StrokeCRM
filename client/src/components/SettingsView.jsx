@@ -29,6 +29,7 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
   const [maxDelay, setMaxDelay] = useState(90);
   const [startHour, setStartHour] = useState('09:00');
   const [endHour, setEndHour] = useState('18:00');
+  const [enforceSchedule, setEnforceSchedule] = useState(false);
   const [quotaType, setQuotaType] = useState('personal');
 
   // UI state
@@ -53,6 +54,9 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
         if (data.max_delay_sec) setMaxDelay(Number(data.max_delay_sec));
         if (data.start_hour) setStartHour(data.start_hour);
         if (data.end_hour) setEndHour(data.end_hour);
+        if (data.enforce_schedule !== undefined) {
+          setEnforceSchedule(data.enforce_schedule === '1' || data.enforce_schedule === 'true' || data.enforce_schedule === true);
+        }
         if (data.gmail_quota_type) setQuotaType(data.gmail_quota_type);
       })
       .catch(err => console.error('Failed to load settings:', err));
@@ -132,6 +136,7 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
         max_delay_sec: maxDelay,
         start_hour: startHour,
         end_hour: endHour,
+        enforce_schedule: enforceSchedule ? '1' : '0',
         gmail_quota_type: quotaType
       };
 
@@ -486,6 +491,27 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
               onChange={(e) => setEndHour(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white"
             />
+          </div>
+
+          {/* Working Hours Enforcement Toggle */}
+          <div className="md:col-span-2 pt-4 border-t border-slate-800 flex items-center justify-between">
+            <div>
+              <div className="text-xs font-semibold text-white">Restrict Dispatch to Sending Window</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                {enforceSchedule 
+                  ? `Active: Campaigns will pause outside ${startHour} - ${endHour}.` 
+                  : 'Disabled (Default): Campaigns dispatch immediately 24/7 on demand.'}
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={enforceSchedule} 
+                onChange={(e) => setEnforceSchedule(e.target.checked)} 
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+            </label>
           </div>
         </div>
 

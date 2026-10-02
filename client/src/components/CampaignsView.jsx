@@ -30,6 +30,7 @@ export default function CampaignsView({ setActiveTab }) {
 
   // Action states
   const [actionLoading, setActionLoading] = useState(false);
+  const [feedback, setFeedback] = useState(null);
 
   // Fetch campaigns
   const fetchCampaigns = async () => {
@@ -38,7 +39,8 @@ export default function CampaignsView({ setActiveTab }) {
       const data = await res.json();
       setCampaigns(data || []);
       if (data && data.length > 0 && !selectedCampaignId) {
-        setSelectedCampaignId(data[0].id);
+        const campaignWithLeads = data.find(c => c.total_contacts > 0) || data[0];
+        setSelectedCampaignId(campaignWithLeads.id);
       }
     } catch (err) {
       console.error('Failed to load campaigns:', err);
@@ -74,19 +76,26 @@ export default function CampaignsView({ setActiveTab }) {
     return () => clearInterval(interval);
   }, [selectedCampaignId]);
 
-  const handleStart = async () => {
+  const handleStart = async (bypassHours = false) => {
     if (!selectedCampaignId) return;
     setActionLoading(true);
+    setFeedback(null);
     try {
-      const res = await fetch(`/api/campaigns/${selectedCampaignId}/start`, { method: 'POST' });
+      const res = await fetch(`/api/campaigns/${selectedCampaignId}/start`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bypassHours })
+      });
       const data = await res.json();
       if (!data.success) {
-        alert(data.message);
+        setFeedback({ type: 'error', message: data.message });
+      } else {
+        setFeedback({ type: 'success', message: data.message || 'Campaign dispatch started.' });
       }
       fetchQueueStatus();
       fetchCampaigns();
     } catch (err) {
-      alert('Failed to start campaign: ' + err.message);
+      setFeedback({ type: 'error', message: 'Failed to start campaign: ' + err.message });
     } finally {
       setActionLoading(false);
     }
@@ -96,11 +105,15 @@ export default function CampaignsView({ setActiveTab }) {
     if (!selectedCampaignId) return;
     setActionLoading(true);
     try {
-      await fetch(`/api/campaigns/${selectedCampaignId}/pause`, { method: 'POST' });
+      const res = await fetch(`/api/campaigns/${selectedCampaignId}/pause`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setFeedback({ type: 'info', message: 'Campaign queue paused.' });
+      }
       fetchQueueStatus();
       fetchCampaigns();
     } catch (err) {
-      alert('Failed to pause: ' + err.message);
+      setFeedback({ type: 'error', message: 'Failed to pause: ' + err.message });
     } finally {
       setActionLoading(false);
     }
@@ -111,11 +124,15 @@ export default function CampaignsView({ setActiveTab }) {
     if (confirm('Are you sure you want to stop this campaign? Any in-flight sends will be safely paused.')) {
       setActionLoading(true);
       try {
-        await fetch(`/api/campaigns/${selectedCampaignId}/stop`, { method: 'POST' });
+        const res = await fetch(`/api/campaigns/${selectedCampaignId}/stop`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          setFeedback({ type: 'info', message: 'Campaign stopped and reset to Draft.' });
+        }
         fetchQueueStatus();
         fetchCampaigns();
       } catch (err) {
-        alert('Failed to stop: ' + err.message);
+        setFeedback({ type: 'error', message: 'Failed to stop: ' + err.message });
       } finally {
         setActionLoading(false);
       }
@@ -177,6 +194,17 @@ export default function CampaignsView({ setActiveTab }) {
     ? Math.min(100, Math.round((selectedCampaign.sent_count / selectedCampaign.total_contacts) * 100))
     : 0;
 
+  const onStartClick = () => {
+    if (selectedCampaign.total_contacts === 0 || (queueStatus && queueStatus.pendingCount === 0)) {
+      setFeedback({
+        type: 'error',
+        message: 'Cannot start campaign: There are 0 pending leads in this campaign. Upload leads in Leads tab first.'
+      });
+      return;
+    }
+    handleStart(false);
+  };
+
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6 text-left">
       {/* Header and Campaign Selector */}
@@ -189,9 +217,11 @@ export default function CampaignsView({ setActiveTab }) {
                 ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30'
                 : queueStatus?.isPaused
                 ? 'bg-amber-950/60 text-amber-400 border-amber-500/30'
+                : queueStatus?.isWaitingSchedule
+                ? 'bg-amber-950/60 text-amber-300 border-amber-500/30'
                 : 'bg-slate-800 text-slate-300 border-slate-700'
             }`}>
-              {queueStatus?.isRunning ? 'Live Pacing Active' : queueStatus?.status || 'Idle'}
+              {queueStatus?.isRunning ? 'Live Pacing Active' : queueStatus?.isWaitingSchedule ? 'Waiting Schedule Window' : queueStatus?.status || 'Idle'}
             </span>
           </h1>
           <p className="text-sm text-slate-400 mt-1">
@@ -223,6 +253,73 @@ export default function CampaignsView({ setActiveTab }) {
         </div>
       </div>
 
+      {/* Action Feedback Banner */}
+      {feedback && (
+        <div className={`p-4 rounded-xl border flex items-center justify-between text-xs transition-all ${
+          feedback.type === 'success'
+            ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
+            : feedback.type === 'info'
+            ? 'bg-indigo-950/40 border-indigo-500/30 text-indigo-300'
+            : 'bg-rose-950/40 border-rose-500/30 text-rose-300'
+        }`}>
+          <div className="flex items-center gap-2.5">
+            {feedback.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+            ) : feedback.type === 'info' ? (
+              <Sliders className="w-4 h-4 shrink-0 text-indigo-400" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+            )}
+            <span className="font-medium">{feedback.message}</span>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => setFeedback(null)} 
+            className="text-slate-400 hover:text-white text-xs underline ml-4 shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Schedule Window Waiting Banner */}
+      {queueStatus?.isWaitingSchedule && (
+        <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200">
+          <div className="flex items-center gap-2.5">
+            <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+            <div>
+              <span className="font-bold">Sending Window Active: </span>
+              <span>The queue is waiting for your configured schedule window to open.</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleStart(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold whitespace-nowrap shadow-sm transition-all"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>Send Now (Bypass Hours)</span>
+          </button>
+        </div>
+      )}
+
+      {/* Zero Leads Warning */}
+      {selectedCampaign.total_contacts === 0 && (
+        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-300">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-4 h-4 text-indigo-400 shrink-0" />
+            <span>This campaign currently has no contacts. Import leads to enable cold dispatch.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('leads')}
+            className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-all shrink-0"
+          >
+            Upload Leads Spreadsheet
+          </button>
+        </div>
+      )}
+
       {/* Main Dispatch Cockpit Card */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm space-y-6">
         {/* Controls Bar & Progress Summary */}
@@ -246,9 +343,9 @@ export default function CampaignsView({ setActiveTab }) {
             {!queueStatus?.isRunning ? (
               <button
                 type="button"
-                onClick={handleStart}
-                disabled={actionLoading || (queueStatus && queueStatus.pendingCount === 0)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/20 disabled:opacity-50 transition-all"
+                onClick={onStartClick}
+                disabled={actionLoading}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/20 disabled:opacity-50 transition-all cursor-pointer"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
                 <span>{queueStatus?.isPaused ? 'Resume Dispatch' : 'Start Campaign'}</span>
@@ -258,7 +355,7 @@ export default function CampaignsView({ setActiveTab }) {
                 type="button"
                 onClick={handlePause}
                 disabled={actionLoading}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 shadow-lg shadow-amber-600/20 disabled:opacity-50 transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 shadow-lg shadow-amber-600/20 disabled:opacity-50 transition-all cursor-pointer"
               >
                 <Pause className="w-3.5 h-3.5 fill-current" />
                 <span>Pause Queue</span>

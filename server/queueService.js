@@ -147,15 +147,21 @@ async function runCampaignWorker(campaignId) {
     if (sentTodayCount >= dailyLimit) {
       job.lastLog = `Daily send cap of ${dailyLimit} reached for today. Pausing queue until tomorrow.`;
       db.prepare("UPDATE campaigns SET status = 'PAUSED' WHERE id = ?").run(jobId);
+      job.isPaused = true;
       break;
     }
 
-    // 4. Check Working Hours
-    if (!isWithinWorkingHours(startHour, endHour)) {
-      job.lastLog = `Outside allowed sending hours (${startHour} - ${endHour}). Pausing queue.`;
-      db.prepare("UPDATE campaigns SET status = 'PAUSED' WHERE id = ?").run(jobId);
-      break;
+    // 4. Check Working Hours (only if enforce_schedule is enabled and not explicitly bypassed)
+    const enforceSchedule = settings.enforce_schedule === '1' || settings.enforce_schedule === 'true';
+    if (enforceSchedule && !job.bypassHours && !isWithinWorkingHours(startHour, endHour)) {
+      job.isWaitingSchedule = true;
+      job.lastLog = `Waiting for scheduled sending window (${startHour} - ${endHour}). Will resume automatically.`;
+      db.prepare("UPDATE campaigns SET status = 'WAITING_SCHEDULE' WHERE id = ?").run(jobId);
+      const keepGoing = await interruptibleSleep(30000, jobId);
+      if (!keepGoing) break;
+      continue;
     }
+    job.isWaitingSchedule = false;
 
     // 5. Fetch next pending contact
     const contact = db.prepare(`
@@ -167,6 +173,7 @@ async function runCampaignWorker(campaignId) {
     if (!contact) {
       job.lastLog = 'All contacts in campaign processed!';
       db.prepare("UPDATE campaigns SET status = 'COMPLETED' WHERE id = ?").run(jobId);
+      job.isStopped = true;
       break;
     }
 
@@ -242,7 +249,7 @@ async function runCampaignWorker(campaignId) {
 /**
  * Start campaign dispatch
  */
-function startCampaign(campaignId) {
+function startCampaign(campaignId, options = {}) {
   const id = Number(campaignId);
   const account = authService.getActiveAccount();
   if (!account || !account.verified) {
@@ -258,16 +265,31 @@ function startCampaign(campaignId) {
     throw new Error('Please configure and save an email subject and body in Templates before starting dispatch.');
   }
 
+  const pendingCount = db.prepare("SELECT COUNT(*) as count FROM contacts WHERE campaign_id = ? AND status = 'PENDING'").get(id).count;
+  if (pendingCount === 0) {
+    throw new Error('This campaign has 0 pending leads. Please upload leads in the Leads tab first or reset contacts.');
+  }
+
+  // Set DB status to RUNNING
+  db.prepare("UPDATE campaigns SET status = 'RUNNING', updated_at = ? WHERE id = ?")
+    .run(new Date().toISOString(), id);
+
   // Check if already active
   let job = activeJobs.get(id);
   if (job) {
     job.isPaused = false;
     job.isStopped = false;
+    job.isWaitingSchedule = false;
+    if (options.bypassHours) {
+      job.bypassHours = true;
+    }
   } else {
     job = {
       campaignId: id,
       isPaused: false,
       isStopped: false,
+      isWaitingSchedule: false,
+      bypassHours: !!options.bypassHours,
       nextSendAt: null,
       delayDurationSec: 0,
       currentContactEmail: null,
@@ -279,9 +301,6 @@ function startCampaign(campaignId) {
       console.error(`[StrokeCRM Worker Error ${id}]:`, err);
     });
   }
-
-  db.prepare("UPDATE campaigns SET status = 'RUNNING', updated_at = ? WHERE id = ?")
-    .run(new Date().toISOString(), id);
 
   return { success: true, message: 'Campaign dispatch started.' };
 }
@@ -344,12 +363,28 @@ function getCampaignQueueStatus(campaignId) {
     secondsRemaining = Math.max(0, Math.round((job.nextSendAt - Date.now()) / 1000));
   }
 
+  const isRunning = !!(job && !job.isPaused && !job.isStopped && !job.isWaitingSchedule);
+  const isPaused = (job && job.isPaused) || campaign.status === 'PAUSED';
+  const isWaitingSchedule = !!(job && job.isWaitingSchedule) || campaign.status === 'WAITING_SCHEDULE';
+
+  let currentLog = 'Idle';
+  if (job && job.lastLog) {
+    currentLog = job.lastLog;
+  } else if (campaign.status === 'COMPLETED') {
+    currentLog = 'All contacts processed.';
+  } else if (campaign.status === 'PAUSED') {
+    currentLog = 'Queue paused.';
+  } else if (campaign.status === 'WAITING_SCHEDULE') {
+    currentLog = 'Waiting for scheduled sending window.';
+  }
+
   return {
     campaignId: id,
     name: campaign.name,
     status: campaign.status,
-    isRunning: !!(job && !job.isPaused && !job.isStopped),
-    isPaused: !!(job && job.isPaused),
+    isRunning,
+    isPaused,
+    isWaitingSchedule,
     totalContacts: campaign.total_contacts,
     pendingCount,
     sentCount,
@@ -357,7 +392,7 @@ function getCampaignQueueStatus(campaignId) {
     secondsRemaining,
     delayDurationSec: job ? job.delayDurationSec : 0,
     currentContactEmail: job ? job.currentContactEmail : null,
-    lastLog: job ? job.lastLog : 'Idle',
+    lastLog: currentLog,
     recentLogs
   };
 }

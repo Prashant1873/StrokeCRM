@@ -96,6 +96,7 @@ const defaultSettings = [
   ['max_delay_sec', '90'],
   ['start_hour', '09:00'],
   ['end_hour', '18:00'],
+  ['enforce_schedule', '0'], // '0' = 24/7 on-demand dispatch, '1' = restrict to start_hour - end_hour
   ['active_days', JSON.stringify(['Mon', 'Tue', 'Wed', 'Thu', 'Fri'])],
   ['gmail_quota_type', 'personal'] // 'personal' (500) | 'workspace' (2000)
 ];
