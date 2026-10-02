@@ -30,13 +30,13 @@
 
 ## Phase 2: Lead Ingestion & Variable Header Mapping
 
-- [ ] **Task 2.1**: Implement backend Excel/CSV parsing engine
+- [x] **Task 2.1**: Implement backend Excel/CSV parsing engine
   - *Acceptance Criteria*:
     - Endpoint `/api/leads/upload` accepts `.xlsx`, `.xls`, and `.csv`.
     - Extracts all sheet headers, automatically detects the recipient email column, and stores records in SQLite.
   - *Verification*: Upload test spreadsheet, verify parsed JSON headers and row counts in response.
 
-- [ ] **Task 2.2**: Build Lead Import UI with mapping and preview
+- [x] **Task 2.2**: Build Lead Import UI with mapping and preview
   - *Acceptance Criteria*:
     - Drag-and-drop file upload zone with file size/type validation.
     - Dropdown to select/confirm the email column.
@@ -44,7 +44,7 @@
   - *Verification*: User uploads sample file, selects email column, and reviews table rows.
 
 ## Checkpoint 2: Data Ingestion
-- [ ] Contacts successfully ingested into SQLite with arbitrary custom headers intact.
+- [x] Contacts successfully ingested into SQLite with arbitrary custom headers intact.
 
 ---
 

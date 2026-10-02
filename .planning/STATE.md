@@ -5,18 +5,18 @@
 See: `.planning/PROJECT.md` (updated 2026-10-03)
 
 **Core value:** Reliable, throttle-safe, and personalized bulk cold email dispatch directly from the user's Gmail account with dynamic Excel/CSV variable mapping and zero duplicate sends.  
-**Current focus:** Phase 1 complete. Ready for Phase 2 (Lead Ingestion & Variable Header Mapping).
+**Current focus:** Phase 2 complete. Ready for Phase 3 (Template Personalization Engine & Spam Preflight).
 
 ## Current Phase
 
-- **Active Phase**: Phase 2: Lead Ingestion & Variable Header Mapping
+- **Active Phase**: Phase 3: Template Personalization Engine & Spam Preflight
 - **Status**: Ready to plan and execute
 - **Blocked by**: None
 
 ## Phase Progress
 
 - [x] Phase 1: Project Scaffolding & Dual Gmail Authentication Gateway (Completed 2026-10-03)
-- [ ] Phase 2: Lead Ingestion & Variable Header Mapping (0/1 plans)
+- [x] Phase 2: Lead Ingestion & Variable Header Mapping (Completed 2026-10-03)
 - [ ] Phase 3: Template Personalization Engine & Spam Preflight (0/1 plans)
 - [ ] Phase 4: Resilient Queue & Pacing Dispatcher (0/1 plans)
 - [ ] Phase 5: A/B Testing Studio (0/1 plans)

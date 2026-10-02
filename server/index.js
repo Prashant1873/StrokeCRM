@@ -1,14 +1,22 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const multer = require('multer');
 const db = require('./db');
 const authService = require('./authService');
+const leadService = require('./leadService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Multer memory storage for in-memory file parsing
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 } // 15MB max
+});
+
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Health Check
 app.get('/api/health', (req, res) => {
@@ -63,7 +71,6 @@ app.get('/api/auth/status', (req, res) => {
     if (!account) {
       return res.json({ connected: false });
     }
-    // Return safe object without exposing raw app password
     res.json({
       connected: true,
       account: {
@@ -86,7 +93,6 @@ app.post('/api/auth/test-smtp', async (req, res) => {
   if (!email || !app_password) {
     return res.status(400).json({ success: false, message: 'Email and App Password are required.' });
   }
-
   const result = await authService.testSmtpConnection(email, app_password);
   res.json(result);
 });
@@ -96,7 +102,6 @@ app.post('/api/auth/test-oauth', async (req, res) => {
   if (!client_id || !client_secret || !refresh_token) {
     return res.status(400).json({ success: false, message: 'Client ID, Secret, and Refresh Token are required.' });
   }
-
   const result = await authService.testOAuthConnection(client_id, client_secret, refresh_token);
   res.json(result);
 });
@@ -104,14 +109,11 @@ app.post('/api/auth/test-oauth', async (req, res) => {
 app.post('/api/auth/save', async (req, res) => {
   try {
     const { type, email, app_password, oauth_client_id, oauth_client_secret, oauth_refresh_token } = req.body;
-
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email address is required.' });
     }
 
     let verified = false;
-    let verificationMessage = '';
-
     if (type === 'app_password') {
       if (!app_password) {
         return res.status(400).json({ success: false, message: 'App Password is required.' });
@@ -121,14 +123,12 @@ app.post('/api/auth/save', async (req, res) => {
         return res.status(400).json({ success: false, message: testRes.message });
       }
       verified = true;
-      verificationMessage = testRes.message;
     } else if (type === 'oauth2') {
       const testRes = await authService.testOAuthConnection(oauth_client_id, oauth_client_secret, oauth_refresh_token);
       if (!testRes.success) {
         return res.status(400).json({ success: false, message: testRes.message });
       }
       verified = true;
-      verificationMessage = testRes.message;
     }
 
     const saved = authService.saveAccount({
@@ -164,6 +164,86 @@ app.post('/api/auth/disconnect', (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// ==========================================
+// Lead Ingestion Endpoints (Phase 2)
+// ==========================================
+
+// Parse uploaded file without saving yet (Preview step)
+app.post('/api/leads/parse', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No spreadsheet file uploaded.' });
+    }
+
+    const parsed = leadService.parseSpreadsheet(req.file.buffer, req.file.originalname);
+    res.json({ success: true, data: parsed });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// Import parsed rows into a campaign list
+app.post('/api/leads/import', (req, res) => {
+  try {
+    const { campaignName, rows, fieldMapping } = req.body;
+
+    if (!campaignName || !campaignName.trim()) {
+      return res.status(400).json({ success: false, message: 'Campaign name is required.' });
+    }
+    if (!rows || !Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'Rows array is required.' });
+    }
+    if (!fieldMapping || !fieldMapping.email) {
+      return res.status(400).json({ success: false, message: 'Email column must be selected.' });
+    }
+
+    const result = leadService.importLeadsIntoCampaign(campaignName.trim(), rows, fieldMapping);
+    res.json({ success: true, ...result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get leads / contacts list
+app.get('/api/leads', (req, res) => {
+  try {
+    const { campaignId, limit = 100, offset = 0 } = req.query;
+    const contacts = leadService.getContacts(
+      campaignId ? Number(campaignId) : null,
+      Number(limit),
+      Number(offset)
+    );
+    const totalCount = db.prepare('SELECT COUNT(*) as count FROM contacts').get().count;
+    res.json({ contacts, totalCount });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Clear all contacts
+app.post('/api/leads/clear', (req, res) => {
+  try {
+    const result = leadService.clearAllContacts();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Generate ready-to-test sample CSV
+app.get('/api/leads/sample-csv', (req, res) => {
+  const sampleCsv = `FirstName,LastName,Email,Company,Role,Industry,City
+Sarah,Connor,sarah.connor@cyberdyne-ai.io,Cyberdyne Systems,Head of AI,Robotics,San Francisco
+Alex,Mercer,alex.mercer@apexcloud.co,Apex Cloud,CTO,Cloud Infrastructure,Austin
+Maya,Lin,maya@finscale.org,FinScale,Founder & CEO,Fintech,New York
+David,Kim,david.kim@nexushealth.tech,Nexus Health,VP Engineering,Healthtech,Boston
+Elena,Rostova,elena.r@quantumflow.dev,QuantumFlow,Lead Architect,Developer Tools,Seattle`;
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="strokecrm_sample_leads.csv"');
+  res.status(200).send(sampleCsv);
 });
 
 app.listen(PORT, () => {
