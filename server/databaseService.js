@@ -361,7 +361,7 @@ function attachDatabaseToCampaign(databaseId, campaignId) {
   return {
     success: true,
     message: `Database "${database.name}" successfully attached to campaign "${campaign.name}".`,
-    totalContacts: recordCount
+    totalContacts: stats.total || 0
   };
 }
 
