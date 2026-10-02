@@ -14,6 +14,9 @@ data/*.db-shm
 *.sqlite
 *.sqlite3
 
+# Imported lead sheets stay on this machine
+data/databases/
+
 # Environment & Logs
 .env
 *.log
