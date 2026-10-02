@@ -968,9 +968,10 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                       </p>
                     </div>
                     <div className="bg-slate-950/80 border border-slate-800/80 rounded-lg p-2 max-h-20 overflow-y-auto">
-                      <p className="text-[11px] text-slate-300 whitespace-pre-wrap line-clamp-3 font-sans">
-                        {selectedCampaign.body_a || 'No email body text configured yet.'}
-                      </p>
+                      <div
+                        className="text-[11px] text-slate-300 whitespace-pre-wrap line-clamp-3 font-sans [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+                        dangerouslySetInnerHTML={{ __html: selectedCampaign.body_a || 'No email body text configured yet.' }}
+                      />
                     </div>
                   </div>
                 ) : (

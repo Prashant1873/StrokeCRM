@@ -416,6 +416,19 @@ app.post('/api/templates/:id/duplicate', (req, res) => {
   }
 });
 
+// Store template attachment files; template save persists the returned metadata
+const attachmentUpload = multer({
+  dest: templateService.ATTACHMENTS_DIR,
+  limits: { fileSize: 20 * 1024 * 1024 }
+});
+app.post('/api/attachments', attachmentUpload.array('files'), (req, res) => {
+  res.json((req.files || []).map(f => ({
+    name: Buffer.from(f.originalname, 'latin1').toString('utf8'),
+    file: f.filename,
+    size: f.size
+  })));
+});
+
 // Run real-time spam analysis on subject and body
 app.post('/api/templates/spam-check', (req, res) => {
   const { subject, body } = req.body;

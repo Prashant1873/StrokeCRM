@@ -155,6 +155,10 @@ try {
   if (!campaignColumns.includes('bcc_addresses')) {
     db.exec("ALTER TABLE campaigns ADD COLUMN bcc_addresses TEXT DEFAULT ''");
   }
+  const templateColumns = db.prepare("PRAGMA table_info(templates)").all().map(c => c.name);
+  if (!templateColumns.includes('attachments')) {
+    db.exec("ALTER TABLE templates ADD COLUMN attachments TEXT DEFAULT '[]'"); // JSON [{ name, file, size }]
+  }
 } catch (e) {
   console.warn('Column migration notice:', e.message);
 }

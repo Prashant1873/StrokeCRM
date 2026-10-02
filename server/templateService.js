@@ -1,6 +1,11 @@
 /**
  * Template Personalization & Spam Analysis Service
  */
+const path = require('path');
+const fs = require('fs');
+
+const ATTACHMENTS_DIR = path.resolve(__dirname, '../data/attachments');
+fs.mkdirSync(ATTACHMENTS_DIR, { recursive: true });
 
 // Curated comprehensive list of cold outreach spam trigger keywords
 const SPAM_KEYWORDS = [
@@ -103,10 +108,44 @@ function extractVariables(templateStr) {
   return Array.from(matches);
 }
 
+const isHtml = (str) => /<[a-z][\s\S]*>/i.test(str || '');
+
+/**
+ * Plain-text copy of an HTML body (for the text/plain part and spam scanning)
+ */
+function htmlToText(html) {
+  if (!isHtml(html)) return html || '';
+  return html
+    .replace(/<li[^>]*>/gi, '\n- ')
+    .replace(/<a\s[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '$2 ($1)')
+    .replace(/<br\s*\/?>|<\/(p|div|ul|ol|h\d)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
+ * Nodemailer attachment list for a template's stored files
+ */
+function getMailAttachments(templateId) {
+  if (!templateId) return [];
+  const template = getTemplateById(templateId);
+  return JSON.parse(template?.attachments || '[]').map(a => ({
+    filename: a.name,
+    path: path.join(ATTACHMENTS_DIR, path.basename(a.file))
+  }));
+}
+
 /**
  * Analyzes subject line and body for spam trigger words, all-caps, and excessive punctuation
  */
 function checkSpam(subject = '', body = '') {
+  body = htmlToText(body);
   const combinedText = `${subject} ${body}`.toLowerCase();
   const flagged = [];
   let score = 0; // 0 (clean) to 100 (high risk)
@@ -184,12 +223,12 @@ function getTemplateById(id) {
   return db.prepare('SELECT * FROM templates WHERE id = ?').get(id);
 }
 
-function createTemplate({ name, subject_a, body_a, subject_b = '', body_b = '', is_ab_test = 0 }) {
+function createTemplate({ name, subject_a, body_a, subject_b = '', body_b = '', is_ab_test = 0, attachments = [] }) {
   const db = require('./db');
   const now = new Date().toISOString();
   const info = db.prepare(`
-    INSERT INTO templates (name, subject_a, body_a, subject_b, body_b, is_ab_test, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO templates (name, subject_a, body_a, subject_b, body_b, is_ab_test, attachments, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     name || 'Untitled Template',
     subject_a || '',
@@ -197,18 +236,19 @@ function createTemplate({ name, subject_a, body_a, subject_b = '', body_b = '', 
     subject_b || '',
     body_b || '',
     is_ab_test ? 1 : 0,
+    JSON.stringify(attachments),
     now,
     now
   );
   return getTemplateById(info.lastInsertRowid);
 }
 
-function updateTemplate(id, { name, subject_a, body_a, subject_b = '', body_b = '', is_ab_test = 0 }) {
+function updateTemplate(id, { name, subject_a, body_a, subject_b = '', body_b = '', is_ab_test = 0, attachments = [] }) {
   const db = require('./db');
   const now = new Date().toISOString();
   db.prepare(`
     UPDATE templates 
-    SET name = ?, subject_a = ?, body_a = ?, subject_b = ?, body_b = ?, is_ab_test = ?, updated_at = ?
+    SET name = ?, subject_a = ?, body_a = ?, subject_b = ?, body_b = ?, is_ab_test = ?, attachments = ?, updated_at = ?
     WHERE id = ?
   `).run(
     name || 'Untitled Template',
@@ -217,6 +257,7 @@ function updateTemplate(id, { name, subject_a, body_a, subject_b = '', body_b = 
     subject_b || '',
     body_b || '',
     is_ab_test ? 1 : 0,
+    JSON.stringify(attachments),
     now,
     id
   );
@@ -266,8 +307,8 @@ function duplicateTemplate(id) {
   const newName = `${original.name} (Copy)`;
 
   const result = db.prepare(`
-    INSERT INTO templates (name, subject_a, body_a, subject_b, body_b, is_ab_test, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO templates (name, subject_a, body_a, subject_b, body_b, is_ab_test, attachments, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     newName,
     original.subject_a || '',
@@ -275,6 +316,7 @@ function duplicateTemplate(id) {
     original.subject_b || '',
     original.body_b || '',
     original.is_ab_test ? 1 : 0,
+    original.attachments || '[]',
     now,
     now
   );
@@ -286,6 +328,10 @@ module.exports = {
   interpolate,
   extractVariables,
   checkSpam,
+  htmlToText,
+  isHtml,
+  getMailAttachments,
+  ATTACHMENTS_DIR,
   SPAM_KEYWORDS,
   getTemplates,
   getTemplateById,

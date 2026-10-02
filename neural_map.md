@@ -76,6 +76,7 @@ flowchart TD
 - **Input**: `.xlsx`, `.xls`, `.csv` uploads with arbitrary column names.
 - **Normalization**: Column detection (e.g. Email, First Name, Company).
 - **Template Interpolation**: Replaces `{{variable}}` with row values; supports fallback defaults (e.g. `{{FirstName | "there"}}`).
+- **Rich Body & Attachments**: Template body is HTML from a contentEditable editor (legacy plain text auto-converted). Dispatch sends `html` + `htmlToText` plain copy. Template `attachments` (JSON metadata, files in `data/attachments/`) are read live via `campaign.template_id` at send time.
 
 ### 2. Campaign & Dispatch Queue Engine
 - **State Machine**: Contacts transition through `UNPROCESSED` -> `QUEUED` -> `SENDING` -> `SENT` -> `FAILED` / `REPLIED` / `UNSUBSCRIBED`.

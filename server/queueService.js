@@ -154,12 +154,15 @@ async function dispatchSingleEmail(account, contact, campaign) {
     from: account.email,
     to: contact.email,
     subject: renderedSubject,
-    text: renderedBody,
+    text: templateService.htmlToText(renderedBody),
+    attachments: templateService.getMailAttachments(campaign.template_id),
     headers: {
       'X-Mailer': 'StrokeCRM Outreach Engine',
       'X-Campaign-ID': String(campaign.id)
     }
   };
+
+  if (templateService.isHtml(renderedBody)) mailOptions.html = renderedBody;
 
   const copied = ccBccForRecipient(campaign, contact.email);
   if (copied.cc) mailOptions.cc = copied.cc;

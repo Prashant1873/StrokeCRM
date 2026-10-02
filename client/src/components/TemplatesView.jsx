@@ -21,8 +21,35 @@ import {
   Trash2,
   RefreshCw,
   Edit3,
-  X
+  X,
+  Bold,
+  Italic,
+  Underline,
+  List,
+  ListOrdered,
+  Link,
+  RemoveFormatting,
+  Paperclip
 } from 'lucide-react';
+
+const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+
+// Legacy plain-text bodies → HTML so line breaks survive in the rich editor
+const toHtml = (text = '') => /<[a-z][\s\S]*>/i.test(text)
+  ? text
+  : text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+
+const RICH_TEXT_CLASSES = '[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-violet-400 [&_a]:underline';
+
+const FORMAT_BUTTONS = [
+  { cmd: 'bold', icon: Bold, title: 'Bold (Ctrl+B)' },
+  { cmd: 'italic', icon: Italic, title: 'Italic (Ctrl+I)' },
+  { cmd: 'underline', icon: Underline, title: 'Underline (Ctrl+U)' },
+  { cmd: 'insertUnorderedList', icon: List, title: 'Bullet list' },
+  { cmd: 'insertOrderedList', icon: ListOrdered, title: 'Numbered list' },
+  { cmd: 'createLink', icon: Link, title: 'Insert link' },
+  { cmd: 'removeFormat', icon: RemoveFormatting, title: 'Clear formatting' }
+];
 
 // ── TEMPLATES LIBRARY ────────────────────────────────────────────────────────
 function TemplatesLibrary({ navigate }) {
@@ -177,9 +204,10 @@ function TemplatesLibrary({ navigate }) {
               {/* Body preview */}
               {t.body_a && (
                 <div className="bg-slate-950/80 border border-slate-800/80 rounded-lg p-2.5 flex-1">
-                  <p className="text-[11px] text-slate-400 line-clamp-3 font-sans whitespace-pre-wrap">
-                    {t.body_a}
-                  </p>
+                  <div
+                    className={`text-[11px] text-slate-400 line-clamp-3 font-sans ${RICH_TEXT_CLASSES}`}
+                    dangerouslySetInnerHTML={{ __html: toHtml(t.body_a) }}
+                  />
                 </div>
               )}
 
@@ -237,7 +265,9 @@ function TemplateComposer({ templateId, navigate }) {
   // Template Form State
   const [templateName, setTemplateName] = useState(isNew ? 'New Template' : '');
   const [subject, setSubject] = useState(isNew ? 'Quick question regarding {{Company | "your company"}}' : '');
-  const [body, setBody] = useState(isNew ? `Hi {{FirstName | "there"}},\n\nSaw your team's recent work at {{Company}} in {{City | "your area"}}. I wanted to reach out because we built a tool specifically designed to help founders and outreach teams streamline cold email without expensive recurring fees.\n\nWould you be open to a 5-minute chat next Tuesday to see if this could save your team time?\n\nBest regards,\nFounder` : '');
+  const [body, setBody] = useState(isNew ? toHtml(`Hi {{FirstName | "there"}},\n\nSaw your team's recent work at {{Company}} in {{City | "your area"}}. I wanted to reach out because we built a tool specifically designed to help founders and outreach teams streamline cold email without expensive recurring fees.\n\nWould you be open to a 5-minute chat next Tuesday to see if this could save your team time?\n\nBest regards,\nFounder`) : '');
+  const [attachments, setAttachments] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [loadedTemplate, setLoadedTemplate] = useState(null);
   const [loadError, setLoadError] = useState(null);
 
@@ -264,10 +294,16 @@ function TemplateComposer({ templateId, navigate }) {
         setLoadedTemplate(data);
         setTemplateName(data.name || '');
         setSubject(data.subject_a || '');
-        setBody(data.body_a || '');
+        setBody(toHtml(data.body_a || ''));
+        setAttachments(JSON.parse(data.attachments || '[]'));
       })
       .catch(err => setLoadError(err.message));
   }, [templateId]);
+
+  // Push external body changes (load, defaults) into the editor; typing already matches, so caret is untouched
+  useEffect(() => {
+    if (bodyRef.current && bodyRef.current.innerHTML !== body) bodyRef.current.innerHTML = body;
+  }, [body]);
 
   // Load databases for preview variables
   useEffect(() => {
@@ -330,15 +366,57 @@ function TemplateComposer({ templateId, navigate }) {
       }
     } else {
       const el = bodyRef.current;
-      if (el) {
-        const start = el.selectionStart || 0;
-        const end = el.selectionEnd || 0;
-        const updated = body.substring(0, start) + token + body.substring(end);
-        setBody(updated);
-        setTimeout(() => { el.focus(); el.setSelectionRange(start + token.length, start + token.length); }, 10);
-      } else {
-        setBody(prev => prev + ' ' + token);
+      if (!el) return;
+      const sel = window.getSelection();
+      const caret = sel.rangeCount && el.contains(sel.anchorNode) ? sel.getRangeAt(0) : null;
+      el.focus();
+      const range = caret || document.createRange();
+      if (!caret) {
+        range.selectNodeContents(el);
+        range.collapse(false);
       }
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand('insertText', false, token);
+    }
+  };
+
+  const handleFormat = (cmd) => {
+    let arg;
+    if (cmd === 'createLink') {
+      const sel = window.getSelection();
+      const range = sel.rangeCount ? sel.getRangeAt(0) : null;
+      arg = prompt('Link URL', 'https://');
+      if (!arg || !range) return;
+      bodyRef.current.focus();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    document.execCommand(cmd, false, arg);
+    setBody(bodyRef.current.innerHTML);
+  };
+
+  const handleAttach = async (e) => {
+    const files = [...e.target.files];
+    e.target.value = '';
+    if (!files.length) return;
+    const total = [...attachments, ...files].reduce((sum, f) => sum + f.size, 0);
+    if (total > MAX_ATTACHMENT_BYTES) {
+      setSaveStatus({ type: 'error', text: 'Attachments exceed 20 MB total.' });
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const form = new FormData();
+      files.forEach(f => form.append('files', f));
+      const res = await fetch('/api/attachments', { method: 'POST', body: form });
+      if (!res.ok) throw new Error('Attachment upload failed.');
+      const added = await res.json();
+      setAttachments(prev => [...prev, ...added]);
+    } catch (err) {
+      setSaveStatus({ type: 'error', text: err.message });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -355,7 +433,7 @@ function TemplateComposer({ templateId, navigate }) {
         res = await fetch('/api/templates', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: templateName.trim(), subject_a: subject, body_a: body, is_ab_test: 0 })
+          body: JSON.stringify({ name: templateName.trim(), subject_a: subject, body_a: body, is_ab_test: 0, attachments })
         });
         data = await res.json();
         if (data.success && data.template?.id) {
@@ -368,7 +446,7 @@ function TemplateComposer({ templateId, navigate }) {
         res = await fetch(`/api/templates/${templateId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: templateName.trim(), subject_a: subject, body_a: body, is_ab_test: loadedTemplate?.is_ab_test || 0 })
+          body: JSON.stringify({ name: templateName.trim(), subject_a: subject, body_a: body, is_ab_test: loadedTemplate?.is_ab_test || 0, attachments })
         });
         data = await res.json();
         if (data.success) {
@@ -494,15 +572,66 @@ function TemplateComposer({ templateId, navigate }) {
             <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5 text-violet-400" /> Email Body
             </label>
-            <textarea
+            <div className="flex items-center gap-0.5 p-1 bg-slate-950 border border-slate-800 rounded-lg w-fit">
+              {FORMAT_BUTTONS.map(({ cmd, icon: Icon, title }) => (
+                <button
+                  key={cmd}
+                  type="button"
+                  title={title}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleFormat(cmd)}
+                  className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                </button>
+              ))}
+            </div>
+            <div
               ref={bodyRef}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={(e) => setBody(e.currentTarget.innerHTML)}
               onFocus={() => setActiveInput('body')}
-              rows={12}
-              placeholder="Hi {{FirstName}},&#10;&#10;..."
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-violet-500 font-mono resize-none transition-colors"
+              data-placeholder="Hi {{FirstName}}, ..."
+              className={`w-full min-h-[18rem] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-violet-500 font-sans transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-slate-600 ${RICH_TEXT_CLASSES}`}
             />
+          </div>
+
+          {/* Attachments */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Paperclip className="w-3.5 h-3.5 text-violet-400" /> Attachments
+              </span>
+              <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600/20 hover:bg-violet-600 text-violet-300 hover:text-white text-[11px] font-semibold border border-violet-500/20 transition-all cursor-pointer ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                {isUploading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                {isUploading ? 'Uploading…' : 'Add Files'}
+                <input type="file" multiple className="hidden" onChange={handleAttach} />
+              </label>
+            </div>
+            {attachments.length > 0 && (
+              <ul className="space-y-1.5">
+                {attachments.map((a, i) => (
+                  <li key={a.file} className="flex items-center justify-between gap-2 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-[11px]">
+                    <span className="truncate text-slate-300">{a.name}</span>
+                    <span className="flex items-center gap-2 shrink-0 text-slate-500">
+                      {(a.size / 1024 / 1024).toFixed(2)} MB
+                      <button
+                        type="button"
+                        title="Remove"
+                        onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))}
+                        className="text-slate-500 hover:text-rose-400"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-[10px] text-slate-600">
+              Sent with every email of campaigns using this template. Max 20 MB total. Changes apply after saving.
+            </p>
           </div>
 
           {/* Variable Palette */}
@@ -526,6 +655,7 @@ function TemplateComposer({ templateId, navigate }) {
                 <button
                   key={v}
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleInsertVariable(v)}
                   className="px-2.5 py-1 rounded-full text-[11px] font-mono bg-violet-500/10 text-violet-300 border border-violet-500/20 hover:bg-violet-500/20 hover:text-white transition-all cursor-pointer"
                 >
@@ -629,9 +759,19 @@ function TemplateComposer({ templateId, navigate }) {
               <p className="text-[11px] text-slate-500 font-mono">To: {activeLeadFields.email}</p>
               <p className="text-[11px] font-semibold text-white">{renderedSubject || <span className="text-slate-600">(no subject)</span>}</p>
               <hr className="border-slate-800" />
-              <p className="text-[11px] text-slate-300 whitespace-pre-wrap font-sans leading-relaxed">
-                {renderedBody || <span className="text-slate-600">(body is empty)</span>}
-              </p>
+              {renderedBody ? (
+                <div
+                  className={`text-[11px] text-slate-300 font-sans leading-relaxed ${RICH_TEXT_CLASSES}`}
+                  dangerouslySetInnerHTML={{ __html: renderedBody }}
+                />
+              ) : (
+                <p className="text-[11px] text-slate-600">(body is empty)</p>
+              )}
+              {attachments.length > 0 && (
+                <p className="text-[10px] text-slate-500 flex items-center gap-1 pt-1 border-t border-slate-800">
+                  <Paperclip className="w-3 h-3" /> {attachments.map(a => a.name).join(', ')}
+                </p>
+              )}
             </div>
 
             <p className="text-[10px] text-slate-600">
