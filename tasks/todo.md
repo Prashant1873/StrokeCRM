@@ -76,27 +76,27 @@
 
 ## Phase 4: Resilient Queue & Pacing Dispatcher
 
-- [ ] **Task 4.1**: Build SQLite persistent dispatch queue worker with jitter pacing
+- [x] **Task 4.1**: Build SQLite persistent dispatch queue worker with jitter pacing
   - *Acceptance Criteria*:
     - Queue worker selects next pending recipient, waits randomized delay between `minDelay` and `maxDelay` seconds, and sends via Gmail.
     - Atomically updates record to `SENT` or `FAILED` with timestamp and error message.
     - Respects daily send cap (stops if cap reached for the calendar day).
   - *Verification*: Queue processes 3 test emails with configured 5-second interval and updates DB states.
 
-- [ ] **Task 4.2**: Build Campaign Dispatch Controller (Start, Pause, Resume, Stop)
+- [x] **Task 4.2**: Build Campaign Dispatch Controller (Start, Pause, Resume, Stop)
   - *Acceptance Criteria*:
     - API endpoints `/api/campaigns/:id/start`, `/pause`, `/resume`, `/stop`.
     - Survives server restart: in-flight queue can be resumed without resending to already `SENT` contacts.
   - *Verification*: Pause campaign mid-run, resume, verify no duplicate sends occur.
 
-- [ ] **Task 4.3**: Implement Campaign Execution UI
+- [x] **Task 4.3**: Implement Campaign Execution UI
   - *Acceptance Criteria*:
     - Controls for Start, Pause, Stop.
     - Live progress bar (Sent / Total), countdown timer to next send, and live log stream.
   - *Verification*: Launch campaign and observe real-time progress updates and status badges.
 
 ## Checkpoint 4: Live Outbound Dispatch
-- [ ] Safe, paced email sending directly through user's Gmail with pause/resume resilience.
+- [x] Safe, paced email sending directly through user's Gmail with pause/resume resilience.
 
 ---
 

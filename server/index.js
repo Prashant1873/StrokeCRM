@@ -6,6 +6,7 @@ const db = require('./db');
 const authService = require('./authService');
 const leadService = require('./leadService');
 const templateService = require('./templateService');
+const queueService = require('./queueService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -360,10 +361,70 @@ app.post('/api/campaigns/:id/template', (req, res) => {
       new Date().toISOString(),
       req.params.id
     );
-
     res.json({ success: true, message: 'Template saved to campaign successfully.' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==========================================
+// Campaign Dispatch & Queue Endpoints (Phase 4)
+// ==========================================
+
+// Start campaign dispatch
+app.post('/api/campaigns/:id/start', (req, res) => {
+  try {
+    const result = queueService.startCampaign(req.params.id);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// Pause campaign dispatch
+app.post('/api/campaigns/:id/pause', (req, res) => {
+  try {
+    const result = queueService.pauseCampaign(req.params.id);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// Stop campaign dispatch
+app.post('/api/campaigns/:id/stop', (req, res) => {
+  try {
+    const result = queueService.stopCampaign(req.params.id);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// Get campaign queue status & live logs
+app.get('/api/campaigns/:id/status', (req, res) => {
+  try {
+    const status = queueService.getCampaignQueueStatus(req.params.id);
+    if (!status) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Send a single test email preview
+app.post('/api/campaigns/:id/test-send', async (req, res) => {
+  try {
+    const { testRecipient } = req.body;
+    if (!testRecipient) {
+      return res.status(400).json({ success: false, message: 'Test recipient email is required.' });
+    }
+    const result = await queueService.sendTestEmail(req.params.id, testRecipient);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
   }
 });
 
