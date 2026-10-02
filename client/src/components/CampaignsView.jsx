@@ -76,6 +76,10 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
   const [selectedAttachDbId, setSelectedAttachDbId] = useState('');
   const [isAttachingDb, setIsAttachingDb] = useState(false);
 
+  // Attach template dropdown state
+  const [selectedAttachTmplId, setSelectedAttachTmplId] = useState('');
+  const [isAttachingTmpl, setIsAttachingTmpl] = useState(false);
+
   // Test email modal state
   const [showTestModal, setShowTestModal] = useState(false);
   const [testRecipient, setTestRecipient] = useState('');
@@ -258,6 +262,31 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
       } finally {
         setActionLoading(false);
       }
+    }
+  };
+
+  const handleAttachTemplate = async () => {
+    if (!selectedAttachTmplId || !selectedCampaignId) return;
+    setIsAttachingTmpl(true);
+    try {
+      const res = await fetch(`/api/campaigns/${selectedCampaignId}/attach-template`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId: Number(selectedAttachTmplId) })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFeedback({ type: 'success', message: data.message });
+        setSelectedAttachTmplId('');
+        await fetchCampaigns();
+        await fetchMetadata();
+      } else {
+        setFeedback({ type: 'error', message: data.message });
+      }
+    } catch (err) {
+      setFeedback({ type: 'error', message: 'Attach error: ' + err.message });
+    } finally {
+      setIsAttachingTmpl(false);
     }
   };
 
@@ -880,37 +909,85 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                     </div>
                     <span className="text-xs font-bold text-white uppercase tracking-wider">2. Attached Template</span>
                   </div>
-                  <span className="text-[10px] font-semibold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
-                    {selectedCampaign.is_ab_test ? 'A/B Split' : 'Single'}
-                  </span>
+                  {selectedCampaign.template_id ? (
+                    <span className="text-[10px] font-semibold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
+                      {selectedCampaign.is_ab_test ? 'A/B Split' : 'Single'}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                      Unattached
+                    </span>
+                  )}
                 </div>
 
-                <div className="space-y-2">
-                  <div>
-                    <h4 className="text-sm font-semibold text-white truncate">
-                      {selectedCampaign.template_name || 'Campaign Template'}
-                    </h4>
-                    <p className="text-[11px] text-slate-400 font-mono truncate">
-                      Subject: "{selectedCampaign.subject_a || '(No subject set)'}"
-                    </p>
+                {selectedCampaign.template_id ? (
+                  <div className="space-y-2">
+                    <div>
+                      <h4 className="text-sm font-semibold text-white truncate">
+                        {selectedCampaign.template_name || 'Campaign Template'}
+                      </h4>
+                      <p className="text-[11px] text-slate-400 font-mono truncate">
+                        Subject: "{selectedCampaign.subject_a || '(No subject set)'}"
+                      </p>
+                    </div>
+                    <div className="bg-slate-950/80 border border-slate-800/80 rounded-lg p-2 max-h-20 overflow-y-auto">
+                      <p className="text-[11px] text-slate-300 whitespace-pre-wrap line-clamp-3 font-sans">
+                        {selectedCampaign.body_a || 'No email body text configured yet.'}
+                      </p>
+                    </div>
                   </div>
-
-                  <div className="bg-slate-950/80 border border-slate-800/80 rounded-lg p-2 max-h-20 overflow-y-auto">
-                    <p className="text-[11px] text-slate-300 whitespace-pre-wrap line-clamp-3 font-sans">
-                      {selectedCampaign.body_a || 'No email body text configured yet.'}
+                ) : (
+                  <div className="space-y-3 pt-1">
+                    <p className="text-xs text-amber-300/80">
+                      Attach an email template to define the message sent to contacts.
                     </p>
+                    <div className="flex flex-col gap-2">
+                      <select
+                        value={selectedAttachTmplId}
+                        onChange={(e) => setSelectedAttachTmplId(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-violet-500"
+                      >
+                        <option value="">-- Select Template --</option>
+                        {templates.map(t => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleAttachTemplate}
+                          disabled={!selectedAttachTmplId || isAttachingTmpl}
+                          className="flex-1 py-1 px-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
+                        >
+                          {isAttachingTmpl ? 'Attaching...' : 'Attach Template'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => navigate && navigate('#/templates/new')}
+                          className="py-1 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors"
+                          title="Create a new template"
+                        >
+                          + New
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="pt-3 border-t border-slate-800/80 mt-3 flex items-center justify-between">
-                <span className="text-[10px] text-slate-500">Spam Check Ready</span>
+                <span className="text-[10px] text-slate-500">
+                  {selectedCampaign.template_id ? 'Spam Check Ready' : 'Template required to dispatch'}
+                </span>
                 <button
                   type="button"
-                  onClick={() => navigate ? navigate('#/templates') : null}
+                  onClick={() => navigate && navigate(
+                    selectedCampaign.template_id ? `#/templates/${selectedCampaign.template_id}` : '#/templates'
+                  )}
                   className="text-[11px] text-violet-400 hover:text-violet-300 flex items-center gap-1"
                 >
-                  Edit in Templates <ArrowRight className="w-3 h-3" />
+                  {selectedCampaign.template_id ? 'Edit Template' : 'Browse Templates'}
+                  <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
             </div>
