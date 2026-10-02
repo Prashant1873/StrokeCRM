@@ -568,6 +568,159 @@ app.post('/api/campaigns/:id/ab-save', (req, res) => {
   }
 });
 
+// ==========================================
+// Day-Wise Analytics & Audit Endpoints (Phase 6)
+// ==========================================
+
+// Overview high-level stats
+app.get('/api/analytics/overview', (req, res) => {
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // Settings
+    const settingsRows = db.prepare('SELECT key, value FROM settings').all();
+    const settings = {};
+    settingsRows.forEach(r => { settings[r.key] = r.value; });
+
+    const quotaType = settings.gmail_quota_type || 'personal';
+    const hardLimit = quotaType === 'personal' ? 500 : 2000;
+    const dailyCap = Number(settings.daily_limit || 100);
+
+    // Lifetime metrics
+    const lifetime = db.prepare(`
+      SELECT 
+        COUNT(*) as totalAttempted,
+        SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as lifetimeSent,
+        SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as lifetimeFailed
+      FROM email_logs
+    `).get();
+
+    // Today metrics
+    const todayStats = db.prepare(`
+      SELECT 
+        SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sentToday,
+        SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failedToday
+      FROM email_logs
+      WHERE sent_date = ?
+    `).get(todayStr);
+
+    const sentToday = todayStats.sentToday || 0;
+    const failedToday = todayStats.failedToday || 0;
+
+    // Contact counts
+    const totalLeads = db.prepare('SELECT COUNT(*) as count FROM contacts').get().count;
+    const pendingLeads = db.prepare("SELECT COUNT(*) as count FROM contacts WHERE status = 'PENDING'").get().count;
+    const activeCampaigns = db.prepare("SELECT COUNT(*) as count FROM campaigns WHERE status = 'RUNNING'").get().count;
+
+    const lifetimeSent = lifetime.lifetimeSent || 0;
+    const lifetimeFailed = lifetime.lifetimeFailed || 0;
+    const deliveryRate = (lifetimeSent + lifetimeFailed) > 0 
+      ? Math.round((lifetimeSent / (lifetimeSent + lifetimeFailed)) * 100) 
+      : 100;
+
+    res.json({
+      sentToday,
+      failedToday,
+      dailyCap,
+      hardLimit,
+      remainingToday: Math.max(0, dailyCap - sentToday),
+      lifetimeSent,
+      lifetimeFailed,
+      deliveryRate,
+      totalLeads,
+      pendingLeads,
+      activeCampaigns,
+      quotaType
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Day-wise metrics timeline (last 14 days)
+app.get('/api/analytics/daily', (req, res) => {
+  try {
+    const rawLogs = db.prepare(`
+      SELECT 
+        sent_date as date,
+        SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sent,
+        SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed
+      FROM email_logs
+      GROUP BY sent_date
+      ORDER BY sent_date ASC
+    `).all();
+
+    const logsMap = new Map();
+    rawLogs.forEach(r => logsMap.set(r.date, { sent: r.sent, failed: r.failed }));
+
+    // Generate continuous 14-day timeline window ending today
+    const timeline = [];
+    const now = new Date();
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      const entry = logsMap.get(dateStr) || { sent: 0, failed: 0 };
+      timeline.push({
+        date: dateStr,
+        day: dayLabel,
+        sent: entry.sent,
+        failed: entry.failed,
+        total: entry.sent + entry.failed
+      });
+    }
+
+    res.json(timeline);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Downloadable Audit CSV export
+app.get('/api/analytics/export', (req, res) => {
+  try {
+    const logs = db.prepare(`
+      SELECT 
+        l.id,
+        c.name as campaign_name,
+        l.recipient_email,
+        l.variant,
+        l.subject,
+        l.status,
+        l.error_message,
+        l.sent_at,
+        l.message_id
+      FROM email_logs l
+      LEFT JOIN campaigns c ON l.campaign_id = c.id
+      ORDER BY l.id DESC
+    `).all();
+
+    let csvContent = 'ID,Campaign,RecipientEmail,Variant,Subject,Status,ErrorMessage,SentAt,MessageID\n';
+    logs.forEach(log => {
+      const escape = (val) => `"${String(val || '').replace(/"/g, '""')}"`;
+      csvContent += [
+        log.id,
+        escape(log.campaign_name),
+        escape(log.recipient_email),
+        escape(log.variant),
+        escape(log.subject),
+        escape(log.status),
+        escape(log.error_message),
+        escape(log.sent_at),
+        escape(log.message_id)
+      ].join(',') + '\n';
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="strokecrm_outreach_audit.csv"');
+    res.status(200).send(csvContent);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`[StrokeCRM] Server running on http://localhost:${PORT}`);
 });

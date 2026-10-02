@@ -122,25 +122,25 @@
 
 ## Phase 6: Day-Wise Analytics Dashboard & Craft Polish
 
-- [ ] **Task 6.1**: Build day-wise send tracking engine & audit export
+- [x] **Task 6.1**: Build day-wise send tracking engine & audit export
   - *Acceptance Criteria*:
     - Endpoint `/api/analytics/daily` returns array of `{ date, sentCount, failedCount }`.
     - Endpoint `/api/analytics/export` generates downloadable CSV audit report.
     - Daily Gmail quota calculator (tracking 500 or 2,000 allowance).
   - *Verification*: Dispatch emails across simulated dates and verify aggregated daily stats and CSV output.
 
-- [ ] **Task 6.2**: Build Analytics Dashboard UI
+- [x] **Task 6.2**: Build Analytics Dashboard UI
   - *Acceptance Criteria*:
     - Day-wise bar/line chart displaying emails dispatched over time.
     - Daily Quota Gauge showing used vs remaining Gmail quota.
     - Recent activity feed and one-click "Export Audit CSV" button.
   - *Verification*: View dashboard and confirm charts render correctly with active campaign data.
 
-- [ ] **Task 6.3**: UI Craft Polish & Accessibility Review
+- [x] **Task 6.3**: UI Craft Polish & Accessibility Review
   - *Acceptance Criteria*:
     - Adheres to `frontend-skill` standards (no AI-purple generic slop, high-contrast dark/light theme, micro-animations, keyboard accessibility).
     - Smooth navigation tabs: Dashboard, Campaigns, Leads, Templates, A/B Testing, Settings.
   - *Verification*: Full keyboard tab navigation, zero layout shifts, clean optical rhythm.
 
 ## Checkpoint 6: Production Verification
-- [ ] End-to-end verification of entire StrokeCRM workflow from Gmail setup to lead dispatch and analytics tracking.
+- [x] End-to-end verification of entire StrokeCRM workflow from Gmail setup to lead dispatch and analytics tracking.

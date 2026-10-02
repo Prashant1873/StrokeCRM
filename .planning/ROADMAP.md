@@ -6,12 +6,12 @@ StrokeCRM will be built in 6 structured phases: from project foundation & dual G
 
 ## Phases
 
-- [ ] **Phase 1: Project Scaffolding & Dual Gmail Authentication Gateway** - Set up full-stack Node.js + Express + React (Vite) + SQLite project, implement App Password SMTP & OAuth2 connections, credential testing, and encrypted local storage.
-- [ ] **Phase 2: Lead Ingestion & Variable Header Mapping** - Upload `.xlsx`, `.xls`, `.csv` files, parse headers, auto-detect emails, and display preview table.
-- [ ] **Phase 3: Template Personalization Engine & Spam Preflight** - Variable interpolation (`{{FirstName}}`), fallback tokens, live per-row rendering preview, and spam buzzword scanner.
-- [ ] **Phase 4: Resilient Queue & Pacing Dispatcher** - SQLite queue state machine, randomized jitter, daily limit quota guard, working-hours scheduler, and pause/resume execution.
-- [ ] **Phase 5: A/B Testing Studio** - Variant A/B configuration (subject line/body), 50/50 cohort splitting, and comparative metrics page.
-- [ ] **Phase 6: Day-Wise Analytics Dashboard & Polish** - Comprehensive analytics dashboard with day-wise send charts, quota consumption gauges, live activity feed, exportable audit logs, and WCAG AA design polish.
+- [x] **Phase 1: Project Scaffolding & Dual Gmail Authentication Gateway** - Set up full-stack Node.js + Express + React (Vite) + SQLite project, implement App Password SMTP & OAuth2 connections, credential testing, and encrypted local storage.
+- [x] **Phase 2: Lead Ingestion & Variable Header Mapping** - Upload `.xlsx`, `.xls`, `.csv` files, parse headers, auto-detect emails, and display preview table.
+- [x] **Phase 3: Template Personalization Engine & Spam Preflight** - Variable interpolation (`{{FirstName}}`), fallback tokens, live per-row rendering preview, and spam buzzword scanner.
+- [x] **Phase 4: Resilient Queue & Pacing Dispatcher** - SQLite queue state machine, randomized jitter, daily limit quota guard, working-hours scheduler, and pause/resume execution.
+- [x] **Phase 5: A/B Testing Studio** - Variant A/B configuration (subject line/body), 50/50 cohort splitting, and comparative metrics page.
+- [x] **Phase 6: Day-Wise Analytics Dashboard & Polish** - Comprehensive analytics dashboard with day-wise send charts, quota consumption gauges, live activity feed, exportable audit logs, and WCAG AA design polish.
 
 ---
 
