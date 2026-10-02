@@ -1,0 +1,26 @@
+# Node & Dependencies
+node_modules/
+client/node_modules/
+.npm/
+
+# Build artifacts
+dist/
+client/dist/
+
+# SQLite databases & temp files
+data/*.db
+data/*.db-wal
+data/*.db-shm
+*.sqlite
+*.sqlite3
+
+# Environment & Logs
+.env
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS Files
+.DS_Store
+Thumbs.db

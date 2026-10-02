@@ -2,20 +2,20 @@
 
 ## Phase 1: Project Scaffolding & Dual Gmail Authentication Gateway
 
-- [ ] **Task 1.1**: Initialize project repository with Express backend, Vite React frontend, Tailwind CSS, and SQLite schema
+- [x] **Task 1.1**: Initialize project repository with Express backend, Vite React frontend, Tailwind CSS, and SQLite schema
   - *Acceptance Criteria*:
     - Root `package.json` with scripts to launch backend (`server/index.js`), frontend (`client`), or both concurrently.
     - SQLite database initialized in `data/strokecrm.db` with tables for settings, accounts, contacts, campaigns, email_logs.
   - *Verification*: `npm run dev` starts both server and client without errors.
 
-- [ ] **Task 1.2**: Implement dual Gmail auth services (App Password SMTP & OAuth2)
+- [x] **Task 1.2**: Implement dual Gmail auth services (App Password SMTP & OAuth2)
   - *Acceptance Criteria*:
     - Nodemailer SMTP verification endpoint `/api/auth/test-smtp` with Gmail App Password.
     - Google OAuth2 token exchange and verification endpoint `/api/auth/google`.
     - Secure SQLite persistence for sender credentials and configuration.
   - *Verification*: POST request to `/api/auth/test-smtp` with valid credentials returns `{ success: true }`.
 
-- [ ] **Task 1.3**: Build Settings & Gmail Connection UI
+- [x] **Task 1.3**: Build Settings & Gmail Connection UI
   - *Acceptance Criteria*:
     - UI page to configure Gmail App Password or OAuth2.
     - Interactive "Test Connection" button with instant feedback (success pill or specific diagnostic error).
@@ -23,8 +23,8 @@
   - *Verification*: User enters Gmail details, clicks "Test Connection", and sees verified status badge.
 
 ## Checkpoint 1: Auth & Foundation
-- [ ] Backend and frontend run concurrently
-- [ ] Gmail App Password SMTP verification verified end-to-end
+- [x] Backend and frontend run concurrently
+- [x] Gmail App Password SMTP verification verified end-to-end
 
 ---
 

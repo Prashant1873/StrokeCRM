@@ -1,0 +1,26 @@
+{
+  "name": "strokecrm",
+  "version": "1.0.0",
+  "description": "Free, self-hosted, private cold outreach platform & local CRM for Gmail",
+  "main": "server/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node server/index.js",
+    "client": "npm run dev --prefix client",
+    "build": "npm run build --prefix client"
+  },
+  "keywords": ["crm", "gmail", "cold-email", "outreach", "email-automation"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "concurrently": "^10.0.5",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1",
+    "googleapis": "^182.0.0",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.0.13",
+    "xlsx": "^0.18.5"
+  }
+}
