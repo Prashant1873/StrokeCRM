@@ -20,45 +20,22 @@
 - [x] Phase 8: Multi-Step Wizards & Contextual Preflight Option Controls (completed 2026-10-03)
 - [x] Phase 9: Frontend-Skill Polish, Apple Fluid Motion & WCAG 2.2 AA Hardening (completed 2026-10-03)
 
+See: `.planning/milestones/v1.0-ROADMAP.md`
+
 </details>
 
-## Milestone v2.0: Custom Domains & Automated Drips
+<details>
+<summary>✅ v2.0 Custom Domains & Automated Drips (Phases 10-12) — SHIPPED 2026-10-03</summary>
 
 - [x] **Phase 10: Custom Domain SMTP & IMAP Account Gateway** (completed 2026-10-03)
 - [x] **Phase 11: Multi-Step Drip Sequence Engine & Builder Studio** (completed 2026-10-03)
 - [x] **Phase 12: Inbound IMAP Reply Scanner, Sequence Disarm & Funnel Analytics** (completed 2026-10-03)
 
+See: `.planning/milestones/v2.0-ROADMAP.md`
+
+</details>
+
 ---
 
-## Phase Details
+*All milestones shipped. Next milestone will be initialized via `/gsd-new-milestone`.*
 
-### Phase 10: Custom Domain SMTP & IMAP Account Gateway
-**Goal**: Allow users to connect custom domain email addresses (e.g. `user@mycompany.com`, Zoho, Fastmail, Namecheap, Outlook 365) via standard SMTP and IMAP protocols with test connection validation.  
-**Depends on**: Phase 9  
-**Requirements**: [DOM-01, DOM-02, DOM-03]  
-**Success Criteria**:
-1. User can enter custom SMTP server credentials (host, port 465/587/25, SSL/TLS toggle, username, password) and receive instant connection verification test results.
-2. User can enter custom IMAP server credentials (host, port 993/143, SSL/TLS toggle, username, password) and receive instant connection verification test results.
-3. User can switch active sending provider between Gmail App Password, Gmail OAuth2, and Custom Domain SMTP in Settings and Campaign Preflight.
-4. Custom domain credentials persist securely in encrypted SQLite settings.
-
-### Phase 11: Multi-Step Drip Sequence Engine & Builder Studio
-**Goal**: Enable campaigns to schedule automated multi-step follow-up sequences (Step 1, Step 2 after N days, Step 3 after M days) with independent templates, organic conversation threading, and throttle-safe scheduled queue dispatch.  
-**Depends on**: Phase 10  
-**Requirements**: [DRIP-01, DRIP-02, DRIP-03, DRIP-04]  
-**Success Criteria**:
-1. User can define Step 1, Step 2, and Step 3 in the Campaign Cockpit with custom day/hour delay offsets.
-2. User can bind distinct subject and body templates to each step with dynamic header variable support.
-3. Follow-up emails sent as Step 2 or 3 preserve original `Message-ID` in `In-Reply-To` and `References` headers for organic in-thread replies.
-4. Queue engine evaluates `scheduled_at` timestamps and dispatches eligible follow-up steps respecting working hours and daily send caps.
-
-### Phase 12: Inbound IMAP Reply Scanner, Sequence Disarm & Funnel Analytics
-**Goal**: Automatically detect inbound replies from leads via IMAP, disarm subsequent follow-up steps for replied leads, filter out auto-responders, and display visual funnel metrics.  
-**Depends on**: Phase 11  
-**Requirements**: [REPLY-01, REPLY-02, REPLY-03, REPLY-04, DASH2-01, DASH2-02]  
-**Success Criteria**:
-1. Background IMAP poller (and manual "Scan Replies" button) detects incoming responses matching active campaign leads.
-2. Replying leads transition to `REPLIED` status, and all pending subsequent steps are atomically marked `CANCELLED_REPLIED`.
-3. Out-of-office and bounce auto-responders are filtered out via `Auto-Submitted` / `X-Autoreply` headers to prevent false halts.
-4. User can manually mark any lead as replied or cancel follow-ups with a single click.
-5. Campaign Cockpit displays a step-by-step conversion funnel and downloadable audit export with step and reply timestamps.
