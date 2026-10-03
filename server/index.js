@@ -339,6 +339,16 @@ app.get('/api/databases/:id/download', (req, res) => {
   }
 });
 
+// Choose which rows of a database the attached campaign will email
+app.post('/api/databases/:id/included', (req, res) => {
+  try {
+    const result = databaseService.setIncludedRecords(req.params.id, req.body.ids);
+    res.json({ success: true, ...result });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
 // Delete an isolated database
 app.delete('/api/databases/:id', (req, res) => {
   try {
@@ -531,13 +541,7 @@ app.get('/api/campaigns', (req, res) => {
 
       if (c.database_id) {
         databaseService.reopenUnusedDatabase(c.database_id, c.id);
-        const stats = db.prepare(`
-          SELECT 
-            COUNT(*) as total,
-            SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sent,
-            SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed
-          FROM database_records WHERE database_id = ?
-        `).get(c.database_id);
+        const stats = databaseService.getIncludedStats(c.database_id);
 
         if (stats) {
           totalContacts = stats.total || 0;
@@ -657,13 +661,7 @@ app.get('/api/campaigns/:id', (req, res) => {
 
     if (campaign.database_id) {
       databaseService.reopenUnusedDatabase(campaign.database_id, campaign.id);
-      const stats = db.prepare(`
-        SELECT 
-          COUNT(*) as total,
-          SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sent,
-          SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed
-        FROM database_records WHERE database_id = ?
-      `).get(campaign.database_id);
+      const stats = databaseService.getIncludedStats(campaign.database_id);
 
       if (stats) {
         campaign.total_contacts = stats.total || 0;

@@ -113,6 +113,7 @@ db.exec(`
     company TEXT,
     custom_fields TEXT, -- JSON string of all row headers & values
     status TEXT DEFAULT 'PENDING', -- 'PENDING', 'SENDING', 'SENT', 'FAILED', 'REPLIED', 'SKIPPED'
+    included INTEGER NOT NULL DEFAULT 1, -- 0 = left out of the campaign that uses this database
     assigned_variant TEXT DEFAULT 'A', -- 'A' or 'B'
     sent_at TEXT,
     message_id TEXT,
@@ -158,6 +159,10 @@ try {
   const templateColumns = db.prepare("PRAGMA table_info(templates)").all().map(c => c.name);
   if (!templateColumns.includes('attachments')) {
     db.exec("ALTER TABLE templates ADD COLUMN attachments TEXT DEFAULT '[]'"); // JSON [{ name, file, size }]
+  }
+  const recordColumns = db.prepare("PRAGMA table_info(database_records)").all().map(c => c.name);
+  if (!recordColumns.includes('included')) {
+    db.exec("ALTER TABLE database_records ADD COLUMN included INTEGER NOT NULL DEFAULT 1");
   }
 } catch (e) {
   console.warn('Column migration notice:', e.message);

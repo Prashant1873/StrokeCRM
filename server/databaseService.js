@@ -205,6 +205,64 @@ function createDatabase({ buffer, filename, customName, fieldMapping, deduplicat
 }
 
 /**
+ * Counts only rows the current campaign will actually use
+ */
+function getIncludedStats(databaseId) {
+  return db.prepare(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sent,
+      SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed,
+      SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pending
+    FROM database_records
+    WHERE database_id = ? AND included = 1
+  `).get(databaseId);
+}
+
+/**
+ * Checks `ids` in and every other not-yet-sent row out.
+ * Sent and in-flight rows stay included.
+ */
+function setIncludedRecords(databaseId, ids) {
+  const database = db.prepare('SELECT campaign_id FROM databases WHERE id = ?').get(databaseId);
+  if (!database) throw new Error('Database not found.');
+
+  if (database.campaign_id) {
+    const campaign = db.prepare('SELECT status FROM campaigns WHERE id = ?').get(database.campaign_id);
+    if (campaign && campaign.status === 'RUNNING') {
+      throw new Error('Pause the campaign before changing which rows it uses.');
+    }
+  }
+
+  const chosen = [...new Set((ids || []).map(Number).filter(n => Number.isInteger(n) && n > 0))];
+  if (!chosen.length) throw new Error('Select at least one row.');
+
+  const apply = db.transaction(() => {
+    db.prepare(`
+      UPDATE database_records
+      SET included = CASE WHEN status IN ('SENT', 'SENDING') THEN 1 ELSE 0 END
+      WHERE database_id = ?
+    `).run(databaseId);
+    const mark = db.prepare('UPDATE database_records SET included = 1 WHERE database_id = ? AND id = ?');
+    for (const id of chosen) mark.run(databaseId, id);
+
+    const stats = getIncludedStats(databaseId);
+    if (database.campaign_id) {
+      db.prepare(`
+        UPDATE campaigns
+        SET total_contacts = ?, sent_count = ?, failed_count = ?, updated_at = ?
+        WHERE id = ?
+      `).run(stats.total || 0, stats.sent || 0, stats.failed || 0, new Date().toISOString(), database.campaign_id);
+    }
+    return stats;
+  });
+
+  const stats = apply();
+  const total = db.prepare('SELECT COUNT(*) as count FROM database_records WHERE database_id = ?').get(databaseId).count;
+  return { included: stats.total || 0, total, pending: stats.pending || 0 };
+}
+
+/**
  * Returns all databases with attachment status and counts
  */
 function getDatabases() {
@@ -334,20 +392,16 @@ function attachDatabaseToCampaign(databaseId, campaignId) {
     db.prepare('UPDATE databases SET campaign_id = NULL, is_attached = 0 WHERE id = ?').run(campaign.database_id);
   }
 
-  const stats = db.prepare(`
-    SELECT 
-      COUNT(*) as total,
-      SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sent,
-      SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed
-    FROM database_records WHERE database_id = ?
-  `).get(databaseId);
-
   const attachTx = db.transaction(() => {
     db.prepare(`
       UPDATE databases 
       SET campaign_id = ?, is_attached = 1 
       WHERE id = ?
     `).run(campaignId, databaseId);
+
+    // A newly attached list starts with every row. The campaign can narrow it after.
+    db.prepare('UPDATE database_records SET included = 1 WHERE database_id = ?').run(databaseId);
+    const stats = getIncludedStats(databaseId);
 
     db.prepare(`
       UPDATE campaigns 
@@ -397,7 +451,7 @@ function reopenUnusedDatabase(databaseId, campaignId) {
       WHERE database_id = ?
     `).run(campaignId, databaseId);
 
-    const total = db.prepare('SELECT COUNT(*) as count FROM database_records WHERE database_id = ?').get(databaseId).count;
+    const total = getIncludedStats(databaseId).total || 0;
     db.prepare(`
       UPDATE campaigns
       SET total_contacts = ?, sent_count = 0, failed_count = 0,
@@ -418,5 +472,7 @@ module.exports = {
   getDatabaseById,
   deleteDatabase,
   attachDatabaseToCampaign,
-  reopenUnusedDatabase
+  reopenUnusedDatabase,
+  getIncludedStats,
+  setIncludedRecords
 };

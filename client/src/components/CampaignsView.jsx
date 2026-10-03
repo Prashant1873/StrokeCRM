@@ -23,7 +23,8 @@ import {
   X,
   ArrowRight,
   ArrowLeft,
-  ExternalLink
+  ExternalLink,
+  Eye
 } from 'lucide-react';
 import CampaignPreflight from './CampaignPreflight';
 
@@ -75,6 +76,9 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
   // Attach database dropdown state
   const [selectedAttachDbId, setSelectedAttachDbId] = useState('');
   const [isAttachingDb, setIsAttachingDb] = useState(false);
+  // Row picks made in Preview before the database is attached. Keyed by database id.
+  const [stagedRows, setStagedRows] = useState({});
+  const [rowPicker, setRowPicker] = useState(null);
 
   // Attach template dropdown state
   const [selectedAttachTmplId, setSelectedAttachTmplId] = useState('');
@@ -301,6 +305,117 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
     }
   };
 
+  const loadDatabaseRows = async (databaseId) => {
+    const pageSize = 200;
+    let offset = 0;
+    let records = [];
+    let total = 0;
+    do {
+      const res = await fetch(`/api/databases/${databaseId}?limit=${pageSize}&offset=${offset}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not load rows.');
+      total = data.totalCount || 0;
+      records = records.concat(data.records || []);
+      offset += pageSize;
+    } while (records.length < total);
+    return records;
+  };
+
+  const openRowPicker = async (databaseId, applyNow) => {
+    const id = Number(databaseId);
+    const dbMeta = databases.find(d => Number(d.id) === id);
+    setRowPicker({
+      databaseId: id,
+      databaseName: dbMeta?.name || 'Database',
+      applyNow,
+      loading: true,
+      saving: false,
+      error: null,
+      records: [],
+      selected: new Set(),
+      query: ''
+    });
+    try {
+      const records = await loadDatabaseRows(id);
+      const staged = stagedRows[id];
+      const selected = new Set();
+      for (const row of records) {
+        const locked = row.status === 'SENT' || row.status === 'SENDING';
+        const checked = locked || (staged ? staged.includes(row.id) : applyNow ? row.included !== 0 : true);
+        if (checked) selected.add(row.id);
+      }
+      setRowPicker(prev => prev && prev.databaseId === id
+        ? { ...prev, loading: false, records, selected }
+        : prev);
+    } catch (err) {
+      setRowPicker(prev => prev ? { ...prev, loading: false, error: err.message } : prev);
+    }
+  };
+
+  const togglePickedRow = (row) => {
+    if (row.status === 'SENT' || row.status === 'SENDING') return;
+    setRowPicker(prev => {
+      if (!prev) return prev;
+      const selected = new Set(prev.selected);
+      if (selected.has(row.id)) selected.delete(row.id);
+      else selected.add(row.id);
+      return { ...prev, selected };
+    });
+  };
+
+  const toggleShownRows = (rows, check) => {
+    setRowPicker(prev => {
+      if (!prev) return prev;
+      const selected = new Set(prev.selected);
+      for (const row of rows) {
+        if (row.status === 'SENT' || row.status === 'SENDING') continue;
+        if (check) selected.add(row.id);
+        else selected.delete(row.id);
+      }
+      return { ...prev, selected };
+    });
+  };
+
+  const saveIncludedRows = async (databaseId, ids) => {
+    const res = await fetch(`/api/databases/${databaseId}/included`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids })
+    });
+    const data = await res.json();
+    if (!res.ok || data.success === false) throw new Error(data.message || 'Could not save the row selection.');
+    return data;
+  };
+
+  const confirmRowPicker = async () => {
+    if (!rowPicker) return;
+    const ids = [...rowPicker.selected];
+    if (!ids.length) {
+      setRowPicker(prev => prev ? { ...prev, error: 'Select at least one row.' } : prev);
+      return;
+    }
+    if (!rowPicker.applyNow) {
+      setStagedRows(prev => ({ ...prev, [rowPicker.databaseId]: ids }));
+      setRowPicker(null);
+      return;
+    }
+    setRowPicker(prev => ({ ...prev, saving: true, error: null }));
+    try {
+      const data = await saveIncludedRows(rowPicker.databaseId, ids);
+      setStagedRows(prev => {
+        const next = { ...prev };
+        delete next[rowPicker.databaseId];
+        return next;
+      });
+      setRowPicker(null);
+      setFeedback({ type: 'success', message: `${data.included} of ${data.total} rows will be used.` });
+      await fetchCampaigns();
+      fetchQueueStatus();
+    } catch (err) {
+      setRowPicker(prev => prev ? { ...prev, saving: false, error: err.message } : prev);
+    }
+  };
+
   const handleAttachDatabase = async () => {
     if (!selectedAttachDbId || !selectedCampaignId) return;
     setIsAttachingDb(true);
@@ -312,6 +427,13 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
       });
       const data = await res.json();
       if (data.success) {
+        const picked = stagedRows[Number(selectedAttachDbId)];
+        if (picked) await saveIncludedRows(selectedAttachDbId, picked);
+        setStagedRows(prev => {
+          const next = { ...prev };
+          delete next[Number(selectedAttachDbId)];
+          return next;
+        });
         setFeedback({ type: 'success', message: data.message });
         fetchCampaigns();
         fetchMetadata();
@@ -341,6 +463,15 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
       });
       const data = await res.json();
       if (data.success) {
+        const picked = newCampaignDbId ? stagedRows[Number(newCampaignDbId)] : null;
+        if (picked) await saveIncludedRows(newCampaignDbId, picked);
+        if (newCampaignDbId) {
+          setStagedRows(prev => {
+            const next = { ...prev };
+            delete next[Number(newCampaignDbId)];
+            return next;
+          });
+        }
         setShowCreateModal(false);
         setNewCampaignName('');
         setNewCampaignDbId('');
@@ -478,6 +609,102 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
       }
     }
   };
+
+  const pickerQuery = (rowPicker?.query || '').trim().toLowerCase();
+  const pickerShown = (rowPicker?.records || []).filter(row => {
+    if (!pickerQuery) return true;
+    return [row.email, row.first_name, row.company].some(value => String(value || '').toLowerCase().includes(pickerQuery));
+  });
+  const pickerAllShown = pickerShown.length > 0 && pickerShown.every(row => rowPicker.selected.has(row.id));
+
+  const rowPickerModal = rowPicker && (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[85vh]">
+        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+          <div>
+            <h3 className="text-sm font-bold text-white">Choose rows — {rowPicker.databaseName}</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">Checked rows are the ones this campaign will email.</p>
+          </div>
+          <button type="button" onClick={() => setRowPicker(null)} className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="px-5 py-3 border-b border-slate-800 flex items-center gap-2">
+          <input
+            type="text"
+            value={rowPicker.query}
+            onChange={(e) => setRowPicker(prev => prev ? { ...prev, query: e.target.value } : prev)}
+            placeholder="Search email, name, or company"
+            className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+          />
+          <span className="text-[11px] text-slate-400 shrink-0">{rowPicker.selected.size} of {rowPicker.records.length}</span>
+        </div>
+
+        <div className="overflow-y-auto flex-1">
+          {rowPicker.loading ? (
+            <p className="text-xs text-slate-400 text-center py-10">Loading rows...</p>
+          ) : rowPicker.records.length === 0 ? (
+            <p className="text-xs text-slate-400 text-center py-10">This database has no rows.</p>
+          ) : (
+            <table className="w-full text-left text-xs">
+              <thead className="sticky top-0 bg-slate-900 text-slate-500">
+                <tr>
+                  <th className="px-4 py-2 w-8">
+                    <input
+                      type="checkbox"
+                      checked={pickerAllShown}
+                      onChange={() => toggleShownRows(pickerShown, !pickerAllShown)}
+                    />
+                  </th>
+                  <th className="px-2 py-2 font-medium">Email</th>
+                  <th className="px-2 py-2 font-medium">Name</th>
+                  <th className="px-2 py-2 font-medium">Company</th>
+                  <th className="px-2 py-2 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pickerShown.map(row => {
+                  const locked = row.status === 'SENT' || row.status === 'SENDING';
+                  return (
+                    <tr key={row.id} className="border-t border-slate-800/80 text-slate-300">
+                      <td className="px-4 py-1.5">
+                        <input
+                          type="checkbox"
+                          checked={rowPicker.selected.has(row.id)}
+                          disabled={locked}
+                          onChange={() => togglePickedRow(row)}
+                        />
+                      </td>
+                      <td className="px-2 py-1.5 font-mono truncate max-w-[14rem]">{row.email}</td>
+                      <td className="px-2 py-1.5 truncate max-w-[8rem]">{row.first_name || '—'}</td>
+                      <td className="px-2 py-1.5 truncate max-w-[8rem]">{row.company || '—'}</td>
+                      <td className="px-2 py-1.5 text-slate-500">{locked ? row.status : row.status === 'FAILED' ? 'FAILED' : ''}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-slate-800 px-5 py-3">
+          <span className="text-[11px] text-rose-400">{rowPicker.error || (rowPicker.applyNow ? '' : 'Applied when you attach this database.')}</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <button type="button" onClick={() => setRowPicker(null)} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white">Cancel</button>
+            <button
+              type="button"
+              onClick={confirmRowPicker}
+              disabled={rowPicker.loading || rowPicker.saving || rowPicker.selected.size === 0}
+              className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold disabled:opacity-50"
+            >
+              {rowPicker.saving ? 'Saving...' : `Use ${rowPicker.selected.size} rows`}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   // Safe early returns AFTER all hooks are evaluated
   if (loading) {
@@ -674,17 +901,32 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-300 block mb-1">2. Attach Database (1:1 Exclusive)</label>
-                  <select
-                    value={newCampaignDbId}
-                    onChange={(e) => setNewCampaignDbId(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="">-- Attach Later / Pick Available Database --</option>
-                    {databases.map(d => (
-                      <option key={d.id} value={d.id}>{d.name} ({d.row_count} contacts){d.is_attached && d.campaign_name ? ` — used in ${d.campaign_name}` : ''}</option>
-                    ))}
-                  </select>
-                  <p className="text-[10px] text-slate-500 mt-1">A list can be used again. This campaign starts from the first row, not from the last send.</p>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={newCampaignDbId}
+                      onChange={(e) => setNewCampaignDbId(e.target.value)}
+                      className="flex-1 min-w-0 px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="">-- Attach Later / Pick Available Database --</option>
+                      {databases.map(d => (
+                        <option key={d.id} value={d.id}>{d.name} ({d.row_count} contacts){d.is_attached && d.campaign_name ? ` — used in ${d.campaign_name}` : ''}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={!newCampaignDbId}
+                      onClick={() => openRowPicker(newCampaignDbId, false)}
+                      className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold disabled:opacity-40"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Preview
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    {newCampaignDbId && stagedRows[Number(newCampaignDbId)]
+                      ? `${stagedRows[Number(newCampaignDbId)].length} rows selected. A list can be used again.`
+                      : 'A list can be used again. This campaign starts from the first row, not from the last send.'}
+                  </p>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-300 block mb-1">3. Attach Template</label>
@@ -714,6 +956,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
             </div>
           </div>
         )}
+        {rowPickerModal}
       </div>
     );
   }
@@ -863,7 +1106,11 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   <div className="space-y-2">
                     <div>
                       <h4 className="text-sm font-semibold text-white">{selectedCampaign.database_name}</h4>
-                      <p className="text-[11px] text-slate-400 font-mono truncate">{selectedCampaign.database_filename} ({selectedCampaign.total_contacts} contacts)</p>
+                      <p className="text-[11px] text-slate-400 font-mono truncate">
+                        {selectedCampaign.database_filename} ({selectedCampaign.total_contacts === selectedCampaign.database_row_count
+                          ? `${selectedCampaign.total_contacts} contacts`
+                          : `${selectedCampaign.total_contacts} of ${selectedCampaign.database_row_count} rows`})
+                      </p>
                     </div>
 
                     {/* Header schema pills */}
@@ -886,18 +1133,32 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                       This campaign requires an isolated database file to dispatch emails.
                     </p>
                     <div className="flex flex-col gap-2">
-                      <select
-                        value={selectedAttachDbId}
-                        onChange={(e) => setSelectedAttachDbId(e.target.value)}
-                        className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
-                      >
-                        <option value="">-- Select Available Database --</option>
-                        {availableDatabases.map(d => (
-                          <option key={d.id} value={d.id}>
-                            {d.name} ({d.row_count} contacts){d.is_attached && d.campaign_name ? ` — used in ${d.campaign_name}` : ''}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={selectedAttachDbId}
+                          onChange={(e) => setSelectedAttachDbId(e.target.value)}
+                          className="flex-1 min-w-0 px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                        >
+                          <option value="">-- Select Available Database --</option>
+                          {availableDatabases.map(d => (
+                            <option key={d.id} value={d.id}>
+                              {d.name} ({d.row_count} contacts){d.is_attached && d.campaign_name ? ` — used in ${d.campaign_name}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          disabled={!selectedAttachDbId}
+                          onClick={() => openRowPicker(selectedAttachDbId, false)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold disabled:opacity-40"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          Preview
+                        </button>
+                      </div>
+                      {selectedAttachDbId && stagedRows[Number(selectedAttachDbId)] && (
+                        <p className="text-[10px] text-indigo-300">{stagedRows[Number(selectedAttachDbId)].length} rows selected. They apply when you attach.</p>
+                      )}
 
                       <div className="flex items-center gap-2">
                         <button
@@ -925,13 +1186,22 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
               {selectedCampaign.database_id && (
                 <div className="pt-3 border-t border-slate-800/80 mt-3 flex items-center justify-between">
                   <span className="text-[10px] text-slate-500">Exclusively bound</span>
-                  <button
-                    type="button"
-                    onClick={() => navigate ? navigate(`#/databases/${selectedCampaign.database_id}`) : null}
-                    className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
-                  >
-                    Inspect Records <ExternalLink className="w-3 h-3" />
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => openRowPicker(selectedCampaign.database_id, true)}
+                      className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                    >
+                      <Eye className="w-3 h-3" /> Choose rows
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate ? navigate(`#/databases/${selectedCampaign.database_id}`) : null}
+                      className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                    >
+                      Inspect Records <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1384,20 +1654,33 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                 <label className="text-xs font-medium text-slate-300 block mb-1">
                   2. Attach Database (1:1 Exclusivity)
                 </label>
-                <select
-                  value={newCampaignDbId}
-                  onChange={(e) => setNewCampaignDbId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="">-- Attach Later / Pick Available Database --</option>
-                  {databases.map(d => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.row_count} contacts){d.is_attached && d.campaign_name ? ` — used in ${d.campaign_name}` : ''}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={newCampaignDbId}
+                    onChange={(e) => setNewCampaignDbId(e.target.value)}
+                    className="flex-1 min-w-0 px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="">-- Attach Later / Pick Available Database --</option>
+                    {databases.map(d => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} ({d.row_count} contacts){d.is_attached && d.campaign_name ? ` — used in ${d.campaign_name}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={!newCampaignDbId}
+                    onClick={() => openRowPicker(newCampaignDbId, false)}
+                    className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold disabled:opacity-40"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    Preview
+                  </button>
+                </div>
                 <p className="text-[10px] text-slate-500 mt-1">
-                  A list can be used again. This campaign starts from the first row, not from the last send.
+                  {newCampaignDbId && stagedRows[Number(newCampaignDbId)]
+                    ? `${stagedRows[Number(newCampaignDbId)].length} rows selected. A list can be used again.`
+                    : 'A list can be used again. This campaign starts from the first row, not from the last send.'}
                 </p>
               </div>
 
@@ -1526,6 +1809,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
           </div>
         </div>
       )}
+      {rowPickerModal}
     </div>
   );
 }

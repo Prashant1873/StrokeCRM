@@ -242,7 +242,7 @@ async function runCampaignWorker(campaignId) {
     if (isIsolated) {
       contact = db.prepare(`
         SELECT * FROM database_records 
-        WHERE database_id = ? AND status = 'PENDING' 
+        WHERE database_id = ? AND status = 'PENDING' AND included = 1 
         ORDER BY id ASC LIMIT 1
       `).get(campaign.database_id);
     } else {
@@ -296,13 +296,7 @@ async function runCampaignWorker(campaignId) {
 
       // Update counters directly from true state
       if (isIsolated) {
-        const stats = db.prepare(`
-          SELECT 
-            COUNT(*) as total,
-            SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sent,
-            SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed
-          FROM database_records WHERE database_id = ?
-        `).get(campaign.database_id);
+        const stats = databaseService.getIncludedStats(campaign.database_id);
 
         db.prepare(`
           UPDATE campaigns 
@@ -345,13 +339,7 @@ async function runCampaignWorker(campaignId) {
       }
 
       if (isIsolated) {
-        const stats = db.prepare(`
-          SELECT 
-            COUNT(*) as total,
-            SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sent,
-            SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed
-          FROM database_records WHERE database_id = ?
-        `).get(campaign.database_id);
+        const stats = databaseService.getIncludedStats(campaign.database_id);
 
         db.prepare(`
           UPDATE campaigns 
@@ -434,13 +422,18 @@ function startCampaign(campaignId, options = {}) {
     if (!dbInfo) {
       throw new Error('The attached database cannot be found. Please attach an active database to this campaign.');
     }
-    pendingCount = db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ? AND status = 'PENDING'").get(campaign.database_id).count;
+    pendingCount = databaseService.getIncludedStats(campaign.database_id).pending || 0;
   } else {
     pendingCount = db.prepare("SELECT COUNT(*) as count FROM contacts WHERE campaign_id = ? AND status = 'PENDING'").get(id).count;
   }
 
   if (pendingCount === 0) {
-    throw new Error('This campaign has 0 pending contacts. All contacts have already been processed.');
+    const leftOut = campaign.database_id
+      ? db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ? AND status = 'PENDING' AND included = 0").get(campaign.database_id).count
+      : 0;
+    throw new Error(leftOut
+      ? 'No selected rows are still pending. Open Preview and check the rows this campaign should send.'
+      : 'This campaign has 0 pending contacts. All contacts have already been processed.');
   }
 
   // Set DB status to RUNNING
@@ -547,10 +540,11 @@ function getCampaignQueueStatus(campaignId) {
 
   if (campaign.database_id) {
     databaseService.reopenUnusedDatabase(campaign.database_id, id);
-    totalContacts = db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ?").get(campaign.database_id).count;
-    pendingCount = db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ? AND status = 'PENDING'").get(campaign.database_id).count;
-    sentCount = db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ? AND status = 'SENT'").get(campaign.database_id).count;
-    failedCount = db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ? AND status = 'FAILED'").get(campaign.database_id).count;
+    const stats = databaseService.getIncludedStats(campaign.database_id);
+    totalContacts = stats.total || 0;
+    pendingCount = stats.pending || 0;
+    sentCount = stats.sent || 0;
+    failedCount = stats.failed || 0;
   } else {
     totalContacts = db.prepare("SELECT COUNT(*) as count FROM contacts WHERE campaign_id = ?").get(id).count;
     pendingCount = db.prepare("SELECT COUNT(*) as count FROM contacts WHERE campaign_id = ? AND status = 'PENDING'").get(id).count;
