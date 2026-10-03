@@ -1,7 +1,7 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: Core Cold Outreach MVP
+milestone: v2.0
+milestone_name: Automation & Multi-Account Outreach
 status: Awaiting next milestone
 last_updated: "2026-10-03T12:35:05.666Z"
 last_activity: 2026-10-03
