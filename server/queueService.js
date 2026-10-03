@@ -78,8 +78,8 @@ function resolveTransporter(campaignSenderOverride = null) {
  * Returns a random integer between min and max inclusive
  */
 function getRandomDelay(minSec, maxSec) {
-  const min = Math.max(1, Number(minSec) || 45);
-  const max = Math.max(min, Number(maxSec) || 90);
+  const min = Math.max(1, (minSec !== undefined && minSec !== null && !isNaN(minSec)) ? Number(minSec) : 15);
+  const max = Math.max(min, (maxSec !== undefined && maxSec !== null && !isNaN(maxSec)) ? Number(maxSec) : 35);
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
@@ -100,7 +100,7 @@ function isWithinWorkingHours(startHourStr = '09:00', endHourStr = '18:00') {
 }
 
 /**
- * Interruptible sleep helper checking if campaign paused or cancelled
+ * Interruptible sleep helper checking if campaign paused, cancelled, or pacing updated
  */
 async function interruptibleSleep(ms, jobId) {
   const step = 250;
@@ -109,6 +109,16 @@ async function interruptibleSleep(ms, jobId) {
     const job = activeJobs.get(jobId);
     if (!job || job.isPaused || job.isStopped) {
       return false; // interrupted
+    }
+    if (job.pacingReset) {
+      job.pacingReset = false;
+      const remainingMs = Math.max(0, (job.nextSendAt || 0) - Date.now());
+      if (remainingMs < (ms - elapsed)) {
+        if (remainingMs > 0) {
+          await new Promise(resolve => setTimeout(resolve, remainingMs));
+        }
+        return true;
+      }
     }
     await new Promise(resolve => setTimeout(resolve, Math.min(step, ms - elapsed)));
     elapsed += step;
@@ -314,8 +324,12 @@ async function runCampaignWorker(campaignId) {
     settingsRows.forEach(r => { settings[r.key] = r.value; });
 
     const dailyLimit = Number(campaign.daily_limit || settings.daily_limit || 100);
-    const minDelay = Number(campaign.min_delay || settings.min_delay_sec || 45);
-    const maxDelay = Number(campaign.max_delay || settings.max_delay_sec || 90);
+    const minDelay = job.minDelay !== undefined 
+      ? job.minDelay 
+      : Number(campaign.min_delay || settings.min_delay_sec || 15);
+    const maxDelay = job.maxDelay !== undefined 
+      ? job.maxDelay 
+      : Number(campaign.max_delay || settings.max_delay_sec || 35);
     const startHour = settings.start_hour || '09:00';
     const endHour = settings.end_hour || '18:00';
 
@@ -623,9 +637,24 @@ function startCampaign(campaignId, options = {}) {
       : 'This campaign has 0 pending contacts. All contacts have already been processed.');
   }
 
-  // Set DB status to RUNNING
-  db.prepare("UPDATE campaigns SET status = 'RUNNING', updated_at = ? WHERE id = ?")
-    .run(new Date().toISOString(), id);
+  // Set DB status to RUNNING and persist pacing if provided
+  let minDelay = options.min_delay !== undefined ? Number(options.min_delay) : undefined;
+  let maxDelay = options.max_delay !== undefined ? Number(options.max_delay) : undefined;
+  if (options.pacingPreset === 'fast') {
+    minDelay = 15; maxDelay = 35;
+  } else if (options.pacingPreset === 'standard') {
+    minDelay = 30; maxDelay = 75;
+  } else if (options.pacingPreset === 'conservative') {
+    minDelay = 60; maxDelay = 120;
+  }
+
+  if (minDelay !== undefined && maxDelay !== undefined) {
+    db.prepare("UPDATE campaigns SET status = 'RUNNING', min_delay = ?, max_delay = ?, updated_at = ? WHERE id = ?")
+      .run(minDelay, maxDelay, new Date().toISOString(), id);
+  } else {
+    db.prepare("UPDATE campaigns SET status = 'RUNNING', updated_at = ? WHERE id = ?")
+      .run(new Date().toISOString(), id);
+  }
 
   // 3. Register or reactivate job in activeJobs
   let job = activeJobs.get(id);
@@ -640,6 +669,8 @@ function startCampaign(campaignId, options = {}) {
       isWorkerRunning: false,
       bypassHours: shouldBypass,
       senderOverride: options.sender_provider || null,
+      minDelay: minDelay !== undefined ? minDelay : (campaign.min_delay || 15),
+      maxDelay: maxDelay !== undefined ? maxDelay : (campaign.max_delay || 35),
       nextSendAt: null,
       delayDurationSec: 0,
       currentContactEmail: null,
@@ -651,6 +682,8 @@ function startCampaign(campaignId, options = {}) {
     job.isStopped = false;
     job.isWaitingSchedule = false;
     job.bypassHours = shouldBypass;
+    if (minDelay !== undefined) job.minDelay = minDelay;
+    if (maxDelay !== undefined) job.maxDelay = maxDelay;
     if (options.sender_provider) job.senderOverride = options.sender_provider;
     job.lastLog = 'Resuming dispatch worker...';
   }
@@ -825,6 +858,13 @@ function getCampaignQueueStatus(campaignId) {
     currentLog = 'Waiting for scheduled sending window.';
   }
 
+  const effectiveMinDelay = job?.minDelay !== undefined ? job.minDelay : (campaign.min_delay || 15);
+  const effectiveMaxDelay = job?.maxDelay !== undefined ? job.maxDelay : (campaign.max_delay || 35);
+  let pacingPreset = 'custom';
+  if (effectiveMinDelay <= 15 && effectiveMaxDelay <= 35) pacingPreset = 'fast';
+  else if (effectiveMinDelay <= 30 && effectiveMaxDelay <= 75) pacingPreset = 'standard';
+  else if (effectiveMinDelay >= 50) pacingPreset = 'conservative';
+
   return {
     campaignId: id,
     name: campaign.name,
@@ -839,6 +879,9 @@ function getCampaignQueueStatus(campaignId) {
     secondsRemaining,
     delayDurationSec: job ? job.delayDurationSec : 0,
     currentContactEmail: job ? job.currentContactEmail : null,
+    minDelay: effectiveMinDelay,
+    maxDelay: effectiveMaxDelay,
+    pacingPreset,
     lastLog: currentLog,
     stepStats,
     recentLogs
@@ -892,12 +935,44 @@ async function sendTestEmail(campaignId, testRecipient, senderOverride = null, s
   };
 }
 
+/**
+ * Dynamically adjust campaign pacing on the fly
+ */
+function updateCampaignPacing(campaignId, minDelay, maxDelay) {
+  const id = Number(campaignId);
+  const min = Math.max(1, (minDelay !== undefined && minDelay !== null && !isNaN(minDelay)) ? Number(minDelay) : 15);
+  const max = Math.max(min, (maxDelay !== undefined && maxDelay !== null && !isNaN(maxDelay)) ? Number(maxDelay) : 35);
+
+  db.prepare('UPDATE campaigns SET min_delay = ?, max_delay = ? WHERE id = ?').run(min, max, id);
+
+  const job = activeJobs.get(id);
+  if (job) {
+    job.minDelay = min;
+    job.maxDelay = max;
+
+    // If currently waiting in a delay that exceeds the new ceiling, shorten immediately
+    const now = Date.now();
+    if (job.nextSendAt && job.nextSendAt > now) {
+      const remainingSec = Math.round((job.nextSendAt - now) / 1000);
+      if (remainingSec > max) {
+        const newDelaySec = getRandomDelay(min, max);
+        job.delayDurationSec = newDelaySec;
+        job.nextSendAt = now + (newDelaySec * 1000);
+        job.pacingReset = true;
+      }
+    }
+  }
+
+  return { success: true, min_delay: min, max_delay: max };
+}
+
 module.exports = {
   resolveTransporter,
   dispatchSingleEmail,
   startCampaign,
   pauseCampaign,
   stopCampaign,
+  updateCampaignPacing,
   getCampaignQueueStatus,
   sendTestEmail,
   normalizeAddressList,

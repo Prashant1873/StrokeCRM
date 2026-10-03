@@ -1459,13 +1459,16 @@ app.delete('/api/campaigns/:id', (req, res) => {
 // Start campaign dispatch
 app.post('/api/campaigns/:id/start', (req, res) => {
   try {
-    const { bypassHours, sender_provider } = req.body || {};
+    const { bypassHours, sender_provider, pacingPreset, min_delay, max_delay } = req.body || {};
     if (sender_provider) {
       db.prepare('UPDATE campaigns SET sender_provider = ? WHERE id = ?').run(sender_provider, req.params.id);
     }
     const result = queueService.startCampaign(req.params.id, { 
       bypassHours: bypassHours !== undefined ? !!bypassHours : true,
-      sender_provider
+      sender_provider,
+      pacingPreset,
+      min_delay,
+      max_delay
     });
     res.json(result);
   } catch (error) {
@@ -1486,14 +1489,37 @@ app.post('/api/campaigns/:id/pause', (req, res) => {
 // Resume campaign dispatch
 app.post('/api/campaigns/:id/resume', (req, res) => {
   try {
-    const { bypassHours, sender_provider } = req.body || {};
+    const { bypassHours, sender_provider, pacingPreset, min_delay, max_delay } = req.body || {};
     if (sender_provider) {
       db.prepare('UPDATE campaigns SET sender_provider = ? WHERE id = ?').run(sender_provider, req.params.id);
     }
     const result = queueService.startCampaign(req.params.id, { 
       bypassHours: bypassHours !== undefined ? !!bypassHours : true,
-      sender_provider
+      sender_provider,
+      pacingPreset,
+      min_delay,
+      max_delay
     });
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// Dynamically update pacing jitter preset on the fly
+app.post('/api/campaigns/:id/pacing', (req, res) => {
+  try {
+    const { preset, min_delay, max_delay } = req.body || {};
+    let minD = min_delay;
+    let maxD = max_delay;
+    if (preset === 'fast' || preset === 'turbo') {
+      minD = 15; maxD = 35;
+    } else if (preset === 'standard') {
+      minD = 30; maxD = 75;
+    } else if (preset === 'conservative' || preset === 'stealth') {
+      minD = 60; maxD = 120;
+    }
+    const result = queueService.updateCampaignPacing(req.params.id, minD, maxD);
     res.json(result);
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });

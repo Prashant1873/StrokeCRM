@@ -53,6 +53,15 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
         if (activeCamp.sender_provider) {
           setSenderProvider(activeCamp.sender_provider);
         }
+        if (activeCamp.min_delay && activeCamp.max_delay) {
+          if (activeCamp.min_delay <= 15 && activeCamp.max_delay <= 35) {
+            setPacingPreset('fast');
+          } else if (activeCamp.min_delay >= 50) {
+            setPacingPreset('conservative');
+          } else {
+            setPacingPreset('standard');
+          }
+        }
       } else {
         // Fallback: fetch all campaigns and match
         const allRes = await fetch('/api/campaigns');
@@ -61,6 +70,15 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
         setCampaign(found || null);
         if (found?.sender_provider) {
           setSenderProvider(found.sender_provider);
+        }
+        if (found?.min_delay && found?.max_delay) {
+          if (found.min_delay <= 15 && found.max_delay <= 35) {
+            setPacingPreset('fast');
+          } else if (found.min_delay >= 50) {
+            setPacingPreset('conservative');
+          } else {
+            setPacingPreset('standard');
+          }
         }
       }
 
@@ -118,13 +136,22 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
     setIsLaunching(true);
     setErrorMessage(null);
 
+    const presetConfig = {
+      fast: { min_delay: 15, max_delay: 35 },
+      standard: { min_delay: 30, max_delay: 75 },
+      conservative: { min_delay: 60, max_delay: 120 }
+    }[pacingPreset] || { min_delay: 15, max_delay: 35 };
+
     try {
       const res = await fetch(`/api/campaigns/${campaignId}/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           bypassHours: !enforceWorkingHours,
-          sender_provider: senderProvider 
+          sender_provider: senderProvider,
+          pacingPreset,
+          min_delay: presetConfig.min_delay,
+          max_delay: presetConfig.max_delay
         })
       });
       const data = await res.json();

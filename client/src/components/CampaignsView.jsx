@@ -282,6 +282,27 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
     }
   };
 
+  const handleUpdatePacing = async (preset) => {
+    const targetId = selectedCampaignId || selectedCampaign?.id;
+    if (!targetId) return;
+    try {
+      const res = await fetch(`/api/campaigns/${targetId}/pacing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preset })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const label = preset === 'fast' ? 'Turbo (15s - 35s)' : preset === 'conservative' ? 'Stealth (60s - 120s)' : 'Standard (30s - 75s)';
+        setFeedback({ type: 'info', message: `Pacing jitter updated to ${label}. Next send delay adjusted.` });
+        fetchQueueStatus();
+        fetchCampaigns();
+      }
+    } catch (err) {
+      console.error('Failed to update pacing:', err);
+    }
+  };
+
   const handleAttachTemplate = async () => {
     if (!selectedAttachTmplId || !selectedCampaignId) return;
     setIsAttachingTmpl(true);
@@ -1520,28 +1541,64 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
 
             {/* Live Pacing Radar */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
-                <div className={`p-3 rounded-xl border ${
-                  queueStatus?.isRunning 
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                    : 'bg-slate-800 text-slate-500 border-slate-700'
-                }`}>
-                  <Clock className="w-5 h-5" />
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-xl border shrink-0 ${
+                    queueStatus?.isRunning 
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                      : 'bg-slate-800 text-slate-500 border-slate-700'
+                  }`}>
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider block">Next Email Pacing</span>
+                    {queueStatus?.isRunning ? (
+                      <div className="flex items-baseline gap-1.5 mt-0.5">
+                        <span className="text-xl font-mono font-bold text-white">
+                          {queueStatus.secondsRemaining}s
+                        </span>
+                        <span className="text-[11px] text-slate-500">
+                          (Random {queueStatus.delayDurationSec}s jitter)
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-500 mt-1 block">Queue Idle</span>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider block">Next Email Pacing</span>
-                  {queueStatus?.isRunning ? (
-                    <div className="flex items-baseline gap-1.5 mt-0.5">
-                      <span className="text-xl font-mono font-bold text-white">
-                        {queueStatus.secondsRemaining}s
-                      </span>
-                      <span className="text-[11px] text-slate-500">
-                        (Random {queueStatus.delayDurationSec}s jitter)
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-slate-500 mt-1 block">Queue Idle</span>
-                  )}
+
+                {/* Real-time Pacing Preset Switcher */}
+                <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between gap-1.5">
+                  <span className="text-[10px] text-slate-400 font-medium">Mode:</span>
+                  <div className="flex items-center gap-1">
+                    {[
+                      { id: 'fast', label: '⚡ Turbo', range: '15-35s' },
+                      { id: 'standard', label: '⚖️ Standard', range: '30-75s' },
+                      { id: 'conservative', label: '🛡️ Stealth', range: '60-120s' }
+                    ].map(p => {
+                      const isActive = queueStatus?.pacingPreset === p.id || 
+                        (!queueStatus?.pacingPreset && (
+                          (p.id === 'fast' && (selectedCampaign?.min_delay <= 15 && selectedCampaign?.max_delay <= 35)) ||
+                          (p.id === 'conservative' && selectedCampaign?.min_delay >= 50) ||
+                          (p.id === 'standard' && (!selectedCampaign?.min_delay || (selectedCampaign?.min_delay > 15 && selectedCampaign?.min_delay < 50)))
+                        ));
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => handleUpdatePacing(p.id)}
+                          title={`${p.label} (${p.range})`}
+                          className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all ${
+                            isActive
+                              ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+                              : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                          }`}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
