@@ -48,10 +48,10 @@ See: `.planning/PROJECT.md` (updated 2026-10-03)
 ## Current Position
 
 Phase: Phase 10: Custom Domain SMTP & IMAP Account Gateway
-Plan: —
-Status: Ready to plan
-Last activity: 2026-10-03 — Milestone v2.0 roadmap created
+Plan: 10-01-PLAN.md
+Status: Ready to execute
+Last activity: 2026-10-03 — Phase 10 plan created
 
 ## Operator Next Steps
 
-- Plan Phase 10 with /gsd-plan-phase 10 (or discuss with /gsd-discuss-phase 10)
+- Execute Phase 10 plan with /gsd-execute-phase 10
