@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import CampaignPreflight from './CampaignPreflight';
 import DripSequenceStudio from './DripSequenceStudio';
+import CampaignFunnelCard from './CampaignFunnelCard';
 
 function formatLogTime(dateStr) {
   if (!dateStr) return { formatted: 'Just now', relative: '', full: '' };
@@ -1407,6 +1408,16 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
             campaign={selectedCampaign}
             databaseHeaders={selectedCampaign.database_headers}
             templates={templates}
+            onUpdate={() => {
+              fetchCampaigns();
+              fetchQueueStatus();
+            }}
+          />
+
+          {/* SEQUENCE CONVERSION FUNNEL & REPLY RADAR (Phase 12) */}
+          <CampaignFunnelCard
+            campaign={selectedCampaign}
+            queueStatus={queueStatus}
             onUpdate={() => {
               fetchCampaigns();
               fetchQueueStatus();

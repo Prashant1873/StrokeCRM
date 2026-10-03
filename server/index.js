@@ -10,6 +10,7 @@ const leadService = require('./leadService');
 const databaseService = require('./databaseService');
 const templateService = require('./templateService');
 const queueService = require('./queueService');
+const replyScannerService = require('./replyScannerService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -1125,6 +1126,299 @@ app.post('/api/campaigns/:id/send-step-test', async (req, res) => {
   }
 });
 
+// ==========================================
+// Phase 12: Inbound IMAP Reply Scanner, Sequence Disarm & Funnel Analytics
+// ==========================================
+
+// Trigger IMAP inbox reply scan (manual or scoped to campaign)
+app.post('/api/replies/scan', async (req, res) => {
+  try {
+    const { campaignId, lookbackDays } = req.body || {};
+    const result = await replyScannerService.scanInboxForReplies({
+      campaignId: campaignId ? Number(campaignId) : null,
+      lookbackDays: lookbackDays ? Number(lookbackDays) : 14
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get current scanner status and last scan results
+app.get('/api/replies/status', (req, res) => {
+  res.json(replyScannerService.getScanStatus());
+});
+
+// Get recorded reply logs for a specific campaign
+app.get('/api/campaigns/:id/replies', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const replies = replyScannerService.getCampaignReplies(campaignId);
+    res.json(replies);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Manual 1-click override: Mark lead as REPLIED and halt follow-ups
+app.post('/api/campaigns/:id/records/:recordId/mark-replied', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const recordId = Number(req.params.recordId);
+    const isContact = req.query.isContact === 'true';
+    const updated = replyScannerService.markLeadRepliedManually(recordId, campaignId, isContact);
+    res.json({ success: true, message: 'Lead marked as REPLIED and follow-up sequence halted.', record: updated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Manual 1-click override: Cancel pending follow-ups
+app.post('/api/campaigns/:id/records/:recordId/cancel-followup', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const recordId = Number(req.params.recordId);
+    const isContact = req.query.isContact === 'true';
+    const updated = replyScannerService.cancelFollowupsManually(recordId, campaignId, isContact);
+    res.json({ success: true, message: 'Pending follow-up cancelled for lead.', record: updated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Visual conversion funnel analytics for multi-step campaigns
+app.get('/api/campaigns/:id/funnel-stats', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(campaignId);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const steps = db.prepare(`
+      SELECT * FROM campaign_drip_steps 
+      WHERE campaign_id = ? 
+      ORDER BY step_number ASC
+    `).all(campaignId);
+
+    let totalAudience = 0;
+    let repliedCount = 0;
+    let cancelledCount = 0;
+    let failedCount = 0;
+    let step2Scheduled = 0;
+    let step3Scheduled = 0;
+
+    if (campaign.database_id) {
+      const stats = db.prepare(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN status = 'REPLIED' THEN 1 ELSE 0 END) as replied,
+          SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) as cancelled,
+          SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed,
+          SUM(CASE WHEN status = 'PENDING' AND current_step = 2 AND next_step_scheduled_at IS NOT NULL THEN 1 ELSE 0 END) as s2_sched,
+          SUM(CASE WHEN status = 'PENDING' AND current_step = 3 AND next_step_scheduled_at IS NOT NULL THEN 1 ELSE 0 END) as s3_sched
+        FROM database_records 
+        WHERE database_id = ? AND included = 1
+      `).get(campaign.database_id);
+
+      totalAudience = stats?.total || 0;
+      repliedCount = stats?.replied || 0;
+      cancelledCount = stats?.cancelled || 0;
+      failedCount = stats?.failed || 0;
+      step2Scheduled = stats?.s2_sched || 0;
+      step3Scheduled = stats?.s3_sched || 0;
+    } else {
+      const stats = db.prepare(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN status = 'REPLIED' THEN 1 ELSE 0 END) as replied,
+          SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) as cancelled,
+          SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed,
+          SUM(CASE WHEN status = 'PENDING' AND current_step = 2 AND next_step_scheduled_at IS NOT NULL THEN 1 ELSE 0 END) as s2_sched,
+          SUM(CASE WHEN status = 'PENDING' AND current_step = 3 AND next_step_scheduled_at IS NOT NULL THEN 1 ELSE 0 END) as s3_sched
+        FROM contacts 
+        WHERE campaign_id = ?
+      `).get(campaignId);
+
+      totalAudience = stats?.total || 0;
+      repliedCount = stats?.replied || 0;
+      cancelledCount = stats?.cancelled || 0;
+      failedCount = stats?.failed || 0;
+      step2Scheduled = stats?.s2_sched || 0;
+      step3Scheduled = stats?.s3_sched || 0;
+    }
+
+    // Step email logs counts
+    const stepLogs = db.prepare(`
+      SELECT 
+        step_number,
+        COUNT(DISTINCT coalesce(database_record_id, contact_id, recipient_email)) as sent_count
+      FROM email_logs
+      WHERE campaign_id = ? AND status = 'SENT'
+      GROUP BY step_number
+    `).all(campaignId);
+
+    const stepSentMap = {};
+    stepLogs.forEach(s => {
+      stepSentMap[s.step_number || 1] = s.sent_count;
+    });
+
+    const step1Sent = stepSentMap[1] || (campaign.sent_count || 0);
+    const step2Sent = stepSentMap[2] || 0;
+    const step3Sent = stepSentMap[3] || 0;
+
+    // Conversion rate calculations
+    const step1Rate = totalAudience > 0 ? Number(((step1Sent / totalAudience) * 100).toFixed(1)) : 0;
+    const step2Rate = step1Sent > 0 ? Number(((step2Sent / step1Sent) * 100).toFixed(1)) : 0;
+    const step3Rate = step2Sent > 0 ? Number(((step3Sent / step2Sent) * 100).toFixed(1)) : 0;
+    const replyRate = step1Sent > 0 
+      ? Number(((repliedCount / step1Sent) * 100).toFixed(1)) 
+      : (totalAudience > 0 ? Number(((repliedCount / totalAudience) * 100).toFixed(1)) : 0);
+
+    res.json({
+      campaignId,
+      campaignName: campaign.name,
+      totalAudience,
+      step1Sent,
+      step2Sent,
+      step3Sent,
+      step2Scheduled,
+      step3Scheduled,
+      repliedCount,
+      cancelledCount,
+      failedCount,
+      rates: {
+        step1: step1Rate,
+        step2: step2Rate,
+        step3: step3Rate,
+        reply: replyRate
+      },
+      stepsConfigured: steps.map(s => ({
+        stepNumber: s.step_number,
+        delayDays: s.delay_days,
+        delayHours: s.delay_hours,
+        threadReply: !!s.thread_reply,
+        isActive: !!s.is_active
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Downloadable RFC 4180 CSV audit export for campaign leads with multi-step & reply tracing
+app.get('/api/campaigns/:id/export-audit', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(campaignId);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    let records = [];
+    if (campaign.database_id) {
+      records = db.prepare(`
+        SELECT id, email, first_name, company, status, current_step, next_step_scheduled_at, replied_at, sent_at
+        FROM database_records
+        WHERE database_id = ? AND included = 1
+        ORDER BY id ASC
+      `).all(campaign.database_id);
+    } else {
+      records = db.prepare(`
+        SELECT id, email, first_name, company, status, current_step, next_step_scheduled_at, replied_at, sent_at
+        FROM contacts
+        WHERE campaign_id = ?
+        ORDER BY id ASC
+      `).all(campaignId);
+    }
+
+    // Pre-fetch all sent step logs for this campaign for fast in-memory indexing
+    const sentLogs = db.prepare(`
+      SELECT database_record_id, contact_id, recipient_email, step_number, sent_at
+      FROM email_logs
+      WHERE campaign_id = ? AND status = 'SENT'
+      ORDER BY id ASC
+    `).all(campaignId);
+
+    const stepLogsMap = new Map();
+    sentLogs.forEach(log => {
+      const key = log.database_record_id || log.contact_id || log.recipient_email?.toLowerCase();
+      if (!stepLogsMap.has(key)) {
+        stepLogsMap.set(key, {});
+      }
+      stepLogsMap.get(key)[log.step_number || 1] = log.sent_at;
+    });
+
+    // Pre-fetch reply logs for this campaign
+    const replyLogs = db.prepare(`
+      SELECT database_record_id, contact_id, sender_email, subject, received_at, is_auto_reply
+      FROM reply_logs
+      WHERE campaign_id = ? AND is_auto_reply = 0
+      ORDER BY id DESC
+    `).all(campaignId);
+
+    const replyMap = new Map();
+    replyLogs.forEach(r => {
+      const key = r.database_record_id || r.contact_id || r.sender_email?.toLowerCase();
+      if (!replyMap.has(key)) {
+        replyMap.set(key, r);
+      }
+    });
+
+    const escapeCsv = (val) => `"${String(val == null ? '' : val).replace(/"/g, '""')}"`;
+
+    let csvContent = [
+      'Email',
+      'First Name',
+      'Company',
+      'Status',
+      'Current Step',
+      'Next Step Scheduled At',
+      'Step 1 Sent At',
+      'Step 2 Sent At',
+      'Step 3 Sent At',
+      'Replied At',
+      'Reply Subject'
+    ].map(escapeCsv).join(',') + '\r\n';
+
+    records.forEach(rec => {
+      const key = rec.id;
+      const emailKey = rec.email ? rec.email.toLowerCase() : '';
+      const stepTimes = stepLogsMap.get(key) || stepLogsMap.get(emailKey) || {};
+      const replyData = replyMap.get(key) || replyMap.get(emailKey) || null;
+
+      const step1Time = stepTimes[1] || rec.sent_at || '';
+      const step2Time = stepTimes[2] || '';
+      const step3Time = stepTimes[3] || '';
+      const repliedTime = rec.replied_at || replyData?.received_at || '';
+      const replySubject = replyData?.subject || (rec.status === 'REPLIED' ? '[Replied]' : '');
+
+      const row = [
+        rec.email,
+        rec.first_name || '',
+        rec.company || '',
+        rec.status || 'PENDING',
+        rec.current_step || 1,
+        rec.next_step_scheduled_at || '',
+        step1Time,
+        step2Time,
+        step3Time,
+        repliedTime,
+        replySubject
+      ];
+
+      csvContent += row.map(escapeCsv).join(',') + '\r\n';
+    });
+
+    const filename = `campaign-${campaign.id}-audit-${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.status(200).send(csvContent);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Delete a campaign
 app.delete('/api/campaigns/:id', (req, res) => {
   try {
@@ -1535,6 +1829,21 @@ app.get('/api/analytics/export', (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Periodic background scan for inbound replies every 5 minutes when active campaigns exist
+setInterval(async () => {
+  try {
+    const activeCount = db.prepare(
+      "SELECT COUNT(*) as count FROM campaigns WHERE status IN ('RUNNING', 'WAITING_SCHEDULE')"
+    ).get().count;
+
+    if (activeCount > 0) {
+      await replyScannerService.scanInboxForReplies();
+    }
+  } catch (pollErr) {
+    console.warn('[StrokeCRM] Periodic IMAP reply check notice:', pollErr.message);
+  }
+}, 5 * 60 * 1000);
 
 app.listen(PORT, () => {
   console.log(`[StrokeCRM] Server running on http://localhost:${PORT}`);

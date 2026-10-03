@@ -20,7 +20,9 @@ import {
   Lock,
   Unlock,
   X,
-  ArrowRight
+  ArrowRight,
+  MessageSquare,
+  Ban
 } from 'lucide-react';
 import Switch from './common/Switch';
 
@@ -214,6 +216,42 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
       console.error('Failed to load database details:', err);
     } finally {
       setInspectLoading(false);
+    }
+  };
+
+  // Manual 1-click sequence disarm
+  const handleMarkReplied = async (recordId) => {
+    try {
+      const campaignId = inspectDb?.campaign_id || 0;
+      const res = await fetch(`/api/campaigns/${campaignId}/records/${recordId}/mark-replied`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInspectRecords(prev => prev.map(r => r.id === recordId ? { ...r, status: 'REPLIED', next_step_scheduled_at: null } : r));
+      } else {
+        alert(data.message || 'Failed to mark as replied.');
+      }
+    } catch (err) {
+      alert('Error marking as replied: ' + err.message);
+    }
+  };
+
+  // Manual 1-click follow-up cancellation
+  const handleCancelFollowup = async (recordId) => {
+    try {
+      const campaignId = inspectDb?.campaign_id || 0;
+      const res = await fetch(`/api/campaigns/${campaignId}/records/${recordId}/cancel-followup`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInspectRecords(prev => prev.map(r => r.id === recordId ? { ...r, status: 'CANCELLED', next_step_scheduled_at: null } : r));
+      } else {
+        alert(data.message || 'Failed to cancel follow-up.');
+      }
+    } catch (err) {
+      alert('Error cancelling follow-up: ' + err.message);
     }
   };
 
@@ -701,12 +739,15 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                       <th className="px-3 py-2 font-medium">Company</th>
                       <th className="px-3 py-2 font-medium">Status</th>
                       <th className="px-3 py-2 font-medium">Custom Fields</th>
+                      <th className="px-3 py-2 font-medium text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
                     {inspectRecords.map((r, idx) => {
                       let custom = {};
                       try { custom = JSON.parse(r.custom_fields || '{}'); } catch {}
+                      const isReplied = r.status === 'REPLIED';
+                      const isCancelled = r.status === 'CANCELLED';
                       return (
                         <tr key={r.id || idx} className="hover:bg-slate-800/30">
                           <td className="px-3 py-2 text-slate-500">{idx + 1}</td>
@@ -714,16 +755,54 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                           <td className="px-3 py-2 text-slate-300">{r.first_name || '-'}</td>
                           <td className="px-3 py-2 text-slate-300">{r.company || '-'}</td>
                           <td className="px-3 py-2">
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-sans ${
-                              r.status === 'SENT' ? 'bg-emerald-500/10 text-emerald-400' :
-                              r.status === 'FAILED' ? 'bg-red-500/10 text-red-400' :
-                              'bg-slate-800 text-slate-400'
-                            }`}>
-                              {r.status || 'PENDING'}
-                            </span>
+                            {isReplied ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-sans font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                <MessageSquare className="w-2.5 h-2.5" /> REPLIED
+                              </span>
+                            ) : isCancelled ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-sans bg-slate-800 text-slate-400 border border-slate-700">
+                                CANCELLED
+                              </span>
+                            ) : r.status === 'SENT' ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-sans bg-emerald-500/10 text-emerald-400">
+                                SENT {r.current_step > 1 ? `(Step ${r.current_step})` : ''}
+                              </span>
+                            ) : r.status === 'FAILED' ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-sans bg-red-500/10 text-red-400">
+                                FAILED
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-sans bg-amber-500/10 text-amber-400">
+                                {r.next_step_scheduled_at ? 'WAITING DELAY' : 'PENDING'}
+                              </span>
+                            )}
                           </td>
-                          <td className="px-3 py-2 text-[10px] text-slate-400 truncate max-w-[200px]" title={JSON.stringify(custom)}>
+                          <td className="px-3 py-2 text-[10px] text-slate-400 truncate max-w-[160px]" title={JSON.stringify(custom)}>
                             {Object.entries(custom).slice(0, 3).map(([k, v]) => `${k}:${v}`).join(', ')}
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <div className="flex items-center justify-end gap-1.5 font-sans">
+                              {!isReplied && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMarkReplied(r.id)}
+                                  title="Mark lead as replied and halt future follow-ups"
+                                  className="px-2 py-0.5 rounded bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 text-[10px] font-medium transition-colors"
+                                >
+                                  Mark Replied
+                                </button>
+                              )}
+                              {!isReplied && !isCancelled && (r.status === 'PENDING' || r.next_step_scheduled_at) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelFollowup(r.id)}
+                                  title="Cancel pending follow-up steps for this lead"
+                                  className="px-2 py-0.5 rounded bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-400 border border-slate-700 hover:border-rose-500/30 text-[10px] font-medium transition-colors"
+                                >
+                                  Cancel Next
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );

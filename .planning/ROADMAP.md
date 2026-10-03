@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Initial MVP** — Phases 1-9 (shipped 2026-10-03)
-- 🚧 **v2.0 Custom Domains & Automated Drips** — Phases 10-12 (in progress)
+- ✅ **v2.0 Custom Domains & Automated Drips** — Phases 10-12 (shipped 2026-10-03)
 
 ## Phases
 
@@ -26,7 +26,7 @@
 
 - [x] **Phase 10: Custom Domain SMTP & IMAP Account Gateway** (completed 2026-10-03)
 - [x] **Phase 11: Multi-Step Drip Sequence Engine & Builder Studio** (completed 2026-10-03)
-- [ ] **Phase 12: Inbound IMAP Reply Scanner, Sequence Disarm & Funnel Analytics** - Background IMAP reply scanner, auto-responder filtering, atomic follow-up disarming (`CANCELLED_REPLIED`), manual reply marking, and step conversion funnel metrics.
+- [x] **Phase 12: Inbound IMAP Reply Scanner, Sequence Disarm & Funnel Analytics** (completed 2026-10-03)
 
 ---
 

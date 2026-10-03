@@ -109,3 +109,11 @@ flowchart TD
 - **Dynamic Header Variables**: Binds template variables directly from the campaign's attached database schema with quick-click insertion.
 - **RFC 2822 Organic Threading**: Follow-up emails inject `In-Reply-To` and `References` headers referencing the Step 1 `Message-ID`, landing naturally in the recipient's existing thread.
 - **Non-Destructive Scheduled Delay Dispatch**: When Step 1 completes, contacts transition to `current_step = 2, next_step_scheduled_at = now + delay`. The worker enters `WAITING_SCHEDULE` and automatically dispatches follow-ups once their scheduled window arrives.
+
+### 7. Inbound IMAP Reply Scanner, Sequence Disarm & Funnel Analytics
+- **Universal IMAP Resolver**: Connects to Custom Domain IMAP servers (port 993 SSL) or Gmail IMAP via App Passwords.
+- **Autoreply Filter**: Discards automated bounce, out-of-office, and delivery status notices using RFC 3834 `Auto-Submitted`, `X-Autoreply`, `Precedence: bulk/junk`, and regex subject heuristics to prevent false halts.
+- **Atomic Disarm Invariant**: Detected replies atomically set `status = 'REPLIED'`, `replied_at = receivedAt`, and `next_step_scheduled_at = NULL` in `database_records`, permanently halting all future drip follow-ups.
+- **Visual Funnel & Audit CSV**: Real-time conversion drop-off funnel (Audience -> Step 1 -> Step 2 -> Step 3 -> Replies) with conversion percentages and downloadable RFC 4180 audit CSV export (`/api/campaigns/:id/export-audit`).
+- **Manual Cockpit Overrides**: 1-click manual "Mark Replied" and "Cancel Next" controls in the Database Inspector table for immediate operator intervention.
+

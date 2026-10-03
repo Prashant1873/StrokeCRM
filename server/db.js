@@ -152,6 +152,22 @@ db.exec(`
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
     UNIQUE (campaign_id, step_number)
   );
+
+  CREATE TABLE IF NOT EXISTS reply_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id INTEGER,
+    database_record_id INTEGER,
+    contact_id INTEGER,
+    sender_email TEXT NOT NULL,
+    subject TEXT DEFAULT '',
+    snippet TEXT DEFAULT '',
+    in_reply_to TEXT,
+    message_id TEXT,
+    is_auto_reply INTEGER DEFAULT 0,
+    received_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+  );
 `);
 
 // Create physical storage directory for database files
@@ -212,6 +228,17 @@ try {
   const logColumns = db.prepare("PRAGMA table_info(email_logs)").all().map(c => c.name);
   if (!logColumns.includes('step_number')) {
     db.exec("ALTER TABLE email_logs ADD COLUMN step_number INTEGER DEFAULT 1");
+  }
+
+  // Phase 12: Inbound Reply Scanner & Tracking Columns
+  if (!recordColumns.includes('replied_at')) {
+    db.exec("ALTER TABLE database_records ADD COLUMN replied_at TEXT");
+  }
+  if (!contactColumns.includes('replied_at')) {
+    db.exec("ALTER TABLE contacts ADD COLUMN replied_at TEXT");
+  }
+  if (!campaignColumns.includes('reply_count')) {
+    db.exec("ALTER TABLE campaigns ADD COLUMN reply_count INTEGER DEFAULT 0");
   }
 } catch (e) {
   console.warn('Column migration notice:', e.message);
