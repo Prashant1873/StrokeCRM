@@ -45,9 +45,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOM-01 | Phase 10 | Pending |
-| DOM-02 | Phase 10 | Pending |
-| DOM-03 | Phase 10 | Pending |
+| DOM-01 | Phase 10 | Complete |
+| DOM-02 | Phase 10 | Complete |
+| DOM-03 | Phase 10 | Complete |
 | DRIP-01 | Phase 11 | Pending |
 | DRIP-02 | Phase 11 | Pending |
 | DRIP-03 | Phase 11 | Pending |
