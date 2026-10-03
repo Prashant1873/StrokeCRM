@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
+const nodemailer = require('nodemailer');
+const { ImapFlow } = require('imapflow');
 const db = require('./db');
 const authService = require('./authService');
 const leadService = require('./leadService');
@@ -71,12 +73,15 @@ app.post('/api/settings', (req, res) => {
 app.get('/api/auth/status', (req, res) => {
   try {
     const account = authService.getActiveAccount();
-    if (!account) {
-      return res.json({ connected: false });
-    }
+    const settings = db.getSettings ? db.getSettings() : {};
+
+    const customConfigured = Boolean(settings.custom_smtp_host && settings.custom_smtp_user);
+    const activeProvider = settings.active_provider || (account ? (account.type || 'gmail_app_password') : 'gmail_app_password');
+
     res.json({
-      connected: true,
-      account: {
+      connected: Boolean(account && account.verified) || customConfigured,
+      active_provider: activeProvider,
+      account: account ? {
         id: account.id,
         email: account.email,
         type: account.type,
@@ -84,6 +89,21 @@ app.get('/api/auth/status', (req, res) => {
         last_verified_at: account.last_verified_at,
         daily_sent_count: account.daily_sent_count,
         has_password: !!account.app_password
+      } : null,
+      custom_domain: {
+        configured: customConfigured,
+        host: settings.custom_smtp_host || '',
+        port: Number(settings.custom_smtp_port) || 587,
+        secure: settings.custom_smtp_secure === '1' || settings.custom_smtp_secure === 'true' || settings.custom_smtp_secure === true || Number(settings.custom_smtp_port) === 465,
+        user: settings.custom_smtp_user || '',
+        sender_name: settings.custom_sender_name || '',
+        sender_email: settings.custom_sender_email || '',
+        imap_host: settings.custom_imap_host || '',
+        imap_port: Number(settings.custom_imap_port) || 993,
+        imap_secure: settings.custom_imap_secure === '1' || settings.custom_imap_secure === 'true' || settings.custom_imap_secure === true || Number(settings.custom_imap_port) === 993,
+        imap_user: settings.custom_imap_user || '',
+        has_smtp_password: Boolean(settings.custom_smtp_pass),
+        has_imap_password: Boolean(settings.custom_imap_pass)
       }
     });
   } catch (error) {
@@ -166,6 +186,179 @@ app.post('/api/auth/disconnect', (req, res) => {
     res.json({ success: true, message: 'Gmail account disconnected.' });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Test Custom Domain SMTP Connection
+app.post('/api/auth/test-custom-smtp', async (req, res) => {
+  try {
+    const { host, port, secure, user, pass } = req.body;
+    if (!host || !user || !pass) {
+      return res.status(400).json({ success: false, message: 'SMTP Host, Username, and Password are required.' });
+    }
+
+    const portNum = Number(port) || 587;
+    const isSecure = secure === true || secure === 'true' || secure === 1 || secure === '1' || portNum === 465;
+
+    const transporter = nodemailer.createTransport({
+      host: host.trim(),
+      port: portNum,
+      secure: isSecure,
+      auth: {
+        user: user.trim(),
+        pass: String(pass)
+      },
+      connectionTimeout: 12000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000
+    });
+
+    await transporter.verify();
+    res.json({
+      success: true,
+      message: `SMTP handshake verified successfully with ${host}:${portNum} (SSL: ${isSecure ? 'Yes' : 'STARTTLS'}).`
+    });
+  } catch (error) {
+    let friendly = error.message;
+    if (error.code === 'EAUTH' || error.responseCode === 535) {
+      friendly = 'Authentication failed. Please verify your SMTP username and password.';
+    } else if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKET') {
+      friendly = `Connection timed out connecting to ${req.body.host}:${req.body.port}. Check your firewall, host, and port/SSL settings.`;
+    } else if (error.code === 'ECONNREFUSED') {
+      friendly = `Connection refused by ${req.body.host}:${req.body.port}. Check host and port.`;
+    }
+    res.status(400).json({ success: false, message: friendly });
+  }
+});
+
+// Test Custom Domain IMAP Connection
+app.post('/api/auth/test-custom-imap', async (req, res) => {
+  let client;
+  try {
+    const { host, port, secure, user, pass } = req.body;
+    if (!host || !user || !pass) {
+      return res.status(400).json({ success: false, message: 'IMAP Host, Username, and Password are required.' });
+    }
+
+    const portNum = Number(port) || 993;
+    const isSecure = secure === true || secure === 'true' || secure === 1 || secure === '1' || portNum === 993;
+
+    client = new ImapFlow({
+      host: host.trim(),
+      port: portNum,
+      secure: isSecure,
+      auth: {
+        user: user.trim(),
+        pass: String(pass)
+      },
+      logger: false,
+      clientInfo: {
+        name: 'StrokeCRM',
+        version: '2.0.0'
+      }
+    });
+
+    const connectPromise = client.connect();
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('IMAP connection timed out after 12 seconds.')), 12000)
+    );
+
+    await Promise.race([connectPromise, timeoutPromise]);
+    await client.logout();
+
+    res.json({
+      success: true,
+      message: `IMAP connection verified successfully with ${host}:${portNum} (SSL: ${isSecure ? 'Yes' : 'STARTTLS'}). Inbound scanner is ready.`
+    });
+  } catch (error) {
+    if (client) {
+      try { await client.logout(); } catch {}
+    }
+    let friendly = error.message;
+    if (error.responseStatus === 'NO' || (error.message && (error.message.includes('authentication failed') || error.message.includes('AUTHENTICATE failed')))) {
+      friendly = 'IMAP authentication failed. Please verify your IMAP username and password.';
+    } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED') {
+      friendly = `IMAP server unreachable at ${req.body.host}:${req.body.port}. Check server host, port, and security settings.`;
+    }
+    res.status(400).json({ success: false, message: friendly });
+  }
+});
+
+// Send Instant Live Deliverability Test Email
+app.post('/api/auth/send-test-email', async (req, res) => {
+  try {
+    const { host, port, secure, user, pass, sender_name, sender_email, recipient_email } = req.body;
+    if (!recipient_email || !recipient_email.trim()) {
+      return res.status(400).json({ success: false, message: 'Recipient email address is required.' });
+    }
+    if (!host || !user || !pass) {
+      return res.status(400).json({ success: false, message: 'SMTP Host, Username, and Password are required.' });
+    }
+
+    const portNum = Number(port) || 587;
+    const isSecure = secure === true || secure === 'true' || secure === 1 || secure === '1' || portNum === 465;
+
+    const fromAddress = sender_name && sender_name.trim()
+      ? `"${sender_name.trim()}" <${(sender_email || user).trim()}>`
+      : (sender_email || user).trim();
+
+    const transporter = nodemailer.createTransport({
+      host: host.trim(),
+      port: portNum,
+      secure: isSecure,
+      auth: {
+        user: user.trim(),
+        pass: String(pass)
+      },
+      connectionTimeout: 15000
+    });
+
+    const info = await transporter.sendMail({
+      from: fromAddress,
+      to: recipient_email.trim(),
+      subject: 'StrokeCRM Custom Domain Verification Test',
+      text: `Hello,\n\nThis is a verification test email sent from StrokeCRM.\n\nOutbound custom domain SMTP dispatch is working perfectly!\n\nHost: ${host}:${portNum}\nSender: ${fromAddress}\nTimestamp: ${new Date().toISOString()}\n\nYou are ready to launch high-deliverability outreach from your domain!`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; background: #0f172a; color: #f8fafc; border-radius: 12px; border: 1px solid #334155;">
+          <h2 style="color: #6366f1; margin-top: 0;">StrokeCRM Custom Domain Verification</h2>
+          <p style="color: #cbd5e1; font-size: 14px; line-height: 1.5;">This email confirms that your custom domain SMTP server connection is active, authenticated, and successfully dispatching outbound emails.</p>
+          <div style="background: #1e293b; padding: 16px; border-radius: 8px; margin: 20px 0; font-family: monospace; font-size: 13px; color: #38bdf8;">
+            <div><strong>Host:</strong> ${host}:${portNum}</div>
+            <div><strong>Sender:</strong> ${fromAddress}</div>
+            <div><strong>SSL:</strong> ${isSecure ? 'Yes (Port 465 SSL)' : 'STARTTLS (Port 587)'}</div>
+            <div><strong>Timestamp:</strong> ${new Date().toLocaleString()}</div>
+          </div>
+          <p style="color: #10b981; font-size: 13px; font-weight: 600;">✓ Ready for cold outreach campaigns.</p>
+        </div>
+      `,
+      headers: {
+        'X-Mailer': 'StrokeCRM Outbound Engine'
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `Test email successfully delivered to ${recipient_email.trim()}! Message ID: ${info.messageId}`,
+      messageId: info.messageId
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: 'Test send failed: ' + error.message });
+  }
+});
+
+// Update Account / Custom Domain Settings
+app.post('/api/settings/account', (req, res) => {
+  try {
+    const { active_provider, ...rest } = req.body;
+    if (active_provider) {
+      db.updateSettings({ active_provider });
+    }
+    if (Object.keys(rest).length > 0) {
+      db.updateSettings(rest);
+    }
+    res.json({ success: true, message: 'Account settings updated successfully', settings: db.getSettings() });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
@@ -806,9 +999,13 @@ app.delete('/api/campaigns/:id', (req, res) => {
 // Start campaign dispatch
 app.post('/api/campaigns/:id/start', (req, res) => {
   try {
-    const { bypassHours } = req.body || {};
+    const { bypassHours, sender_provider } = req.body || {};
+    if (sender_provider) {
+      db.prepare('UPDATE campaigns SET sender_provider = ? WHERE id = ?').run(sender_provider, req.params.id);
+    }
     const result = queueService.startCampaign(req.params.id, { 
-      bypassHours: bypassHours !== undefined ? !!bypassHours : true 
+      bypassHours: bypassHours !== undefined ? !!bypassHours : true,
+      sender_provider
     });
     res.json(result);
   } catch (error) {
@@ -829,9 +1026,13 @@ app.post('/api/campaigns/:id/pause', (req, res) => {
 // Resume campaign dispatch
 app.post('/api/campaigns/:id/resume', (req, res) => {
   try {
-    const { bypassHours } = req.body || {};
+    const { bypassHours, sender_provider } = req.body || {};
+    if (sender_provider) {
+      db.prepare('UPDATE campaigns SET sender_provider = ? WHERE id = ?').run(sender_provider, req.params.id);
+    }
     const result = queueService.startCampaign(req.params.id, { 
-      bypassHours: bypassHours !== undefined ? !!bypassHours : true 
+      bypassHours: bypassHours !== undefined ? !!bypassHours : true,
+      sender_provider
     });
     res.json(result);
   } catch (error) {
@@ -865,11 +1066,11 @@ app.get('/api/campaigns/:id/status', (req, res) => {
 // Send a single test email preview
 app.post('/api/campaigns/:id/test-send', async (req, res) => {
   try {
-    const { testRecipient } = req.body;
+    const { testRecipient, sender_provider } = req.body;
     if (!testRecipient) {
       return res.status(400).json({ success: false, message: 'Test recipient email is required.' });
     }
-    const result = await queueService.sendTestEmail(req.params.id, testRecipient);
+    const result = await queueService.sendTestEmail(req.params.id, testRecipient, sender_provider);
     res.json(result);
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });

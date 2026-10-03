@@ -13,7 +13,8 @@ import {
   Users, 
   Database,
   FileCheck,
-  RefreshCw
+  RefreshCw,
+  Globe
 } from 'lucide-react';
 import Switch from './common/Switch';
 
@@ -22,6 +23,9 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
   const [loading, setLoading] = useState(true);
   const [authStatus, setAuthStatus] = useState(null);
   const [dailyQuota, setDailyQuota] = useState(null);
+
+  // Sender Account Gateway
+  const [senderProvider, setSenderProvider] = useState('default'); // 'default' | 'gmail_app_password' | 'custom_domain'
 
   // Preflight Option States
   const [enforceWorkingHours, setEnforceWorkingHours] = useState(true);
@@ -44,21 +48,29 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
       const campRes = await fetch(`/api/campaigns/${campaignId}`);
       if (campRes.ok) {
         const campData = await campRes.json();
-        setCampaign(campData.campaign || campData);
+        const activeCamp = campData.campaign || campData;
+        setCampaign(activeCamp);
+        if (activeCamp.sender_provider) {
+          setSenderProvider(activeCamp.sender_provider);
+        }
       } else {
         // Fallback: fetch all campaigns and match
         const allRes = await fetch('/api/campaigns');
         const allData = await allRes.json();
         const found = allData.find(c => String(c.id) === String(campaignId));
         setCampaign(found || null);
+        if (found?.sender_provider) {
+          setSenderProvider(found.sender_provider);
+        }
       }
 
       // 2. Fetch auth status
       const authRes = await fetch('/api/auth/status');
       const authData = await authRes.json();
       setAuthStatus(authData);
-      if (authData?.account?.email && !testEmail) {
-        setTestEmail(authData.account.email);
+      const defaultEmail = authData?.custom_domain?.sender_email || authData?.account?.email || '';
+      if (defaultEmail && !testEmail) {
+        setTestEmail(defaultEmail);
       }
 
       // 3. Fetch daily quota
@@ -87,7 +99,10 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
       const res = await fetch(`/api/campaigns/${campaignId}/test-send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ testRecipient: testEmail })
+        body: JSON.stringify({ 
+          testRecipient: testEmail,
+          sender_provider: senderProvider 
+        })
       });
       const data = await res.json();
       setTestResult(data);
@@ -107,7 +122,10 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
       const res = await fetch(`/api/campaigns/${campaignId}/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bypassHours: !enforceWorkingHours })
+        body: JSON.stringify({ 
+          bypassHours: !enforceWorkingHours,
+          sender_provider: senderProvider 
+        })
       });
       const data = await res.json();
       if (!data.success) {
@@ -200,6 +218,69 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left 2 Columns: Configurable Options & Switches */}
         <div className="md:col-span-2 space-y-6">
+          {/* Sender Account Gateway Selection */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 shadow-sm">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-sky-400" />
+                <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+                  Outbound Sender Identity
+                </h2>
+              </div>
+              <span className="text-[10px] text-slate-500">Sender for this campaign</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setSenderProvider('default')}
+                className={`p-3 rounded-lg border text-left transition-all ${
+                  senderProvider === 'default'
+                    ? 'bg-indigo-600/15 border-indigo-500/50 text-white shadow-inner'
+                    : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <div className="font-bold text-xs text-white">Default Gateway</div>
+                <div className="text-[11px] text-indigo-400 mt-0.5 truncate">
+                  {authStatus?.active_provider === 'custom_domain' ? 'Custom Domain' : 'Gmail App Password'}
+                </div>
+                <div className="text-[10px] text-slate-500 mt-1">From Global Settings</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSenderProvider('gmail_app_password')}
+                className={`p-3 rounded-lg border text-left transition-all ${
+                  senderProvider === 'gmail_app_password'
+                    ? 'bg-indigo-600/15 border-indigo-500/50 text-white shadow-inner'
+                    : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <div className="font-bold text-xs text-white">Gmail Account</div>
+                <div className="text-[11px] text-indigo-400 mt-0.5 truncate">
+                  {authStatus?.account?.email || 'Gmail SMTP'}
+                </div>
+                <div className="text-[10px] text-slate-500 mt-1">App Password Direct</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSenderProvider('custom_domain')}
+                className={`p-3 rounded-lg border text-left transition-all ${
+                  senderProvider === 'custom_domain'
+                    ? 'bg-sky-600/15 border-sky-500/50 text-white shadow-inner'
+                    : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <div className="font-bold text-xs text-white">Custom Domain</div>
+                <div className="text-[11px] text-sky-400 mt-0.5 truncate">
+                  {authStatus?.custom_domain?.sender_email || authStatus?.custom_domain?.user || 'Custom SMTP'}
+                </div>
+                <div className="text-[10px] text-slate-500 mt-1">Domain SMTP Relay</div>
+              </button>
+            </div>
+          </div>
+
           {/* Working Hours Enforcement Card */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 shadow-sm">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-800/80 mb-2">
@@ -321,16 +402,38 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
             </h3>
 
             <div className="space-y-3 text-xs">
-              {/* Check 1: Gmail Auth */}
-              <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <div className="font-semibold text-slate-200">Gmail Gateway</div>
-                  <div className="text-[11px] text-slate-400 truncate">
-                    {authStatus?.account?.email || 'Connected & Authorized'}
+              {/* Check 1: Outbound Sending Gateway */}
+              {((senderProvider === 'custom_domain') || (senderProvider === 'default' && authStatus?.active_provider === 'custom_domain')) ? (
+                <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                  {authStatus?.custom_domain?.configured ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  )}
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-200">Custom Domain Gateway</div>
+                    <div className="text-[11px] text-slate-400 truncate">
+                      {authStatus?.custom_domain?.configured
+                        ? `${authStatus.custom_domain.host}:${authStatus.custom_domain.port} (${authStatus.custom_domain.sender_email || authStatus.custom_domain.user})`
+                        : 'Unconfigured — Configure in Settings'}
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                  {authStatus?.account?.email ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  )}
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-200">Gmail Gateway</div>
+                    <div className="text-[11px] text-slate-400 truncate">
+                      {authStatus?.account?.email || 'Not connected — Configure in Settings'}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Check 2: Daily Quota Headroom */}
               <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">

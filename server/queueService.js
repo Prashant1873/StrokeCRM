@@ -1,3 +1,4 @@
+const nodemailer = require('nodemailer');
 const db = require('./db');
 const authService = require('./authService');
 const templateService = require('./templateService');
@@ -13,6 +14,64 @@ try {
   db.prepare("UPDATE campaigns SET status = 'PAUSED' WHERE status = 'RUNNING'").run();
 } catch (e) {
   console.warn('[StrokeCRM] Startup queue cleanup note:', e.message);
+}
+
+/**
+ * Resolves the outbound Nodemailer transporter and sender address based on campaign override or active provider
+ */
+function resolveTransporter(campaignSenderOverride = null) {
+  const settings = db.getSettings ? db.getSettings() : {};
+  const activeProvider = (campaignSenderOverride && campaignSenderOverride !== 'default')
+    ? campaignSenderOverride
+    : (settings.active_provider || 'gmail_app_password');
+
+  if (activeProvider === 'custom_domain') {
+    if (!settings.custom_smtp_host || !settings.custom_smtp_user || !settings.custom_smtp_pass) {
+      throw new Error('Custom Domain SMTP is not fully configured. Please update host, username, and password in Settings.');
+    }
+    const portNum = Number(settings.custom_smtp_port) || 587;
+    const isSecure = settings.custom_smtp_secure === '1' || settings.custom_smtp_secure === 'true' || settings.custom_smtp_secure === true || portNum === 465;
+
+    const transporter = nodemailer.createTransport({
+      host: String(settings.custom_smtp_host).trim(),
+      port: portNum,
+      secure: isSecure,
+      auth: {
+        user: String(settings.custom_smtp_user).trim(),
+        pass: String(settings.custom_smtp_pass)
+      },
+      connectionTimeout: 15000,
+      greetingTimeout: 10000,
+      socketTimeout: 20000
+    });
+
+    const senderEmail = settings.custom_sender_email ? String(settings.custom_sender_email).trim() : String(settings.custom_smtp_user).trim();
+    const senderName = settings.custom_sender_name ? String(settings.custom_sender_name).trim() : '';
+    const fromAddress = senderName ? `"${senderName}" <${senderEmail}>` : senderEmail;
+
+    return {
+      transporter,
+      fromAddress,
+      provider: 'custom_domain'
+    };
+  }
+
+  if (activeProvider === 'oauth2') {
+    throw new Error('OAuth2 dispatch mode is not yet configured with refresh token.');
+  }
+
+  // Default: Gmail App Password
+  const account = authService.getActiveAccount();
+  if (!account || !account.verified) {
+    throw new Error('Gmail sender account is not connected or unverified. Please check Settings & Gmail.');
+  }
+  const transporter = authService.createSmtpTransporter(account.email, account.app_password);
+  return {
+    transporter,
+    fromAddress: account.email,
+    provider: 'gmail_app_password',
+    account
+  };
 }
 
 /**
@@ -114,13 +173,21 @@ function ccBccForRecipient(campaign, recipientEmail) {
 /**
  * Sends a single email to a contact
  */
-async function dispatchSingleEmail(account, contact, campaign) {
-  let transporter;
-  if (account.type === 'app_password') {
-    transporter = authService.createSmtpTransporter(account.email, account.app_password);
+async function dispatchSingleEmail(transportOrAccount, contact, campaign, senderOverride = null) {
+  let transportContext;
+  if (transportOrAccount && transportOrAccount.transporter && transportOrAccount.fromAddress) {
+    transportContext = transportOrAccount;
+  } else if (transportOrAccount && transportOrAccount.type === 'app_password') {
+    transportContext = {
+      transporter: authService.createSmtpTransporter(transportOrAccount.email, transportOrAccount.app_password),
+      fromAddress: transportOrAccount.email,
+      provider: 'gmail_app_password'
+    };
   } else {
-    throw new Error('OAuth2 dispatch mode is not yet configured with refresh token.');
+    transportContext = resolveTransporter(senderOverride || campaign.sender_provider);
   }
+
+  const { transporter, fromAddress } = transportContext;
 
   // Parse contact custom fields
   let customFields = {};
@@ -151,7 +218,7 @@ async function dispatchSingleEmail(account, contact, campaign) {
   const renderedBody = templateService.interpolate(rawBody, rowData);
 
   const mailOptions = {
-    from: account.email,
+    from: fromAddress,
     to: contact.email,
     subject: renderedSubject,
     text: templateService.htmlToText(renderedBody),
@@ -193,9 +260,11 @@ async function runCampaignWorker(campaignId) {
     const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(jobId);
     if (!campaign) break;
 
-    const account = authService.getActiveAccount();
-    if (!account || !account.verified) {
-      job.lastLog = 'Sender account not connected or unverified.';
+    let transportContext;
+    try {
+      transportContext = resolveTransporter(job.senderOverride || campaign.sender_provider);
+    } catch (err) {
+      job.lastLog = `Sender error: ${err.message}`;
       db.prepare("UPDATE campaigns SET status = 'PAUSED' WHERE id = ?").run(jobId);
       break;
     }
@@ -270,7 +339,7 @@ async function runCampaignWorker(campaignId) {
 
     try {
       // 6. Dispatch Email
-      const result = await dispatchSingleEmail(account, contact, campaign);
+      const result = await dispatchSingleEmail(transportContext, contact, campaign);
 
       // Record success
       db.prepare(`
@@ -452,6 +521,7 @@ function startCampaign(campaignId, options = {}) {
       isWaitingSchedule: false,
       isWorkerRunning: false,
       bypassHours: shouldBypass,
+      senderOverride: options.sender_provider || null,
       nextSendAt: null,
       delayDurationSec: 0,
       currentContactEmail: null,
@@ -463,6 +533,7 @@ function startCampaign(campaignId, options = {}) {
     job.isStopped = false;
     job.isWaitingSchedule = false;
     job.bypassHours = shouldBypass;
+    if (options.sender_provider) job.senderOverride = options.sender_provider;
     job.lastLog = 'Resuming dispatch worker...';
   }
 
@@ -618,16 +689,13 @@ function getCampaignQueueStatus(campaignId) {
 /**
  * Send a single test email preview to specified recipient
  */
-async function sendTestEmail(campaignId, testRecipient) {
-  const account = authService.getActiveAccount();
-  if (!account || !account.verified) {
-    throw new Error('Gmail sender is not connected. Configure in Settings & Gmail first.');
-  }
-
+async function sendTestEmail(campaignId, testRecipient, senderOverride = null) {
   const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(campaignId);
   if (!campaign) {
     throw new Error('Campaign not found.');
   }
+
+  const transportContext = resolveTransporter(senderOverride || campaign.sender_provider);
 
   const sampleContact = {
     email: testRecipient,
@@ -642,15 +710,18 @@ async function sendTestEmail(campaignId, testRecipient) {
     })
   };
 
-  const result = await dispatchSingleEmail(account, sampleContact, campaign);
+  const result = await dispatchSingleEmail(transportContext, sampleContact, campaign);
+  const providerLabel = transportContext.provider === 'custom_domain' ? 'Custom Domain SMTP' : 'Gmail';
   return {
     success: true,
-    message: `Test email successfully sent to ${testRecipient} via Gmail!`,
+    message: `Test email successfully sent to ${testRecipient} via ${providerLabel}!`,
     messageId: result.messageId
   };
 }
 
 module.exports = {
+  resolveTransporter,
+  dispatchSingleEmail,
   startCampaign,
   pauseCampaign,
   stopCampaign,

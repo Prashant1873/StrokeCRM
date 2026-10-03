@@ -164,6 +164,9 @@ try {
   if (!recordColumns.includes('included')) {
     db.exec("ALTER TABLE database_records ADD COLUMN included INTEGER NOT NULL DEFAULT 1");
   }
+  if (!campaignColumns.includes('sender_provider')) {
+    db.exec("ALTER TABLE campaigns ADD COLUMN sender_provider TEXT DEFAULT 'default'");
+  }
 } catch (e) {
   console.warn('Column migration notice:', e.message);
 }
@@ -275,7 +278,20 @@ const defaultSettings = [
   ['end_hour', '18:00'],
   ['enforce_schedule', '0'], // '0' = 24/7 on-demand dispatch, '1' = restrict to start_hour - end_hour
   ['active_days', JSON.stringify(['Mon', 'Tue', 'Wed', 'Thu', 'Fri'])],
-  ['gmail_quota_type', 'personal'] // 'personal' (500) | 'workspace' (2000)
+  ['gmail_quota_type', 'personal'], // 'personal' (500) | 'workspace' (2000)
+  ['active_provider', 'gmail_app_password'], // 'gmail_app_password' | 'oauth2' | 'custom_domain'
+  ['custom_sender_name', ''],
+  ['custom_sender_email', ''],
+  ['custom_smtp_host', ''],
+  ['custom_smtp_port', '587'],
+  ['custom_smtp_secure', '0'],
+  ['custom_smtp_user', ''],
+  ['custom_smtp_pass', ''],
+  ['custom_imap_host', ''],
+  ['custom_imap_port', '993'],
+  ['custom_imap_secure', '1'],
+  ['custom_imap_user', ''],
+  ['custom_imap_pass', '']
 ];
 
 const insertSettingStmt = db.prepare(`
@@ -287,4 +303,40 @@ for (const [key, val] of defaultSettings) {
   insertSettingStmt.run(key, val, new Date().toISOString());
 }
 
+/**
+ * Retrieve all settings as a key-value object
+ */
+db.getSettings = function() {
+  const rows = db.prepare('SELECT key, value FROM settings').all();
+  const settings = {};
+  rows.forEach(r => {
+    try {
+      settings[r.key] = JSON.parse(r.value);
+    } catch {
+      settings[r.key] = r.value;
+    }
+  });
+  return settings;
+};
+
+/**
+ * Update multiple settings atomically
+ */
+db.updateSettings = function(settingsObj) {
+  const stmt = db.prepare(`
+    INSERT INTO settings (key, value, updated_at) 
+    VALUES (?, ?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+  `);
+  const updateTx = db.transaction((obj) => {
+    for (const [key, val] of Object.entries(obj)) {
+      const strVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
+      stmt.run(key, strVal, new Date().toISOString());
+    }
+  });
+  updateTx(settingsObj);
+  return db.getSettings();
+};
+
 module.exports = db;
+

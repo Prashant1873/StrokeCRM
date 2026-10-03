@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Custom Domains & Automated Drips
-status: planning
-last_updated: "2026-10-03T12:51:01.466Z"
+status: executing
+last_updated: "2026-10-03T13:36:00.000Z"
 last_activity: 2026-10-03
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 3
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 1
+  percent: 33
 ---
 
 # Current State: StrokeCRM
@@ -24,13 +24,14 @@ See: `.planning/PROJECT.md` (updated 2026-10-03)
 
 ## Current Phase
 
-- **Active Phase**: Phase 10: Custom Domain SMTP & IMAP Account Gateway
+- **Active Phase**: Phase 11: Multi-Step Drip Sequence Engine & Builder Studio
 - **Status**: Ready to plan
+- **Completed**: Phase 10: Custom Domain SMTP & IMAP Account Gateway (shipped 2026-10-03)
 - **Blocked by**: None
 
 ## Phase Progress
 
-- [ ] Phase 10: Custom Domain SMTP & IMAP Account Gateway
+- [x] Phase 10: Custom Domain SMTP & IMAP Account Gateway (completed 2026-10-03)
 - [ ] Phase 11: Multi-Step Drip Sequence Engine & Builder Studio
 - [ ] Phase 12: Inbound IMAP Reply Scanner, Sequence Disarm & Funnel Analytics
 
@@ -38,20 +39,18 @@ See: `.planning/PROJECT.md` (updated 2026-10-03)
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-10-03 | Local Web App Architecture | Guarantees resilient background dispatch queue without browser extension sleep issues, and keeps contact lists private. |
-| 2026-10-03 | Dual Gmail Auth Support | Enables zero-friction 1-minute setup via Google App Passwords while also providing OAuth2 support. |
-| 2026-10-03 | Node.js + Express + React (Vite) + SQLite | Snappy, lightweight, asynchronous, with battle-tested Nodemailer and SQLite ACID transactions. |
-| 2026-10-03 | URL Hash Routing & Traceable Breadcrumbs | Supports browser Back/Forward navigation, bookmarking, and 1-key (Esc) backwards tracing without server routing rewrite overhead. |
-| 2026-10-03 | Dedicated Campaign Preflight Cockpit | Provides tactile Working Hours enforcement switch (with 24/7 bypass), jitter tuning, and test-send verification prior to queue ignition. |
-| 2026-10-03 | Collapsible Dark Cockpit Shell | Linear/Raycast aesthetic, maximizes table viewing density while maintaining fluid spring motion and WCAG 2.2 AA compliance. |
+| 2026-10-03 | Dual Gateway Architecture | Preserves Gmail App Password & OAuth2 alongside Custom Domain SMTP/IMAP in SQLite settings without destructive migration. |
+| 2026-10-03 | `imapflow` Integration | Modern async/await IMAP client with built-in connection timeouts for reliable inbound reply monitoring. |
+| 2026-10-03 | 1-Click Provider Presets | Instant configuration for Zoho, Fastmail, Office 365, Namecheap PrivateEmail, and Custom with auto-port/SSL detection. |
+| 2026-10-03 | Preflight & Campaign Sender Routing | Allows global active gateway setting with per-campaign sender identity selection in the Preflight Cockpit. |
 
 ## Current Position
 
 Phase: Phase 10: Custom Domain SMTP & IMAP Account Gateway
-Plan: 10-01-PLAN.md
-Status: Ready to execute
-Last activity: 2026-10-03 — Phase 10 plan created
+Plan: 10-01-PLAN.md (Completed)
+Status: Completed
+Last activity: 2026-10-03 — Phase 10 executed and verified with 0 errors
 
 ## Operator Next Steps
 
-- Execute Phase 10 plan with /gsd-execute-phase 10
+- Proceed to Phase 11 with `/gsd-plan-phase 11`

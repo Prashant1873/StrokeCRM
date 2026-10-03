@@ -1324,6 +1324,13 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   </div>
                 </div>
 
+                <div className="flex items-center justify-between text-[11px] pt-0.5">
+                  <span className="text-slate-500">Gateway:</span>
+                  <span className="text-slate-300 font-medium">
+                    {selectedCampaign.sender_provider === 'custom_domain' ? 'Custom Domain' : selectedCampaign.sender_provider === 'gmail_app_password' ? 'Gmail' : 'Default Account'}
+                  </span>
+                </div>
+
                 <p className="text-[11px] text-slate-400 truncate">
                   Log: <span className="text-slate-300 font-mono">{queueStatus?.lastLog || 'Awaiting launch command'}</span>
                 </p>

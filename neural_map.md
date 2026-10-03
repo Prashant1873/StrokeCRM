@@ -87,10 +87,12 @@ flowchart TD
   - Delay: e.g. Random delay between 45s to 180s between each send.
   - Daily limit throttle: e.g. Max 100 emails/day during warmup.
 
-### 3. Gmail Transport & Protocol Layer
+### 3. Outbound Transport & Protocol Gateway (Universal Dual Gateway)
 - **Mode A (Gmail REST API via OAuth2)**: Direct Google API integration, thread management, official labels, native draft creation.
 - **Mode B (SMTP with Google App Passwords)**: Direct connection to `smtp.gmail.com:465/587` with zero Google Cloud console setup.
-- **Quota Guard**: Enforces strict Google hard limits (500/day personal, 2,000/day Workspace).
+- **Mode C (Custom Domain SMTP & IMAP Gateway)**: Outbound dispatch via custom domain SMTP (host, port 465 SSL / 587 STARTTLS, auth) and inbound monitoring via IMAP (`imapflow`, port 993 SSL). Supports 1-click presets for Zoho Mail, Fastmail, Microsoft 365, Namecheap PrivateEmail, and self-hosted mail servers.
+- **Dynamic Resolver**: `resolveTransporter(campaignSenderOverride)` routes each email dynamically to the active global default or campaign-specific sender override.
+- **Quota Guard**: Enforces strict Google hard limits (500/day personal, 2,000/day Workspace) or custom daily caps.
 
 ### 4. A/B Testing & Optimization Engine
 - **Variant Splitting**: Random or alternating assignment of recipient rows to Variant A vs Variant B (subject line, body, CTA).
