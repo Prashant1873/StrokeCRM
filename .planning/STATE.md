@@ -25,7 +25,7 @@ See: `.planning/PROJECT.md` (updated 2026-10-03)
 ## Current Phase
 
 - **Active Phase**: Phase 12: Inbound IMAP Reply Scanner, Sequence Disarm & Funnel Analytics
-- **Status**: Ready to plan
+- **Status**: Ready to execute
 - **Completed**: Phase 10: Custom Domain SMTP & IMAP Account Gateway (shipped 2026-10-03), Phase 11: Multi-Step Drip Sequence Engine & Builder Studio (shipped 2026-10-03)
 - **Blocked by**: None
 
@@ -33,7 +33,7 @@ See: `.planning/PROJECT.md` (updated 2026-10-03)
 
 - [x] Phase 10: Custom Domain SMTP & IMAP Account Gateway (completed 2026-10-03)
 - [x] Phase 11: Multi-Step Drip Sequence Engine & Builder Studio (completed 2026-10-03)
-- [ ] Phase 12: Inbound IMAP Reply Scanner, Sequence Disarm & Funnel Analytics
+- [ ] Phase 12: Inbound IMAP Reply Scanner, Sequence Disarm & Funnel Analytics (Plan ready)
 
 ## Recent Decisions
 
@@ -46,14 +46,17 @@ See: `.planning/PROJECT.md` (updated 2026-10-03)
 | 2026-10-03 | Linear 3-Step Sequence Model | Clean, frictionless Step 1 (Initial), Step 2 (Follow-up), Step 3 (Closing) sequence without branching over-engineering. |
 | 2026-10-03 | RFC 2822 In-Reply-To Threading | Follow-up sends inject In-Reply-To & References headers to land directly in recipient's existing conversation thread. |
 | 2026-10-03 | Non-Destructive Delay Queue Polling | Campaigns with future scheduled follow-ups enter WAITING_SCHEDULE rather than closing prematurely when Step 1 concludes. |
+| 2026-10-03 | Universal IMAP Resolver | Reply scanner supports both Custom Domain IMAP and Gmail IMAP (imap.gmail.com:993) transparently. |
+| 2026-10-03 | Atomic Sequence Disarm | Lead reply permanently nullifies next_step_scheduled_at, preventing accidental follow-ups. |
+| 2026-10-03 | RFC Auto-Responder Filter | Auto-Submitted, X-Autoreply, and OOO subject matching prevent false sequence halts. |
 
 ## Current Position
 
-Phase: Phase 11: Multi-Step Drip Sequence Engine & Builder Studio
-Plan: 11-01-PLAN.md (Completed)
-Status: Completed
-Last activity: 2026-10-03 — Phase 11 executed and verified with 0 errors
+Phase: Phase 12: Inbound IMAP Reply Scanner, Sequence Disarm & Funnel Analytics
+Plan: 12-01-PLAN.md (Ready for execution)
+Status: Plan created
+Last activity: 2026-10-03 — Phase 12 planned (Context, Research, Validation, Plan generated)
 
 ## Operator Next Steps
 
-- Proceed to Phase 12 with `/gsd-plan-phase 12`
+- Execute Phase 12 with `/gsd-execute-phase 12`
