@@ -340,8 +340,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
       const staged = stagedRows[id];
       const selected = new Set();
       for (const row of records) {
-        const locked = row.status === 'SENT' || row.status === 'SENDING';
-        const checked = locked || (staged ? staged.includes(row.id) : applyNow ? row.included !== 0 : true);
+        const checked = staged ? staged.includes(row.id) : applyNow ? row.included !== 0 : true;
         if (checked) selected.add(row.id);
       }
       setRowPicker(prev => prev && prev.databaseId === id
@@ -353,7 +352,6 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
   };
 
   const togglePickedRow = (row) => {
-    if (row.status === 'SENT' || row.status === 'SENDING') return;
     setRowPicker(prev => {
       if (!prev) return prev;
       const selected = new Set(prev.selected);
@@ -368,7 +366,6 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
       if (!prev) return prev;
       const selected = new Set(prev.selected);
       for (const row of rows) {
-        if (row.status === 'SENT' || row.status === 'SENDING') continue;
         if (check) selected.add(row.id);
         else selected.delete(row.id);
       }
@@ -660,29 +657,23 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   <th className="px-2 py-2 font-medium">Email</th>
                   <th className="px-2 py-2 font-medium">Name</th>
                   <th className="px-2 py-2 font-medium">Company</th>
-                  <th className="px-2 py-2 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {pickerShown.map(row => {
-                  const locked = row.status === 'SENT' || row.status === 'SENDING';
-                  return (
-                    <tr key={row.id} className="border-t border-slate-800/80 text-slate-300">
-                      <td className="px-4 py-1.5">
-                        <input
-                          type="checkbox"
-                          checked={rowPicker.selected.has(row.id)}
-                          disabled={locked}
-                          onChange={() => togglePickedRow(row)}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5 font-mono truncate max-w-[14rem]">{row.email}</td>
-                      <td className="px-2 py-1.5 truncate max-w-[8rem]">{row.first_name || '—'}</td>
-                      <td className="px-2 py-1.5 truncate max-w-[8rem]">{row.company || '—'}</td>
-                      <td className="px-2 py-1.5 text-slate-500">{locked ? row.status : row.status === 'FAILED' ? 'FAILED' : ''}</td>
-                    </tr>
-                  );
-                })}
+                {pickerShown.map(row => (
+                  <tr key={row.id} className="border-t border-slate-800/80 text-slate-300">
+                    <td className="px-4 py-1.5">
+                      <input
+                        type="checkbox"
+                        checked={rowPicker.selected.has(row.id)}
+                        onChange={() => togglePickedRow(row)}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5 font-mono truncate max-w-[14rem]">{row.email}</td>
+                    <td className="px-2 py-1.5 truncate max-w-[8rem]">{row.first_name || '—'}</td>
+                    <td className="px-2 py-1.5 truncate max-w-[8rem]">{row.company || '—'}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           )}

@@ -220,8 +220,8 @@ function getIncludedStats(databaseId) {
 }
 
 /**
- * Checks `ids` in and every other not-yet-sent row out.
- * Sent and in-flight rows stay included.
+ * Checks `ids` in and every other row out.
+ * A chosen row that was already sent is put back to pending so it can be sent again.
  */
 function setIncludedRecords(databaseId, ids) {
   const database = db.prepare('SELECT campaign_id FROM databases WHERE id = ?').get(databaseId);
@@ -238,12 +238,16 @@ function setIncludedRecords(databaseId, ids) {
   if (!chosen.length) throw new Error('Select at least one row.');
 
   const apply = db.transaction(() => {
-    db.prepare(`
+    db.prepare('UPDATE database_records SET included = 0 WHERE database_id = ?').run(databaseId);
+    const mark = db.prepare(`
       UPDATE database_records
-      SET included = CASE WHEN status IN ('SENT', 'SENDING') THEN 1 ELSE 0 END
-      WHERE database_id = ?
-    `).run(databaseId);
-    const mark = db.prepare('UPDATE database_records SET included = 1 WHERE database_id = ? AND id = ?');
+      SET included = 1,
+          status = CASE WHEN status IN ('SENT', 'FAILED', 'SENDING') THEN 'PENDING' ELSE status END,
+          sent_at = CASE WHEN status IN ('SENT', 'FAILED', 'SENDING') THEN NULL ELSE sent_at END,
+          message_id = CASE WHEN status IN ('SENT', 'FAILED', 'SENDING') THEN NULL ELSE message_id END,
+          error_message = CASE WHEN status IN ('SENT', 'FAILED', 'SENDING') THEN NULL ELSE error_message END
+      WHERE database_id = ? AND id = ?
+    `);
     for (const id of chosen) mark.run(databaseId, id);
 
     const stats = getIncludedStats(databaseId);
