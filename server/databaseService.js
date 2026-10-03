@@ -245,7 +245,10 @@ function setIncludedRecords(databaseId, ids) {
           status = CASE WHEN status IN ('SENT', 'FAILED', 'SENDING') THEN 'PENDING' ELSE status END,
           sent_at = CASE WHEN status IN ('SENT', 'FAILED', 'SENDING') THEN NULL ELSE sent_at END,
           message_id = CASE WHEN status IN ('SENT', 'FAILED', 'SENDING') THEN NULL ELSE message_id END,
-          error_message = CASE WHEN status IN ('SENT', 'FAILED', 'SENDING') THEN NULL ELSE error_message END
+          error_message = CASE WHEN status IN ('SENT', 'FAILED', 'SENDING') THEN NULL ELSE error_message END,
+          current_step = CASE WHEN status IN ('SENT', 'FAILED', 'SENDING') THEN 1 ELSE current_step END,
+          initial_message_id = CASE WHEN status IN ('SENT', 'FAILED', 'SENDING') THEN NULL ELSE initial_message_id END,
+          next_step_scheduled_at = CASE WHEN status IN ('SENT', 'FAILED', 'SENDING') THEN NULL ELSE next_step_scheduled_at END
       WHERE database_id = ? AND id = ?
     `);
     for (const id of chosen) mark.run(databaseId, id);
@@ -451,7 +454,8 @@ function reopenUnusedDatabase(databaseId, campaignId) {
   const reopenTx = db.transaction(() => {
     db.prepare(`
       UPDATE database_records
-      SET status = 'PENDING', sent_at = NULL, message_id = NULL, error_message = NULL, campaign_id = ?
+      SET status = 'PENDING', sent_at = NULL, message_id = NULL, error_message = NULL,
+          current_step = 1, initial_message_id = NULL, next_step_scheduled_at = NULL, campaign_id = ?
       WHERE database_id = ?
     `).run(campaignId, databaseId);
 

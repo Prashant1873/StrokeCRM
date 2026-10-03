@@ -11,10 +11,10 @@
 - [ ] **DOM-03**: User can switch the active sender account between Gmail (App Password/OAuth2) and Custom Domain SMTP in Settings and Campaign Preflight.
 
 ### Multi-Step Drip Sequences
-- [ ] **DRIP-01**: User can configure multiple sequence steps for a campaign (Step 1 Initial, Step 2 Follow-up, Step 3 Final) with customizable delay intervals in days and hours.
-- [ ] **DRIP-02**: User can bind independent email templates and subject/body copy to each sequence step.
-- [ ] **DRIP-03**: System supports Organic Threading mode, preserving original `Message-ID` in `In-Reply-To` and `References` headers so follow-ups arrive in the same conversation thread.
-- [ ] **DRIP-04**: Queue engine evaluates `scheduled_at` timestamps to dispatch due follow-up steps while respecting working hours, jitter pacing, and daily caps.
+- [x] **DRIP-01**: User can configure multiple sequence steps for a campaign (Step 1 Initial, Step 2 Follow-up, Step 3 Final) with customizable delay intervals in days and hours.
+- [x] **DRIP-02**: User can bind independent email templates and subject/body copy to each sequence step.
+- [x] **DRIP-03**: System supports Organic Threading mode, preserving original `Message-ID` in `In-Reply-To` and `References` headers so follow-ups arrive in the same conversation thread.
+- [x] **DRIP-04**: Queue engine evaluates `scheduled_at` timestamps to dispatch due follow-up steps while respecting working hours, jitter pacing, and daily caps.
 
 ### Inbound IMAP Reply Detection & Safety
 - [ ] **REPLY-01**: System scans the configured IMAP inbox (periodic background polling and manual "Scan Replies" trigger) for incoming responses from active leads.
@@ -48,10 +48,10 @@
 | DOM-01 | Phase 10 | Complete |
 | DOM-02 | Phase 10 | Complete |
 | DOM-03 | Phase 10 | Complete |
-| DRIP-01 | Phase 11 | Pending |
-| DRIP-02 | Phase 11 | Pending |
-| DRIP-03 | Phase 11 | Pending |
-| DRIP-04 | Phase 11 | Pending |
+| DRIP-01 | Phase 11 | Complete |
+| DRIP-02 | Phase 11 | Complete |
+| DRIP-03 | Phase 11 | Complete |
+| DRIP-04 | Phase 11 | Complete |
 | REPLY-01 | Phase 12 | Pending |
 | REPLY-02 | Phase 12 | Pending |
 | REPLY-03 | Phase 12 | Pending |

@@ -25,7 +25,7 @@
 ## Milestone v2.0: Custom Domains & Automated Drips
 
 - [x] **Phase 10: Custom Domain SMTP & IMAP Account Gateway** (completed 2026-10-03)
-- [ ] **Phase 11: Multi-Step Drip Sequence Engine & Builder Studio** - Sequence builder for Step 1, 2, and 3 with custom delay intervals, template binding, organic email threading (`In-Reply-To`), and scheduled dispatch.
+- [x] **Phase 11: Multi-Step Drip Sequence Engine & Builder Studio** (completed 2026-10-03)
 - [ ] **Phase 12: Inbound IMAP Reply Scanner, Sequence Disarm & Funnel Analytics** - Background IMAP reply scanner, auto-responder filtering, atomic follow-up disarming (`CANCELLED_REPLIED`), manual reply marking, and step conversion funnel metrics.
 
 ---

@@ -960,6 +960,171 @@ app.post('/api/campaigns/:id/template', (req, res) => {
   }
 });
 
+// ==========================================
+// Multi-Step Drip Sequence Endpoints (Phase 11)
+// ==========================================
+
+// Get all drip sequence steps for a campaign
+app.get('/api/campaigns/:id/drip-steps', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(campaignId);
+    if (!campaign) {
+      return res.status(404).json({ success: false, message: 'Campaign not found.' });
+    }
+
+    const steps = db.prepare(`
+      SELECT s.*, t.name as template_name
+      FROM campaign_drip_steps s
+      LEFT JOIN templates t ON s.template_id = t.id
+      WHERE s.campaign_id = ?
+      ORDER BY s.step_number ASC
+    `).all(campaignId);
+
+    // If no steps configured yet, synthesize Step 1 from campaign defaults
+    if (!steps || steps.length === 0) {
+      const defaultStep1 = {
+        id: null,
+        campaign_id: campaignId,
+        step_number: 1,
+        delay_days: 0,
+        delay_hours: 0,
+        template_id: campaign.template_id || null,
+        template_name: null,
+        subject_a: campaign.subject_a || '',
+        body_a: campaign.body_a || '',
+        subject_b: campaign.subject_b || '',
+        body_b: campaign.body_b || '',
+        thread_reply: 1,
+        is_active: 1
+      };
+      if (campaign.template_id) {
+        const tmpl = db.prepare('SELECT name FROM templates WHERE id = ?').get(campaign.template_id);
+        if (tmpl) defaultStep1.template_name = tmpl.name;
+      }
+      return res.json({ success: true, steps: [defaultStep1] });
+    }
+
+    res.json({ success: true, steps });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Save / update all drip sequence steps for a campaign
+app.post('/api/campaigns/:id/drip-steps', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(campaignId);
+    if (!campaign) {
+      return res.status(404).json({ success: false, message: 'Campaign not found.' });
+    }
+
+    const { steps } = req.body;
+    if (!Array.isArray(steps) || steps.length === 0) {
+      return res.status(400).json({ success: false, message: 'Steps array is required.' });
+    }
+
+    const now = new Date().toISOString();
+
+    const saveTx = db.transaction((stepsList) => {
+      // Clear existing steps for clean state
+      db.prepare('DELETE FROM campaign_drip_steps WHERE campaign_id = ?').run(campaignId);
+
+      const insertStmt = db.prepare(`
+        INSERT INTO campaign_drip_steps (
+          campaign_id, step_number, delay_days, delay_hours, template_id,
+          subject_a, body_a, subject_b, body_b, thread_reply, is_active,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      for (const step of stepsList) {
+        const stepNum = Number(step.step_number) || 1;
+        const delayDays = stepNum === 1 ? 0 : Math.max(0, Number(step.delay_days) || 0);
+        const delayHours = stepNum === 1 ? 0 : Math.max(0, Number(step.delay_hours) || 0);
+        const templateId = step.template_id ? Number(step.template_id) : null;
+        const subjectA = String(step.subject_a || '').trim();
+        const bodyA = String(step.body_a || '');
+        const subjectB = String(step.subject_b || '').trim();
+        const bodyB = String(step.body_b || '');
+        const threadReply = step.thread_reply !== undefined ? (step.thread_reply ? 1 : 0) : 1;
+        const isActive = step.is_active !== undefined ? (step.is_active ? 1 : 0) : 1;
+
+        insertStmt.run(
+          campaignId, stepNum, delayDays, delayHours, templateId,
+          subjectA, bodyA, subjectB, bodyB, threadReply, isActive,
+          now, now
+        );
+
+        // Sync Step 1 back to campaign for 100% backward compatibility
+        if (stepNum === 1) {
+          db.prepare(`
+            UPDATE campaigns 
+            SET subject_a = ?, body_a = ?, subject_b = ?, body_b = ?, template_id = ?, updated_at = ?
+            WHERE id = ?
+          `).run(subjectA, bodyA, subjectB, bodyB, templateId, now, campaignId);
+        }
+      }
+    });
+
+    saveTx(steps);
+
+    const savedSteps = db.prepare(`
+      SELECT s.*, t.name as template_name
+      FROM campaign_drip_steps s
+      LEFT JOIN templates t ON s.template_id = t.id
+      WHERE s.campaign_id = ?
+      ORDER BY s.step_number ASC
+    `).all(campaignId);
+
+    res.json({ success: true, message: 'Drip sequence steps saved successfully.', steps: savedSteps });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete a specific follow-up step
+app.delete('/api/campaigns/:id/drip-steps/:stepNumber', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const stepNumber = Number(req.params.stepNumber);
+    if (stepNumber <= 1) {
+      return res.status(400).json({ success: false, message: 'Cannot delete Step 1 (Initial send).' });
+    }
+
+    db.prepare('DELETE FROM campaign_drip_steps WHERE campaign_id = ? AND step_number = ?')
+      .run(campaignId, stepNumber);
+
+    res.json({ success: true, message: `Step ${stepNumber} deleted successfully.` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Send an isolated test preview of a specific drip step
+app.post('/api/campaigns/:id/send-step-test', async (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const { stepNumber, recipientEmail, sender_provider } = req.body || {};
+
+    if (!recipientEmail || !recipientEmail.trim()) {
+      return res.status(400).json({ success: false, message: 'Recipient email is required.' });
+    }
+
+    const result = await queueService.sendTestEmail(
+      campaignId,
+      recipientEmail.trim(),
+      sender_provider || null,
+      Number(stepNumber) || 1
+    );
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Delete a campaign
 app.delete('/api/campaigns/:id', (req, res) => {
   try {
@@ -981,6 +1146,7 @@ app.delete('/api/campaigns/:id', (req, res) => {
       db.prepare('UPDATE database_records SET campaign_id = NULL WHERE database_id = ?').run(campaign.database_id);
     }
 
+    db.prepare('DELETE FROM campaign_drip_steps WHERE campaign_id = ?').run(id);
     db.prepare('DELETE FROM email_logs WHERE campaign_id = ?').run(id);
     db.prepare('DELETE FROM contacts WHERE campaign_id = ?').run(id);
     db.prepare('DELETE FROM campaigns WHERE id = ?').run(id);

@@ -27,6 +27,7 @@ import {
   Eye
 } from 'lucide-react';
 import CampaignPreflight from './CampaignPreflight';
+import DripSequenceStudio from './DripSequenceStudio';
 
 function formatLogTime(dateStr) {
   if (!dateStr) return { formatted: 'Just now', relative: '', full: '' };
@@ -1401,13 +1402,24 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
             </p>
           </div>
 
+          {/* MULTI-STEP DRIP CADENCE STUDIO (Phase 11) */}
+          <DripSequenceStudio
+            campaign={selectedCampaign}
+            databaseHeaders={selectedCampaign.database_headers}
+            templates={templates}
+            onUpdate={() => {
+              fetchCampaigns();
+              fetchQueueStatus();
+            }}
+          />
+
           {/* MAIN EXECUTION COCKPIT CARD */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm space-y-6">
             {/* Controls Bar & Progress Summary */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-800">
               <div className="space-y-1">
                 <h2 className="text-lg font-bold text-white">{selectedCampaign.name}</h2>
-                <div className="flex items-center gap-3 text-xs text-slate-400">
+                <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-400">
                   <span>{totalContacts} Contacts Bound</span>
                   <span>•</span>
                   <span className="text-emerald-400 font-semibold">{sentCount} Sent</span>
@@ -1415,6 +1427,24 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   <span className="text-rose-400">{failedCount} Failed</span>
                   <span>•</span>
                   <span className="text-amber-400">{pendingCount} Pending</span>
+                  {queueStatus?.stepStats && (queueStatus.stepStats.step2_sent > 0 || queueStatus.stepStats.step2_scheduled > 0) && (
+                    <>
+                      <span>•</span>
+                      <span className="text-indigo-400 font-mono">Step 1: {queueStatus.stepStats.step1_sent}</span>
+                      <span>•</span>
+                      <span className="text-indigo-400 font-mono">
+                        Step 2: {queueStatus.stepStats.step2_sent} sent {queueStatus.stepStats.step2_scheduled > 0 ? `(${queueStatus.stepStats.step2_scheduled} scheduled)` : ''}
+                      </span>
+                      {(queueStatus.stepStats.step3_sent > 0 || queueStatus.stepStats.step3_scheduled > 0) && (
+                        <>
+                          <span>•</span>
+                          <span className="text-indigo-400 font-mono">
+                            Step 3: {queueStatus.stepStats.step3_sent} sent {queueStatus.stepStats.step3_scheduled > 0 ? `(${queueStatus.stepStats.step3_scheduled} scheduled)` : ''}
+                          </span>
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
 

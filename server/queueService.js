@@ -173,7 +173,7 @@ function ccBccForRecipient(campaign, recipientEmail) {
 /**
  * Sends a single email to a contact
  */
-async function dispatchSingleEmail(transportOrAccount, contact, campaign, senderOverride = null) {
+async function dispatchSingleEmail(transportOrAccount, contact, campaign, senderOverride = null, stepConfig = null, initialMessageId = null) {
   let transportContext;
   if (transportOrAccount && transportOrAccount.transporter && transportOrAccount.fromAddress) {
     transportContext = transportOrAccount;
@@ -207,26 +207,64 @@ async function dispatchSingleEmail(transportOrAccount, contact, campaign, sender
 
   // Determine variant (if A/B test)
   const variant = contact.assigned_variant || 'A';
-  const rawSubject = (variant === 'B' && campaign.is_ab_test && campaign.subject_b) 
-    ? campaign.subject_b 
-    : (campaign.subject_a || 'Hello');
-  const rawBody = (variant === 'B' && campaign.is_ab_test && campaign.body_b) 
-    ? campaign.body_b 
-    : (campaign.body_a || 'Hello');
+  const stepNumber = Number(stepConfig?.step_number) || Number(contact.current_step) || 1;
 
-  const renderedSubject = templateService.interpolate(rawSubject, rowData);
+  let rawSubject = '';
+  let rawBody = '';
+
+  if (stepConfig && stepNumber > 1) {
+    // Follow-up step content
+    rawSubject = (variant === 'B' && campaign.is_ab_test && stepConfig.subject_b)
+      ? stepConfig.subject_b
+      : (stepConfig.subject_a || '');
+    rawBody = (variant === 'B' && campaign.is_ab_test && stepConfig.body_b)
+      ? stepConfig.body_b
+      : (stepConfig.body_a || '');
+
+    // If subject is empty on a follow-up, default to Re: initial subject
+    if (!rawSubject) {
+      rawSubject = campaign.subject_a ? `Re: ${campaign.subject_a}` : 'Re: Quick follow up';
+    }
+  } else {
+    // Step 1 content
+    rawSubject = (variant === 'B' && campaign.is_ab_test && campaign.subject_b) 
+      ? campaign.subject_b 
+      : (campaign.subject_a || 'Hello');
+    rawBody = (variant === 'B' && campaign.is_ab_test && campaign.body_b) 
+      ? campaign.body_b 
+      : (campaign.body_a || 'Hello');
+  }
+
+  let renderedSubject = templateService.interpolate(rawSubject, rowData);
   const renderedBody = templateService.interpolate(rawBody, rowData);
+
+  // If follow-up with organic threading enabled, ensure Re: prefix
+  const threadReply = stepConfig ? (stepConfig.thread_reply === 1 || stepConfig.thread_reply === true) : true;
+  if (stepNumber > 1 && threadReply && !/^re:\s*/i.test(renderedSubject)) {
+    renderedSubject = `Re: ${renderedSubject}`;
+  }
+
+  const templateIdToUse = stepConfig?.template_id || campaign.template_id;
+
+  const mailHeaders = {
+    'X-Mailer': 'StrokeCRM Outreach Engine',
+    'X-Campaign-ID': String(campaign.id),
+    'X-Drip-Step': String(stepNumber)
+  };
+
+  // RFC 2822 Organic Conversation Threading: inject In-Reply-To and References
+  if (stepNumber > 1 && threadReply && initialMessageId) {
+    mailHeaders['In-Reply-To'] = initialMessageId;
+    mailHeaders['References'] = initialMessageId;
+  }
 
   const mailOptions = {
     from: fromAddress,
     to: contact.email,
     subject: renderedSubject,
     text: templateService.htmlToText(renderedBody),
-    attachments: templateService.getMailAttachments(campaign.template_id),
-    headers: {
-      'X-Mailer': 'StrokeCRM Outreach Engine',
-      'X-Campaign-ID': String(campaign.id)
-    }
+    attachments: templateService.getMailAttachments(templateIdToUse),
+    headers: mailHeaders
   };
 
   if (templateService.isHtml(renderedBody)) mailOptions.html = renderedBody;
@@ -239,7 +277,8 @@ async function dispatchSingleEmail(transportOrAccount, contact, campaign, sender
   return {
     messageId: info.messageId,
     variant,
-    subject: renderedSubject
+    subject: renderedSubject,
+    stepNumber
   };
 }
 
@@ -305,52 +344,127 @@ async function runCampaignWorker(campaignId) {
     }
     job.isWaitingSchedule = false;
 
-    // 5. Fetch next pending contact strictly from attached database
+    // 5. Fetch next pending contact strictly from attached database respecting scheduled delays
     const isIsolated = !!campaign.database_id;
+    const targetTable = isIsolated ? 'database_records' : 'contacts';
+    const nowIso = new Date().toISOString();
+
     let contact;
     if (isIsolated) {
       contact = db.prepare(`
         SELECT * FROM database_records 
         WHERE database_id = ? AND status = 'PENDING' AND included = 1 
-        ORDER BY id ASC LIMIT 1
-      `).get(campaign.database_id);
+          AND (next_step_scheduled_at IS NULL OR next_step_scheduled_at <= ?)
+        ORDER BY CASE WHEN current_step > 1 THEN 0 ELSE 1 END, id ASC 
+        LIMIT 1
+      `).get(campaign.database_id, nowIso);
     } else {
       contact = db.prepare(`
         SELECT * FROM contacts 
         WHERE campaign_id = ? AND status = 'PENDING' 
-        ORDER BY id ASC LIMIT 1
-      `).get(jobId);
+          AND (next_step_scheduled_at IS NULL OR next_step_scheduled_at <= ?)
+        ORDER BY CASE WHEN current_step > 1 THEN 0 ELSE 1 END, id ASC 
+        LIMIT 1
+      `).get(jobId, nowIso);
     }
 
     if (!contact) {
-      job.lastLog = 'All contacts in campaign processed!';
+      // Check if there are future scheduled contacts waiting for their delay window
+      const futureCheck = isIsolated
+        ? db.prepare(`
+            SELECT COUNT(*) as count, MIN(next_step_scheduled_at) as earliest 
+            FROM database_records 
+            WHERE database_id = ? AND status = 'PENDING' AND included = 1 AND next_step_scheduled_at > ?
+          `).get(campaign.database_id, nowIso)
+        : db.prepare(`
+            SELECT COUNT(*) as count, MIN(next_step_scheduled_at) as earliest 
+            FROM contacts 
+            WHERE campaign_id = ? AND status = 'PENDING' AND next_step_scheduled_at > ?
+          `).get(jobId, nowIso);
+
+      if (futureCheck && futureCheck.count > 0) {
+        job.isWaitingSchedule = true;
+        const earliestDate = futureCheck.earliest 
+          ? new Date(futureCheck.earliest).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          : 'scheduled delay';
+        job.lastLog = `Waiting for scheduled follow-ups (${futureCheck.count} pending, next send around ${earliestDate}).`;
+        db.prepare("UPDATE campaigns SET status = 'WAITING_SCHEDULE' WHERE id = ?").run(jobId);
+        const keepGoing = await interruptibleSleep(15000, jobId);
+        if (!keepGoing) break;
+        continue;
+      }
+
+      job.lastLog = 'All contacts in campaign and sequence steps completed!';
       db.prepare("UPDATE campaigns SET status = 'COMPLETED' WHERE id = ?").run(jobId);
       job.isStopped = true;
       break;
     }
 
     // Mark as SENDING atomically in respective table
-    const targetTable = isIsolated ? 'database_records' : 'contacts';
     db.prepare(`UPDATE ${targetTable} SET status = 'SENDING' WHERE id = ?`).run(contact.id);
     job.currentContactEmail = contact.email;
-    job.lastLog = `Sending to ${contact.email}...`;
+    const currentStepNum = Number(contact.current_step) || 1;
+    job.lastLog = `Sending Step ${currentStepNum} to ${contact.email}...`;
 
-    const nowIso = new Date().toISOString();
+    // Fetch step configuration for this step
+    const stepConfig = db.prepare(`
+      SELECT * FROM campaign_drip_steps 
+      WHERE campaign_id = ? AND step_number = ?
+    `).get(jobId, currentStepNum);
 
     try {
-      // 6. Dispatch Email
-      const result = await dispatchSingleEmail(transportContext, contact, campaign);
+      // 6. Dispatch Email with step-specific copy and threading headers
+      const result = await dispatchSingleEmail(
+        transportContext,
+        contact,
+        campaign,
+        job.senderOverride || campaign.sender_provider,
+        stepConfig,
+        contact.initial_message_id || contact.message_id
+      );
 
-      // Record success
-      db.prepare(`
-        UPDATE ${targetTable} 
-        SET status = 'SENT', sent_at = ?, message_id = ?, error_message = NULL 
-        WHERE id = ?
-      `).run(nowIso, result.messageId, contact.id);
+      // Check if next step exists in campaign_drip_steps
+      const nextStepNum = currentStepNum + 1;
+      const nextStep = db.prepare(`
+        SELECT * FROM campaign_drip_steps 
+        WHERE campaign_id = ? AND step_number = ? AND is_active = 1
+      `).get(jobId, nextStepNum);
+
+      if (nextStep) {
+        // Schedule follow-up step
+        const delayMs = ((Number(nextStep.delay_days) || 0) * 86400 + (Number(nextStep.delay_hours) || 0) * 3600) * 1000;
+        const nextScheduledIso = new Date(Date.now() + Math.max(delayMs, 1000)).toISOString();
+
+        db.prepare(`
+          UPDATE ${targetTable} 
+          SET status = 'PENDING',
+              current_step = ?,
+              sent_at = ?,
+              message_id = ?,
+              initial_message_id = COALESCE(initial_message_id, ?),
+              next_step_scheduled_at = ?,
+              error_message = NULL 
+          WHERE id = ?
+        `).run(nextStepNum, nowIso, result.messageId, result.messageId, nextScheduledIso, contact.id);
+      } else {
+        // Final step complete
+        db.prepare(`
+          UPDATE ${targetTable} 
+          SET status = 'SENT',
+              sent_at = ?,
+              message_id = ?,
+              initial_message_id = COALESCE(initial_message_id, ?),
+              next_step_scheduled_at = NULL,
+              error_message = NULL 
+          WHERE id = ?
+        `).run(nowIso, result.messageId, result.messageId, contact.id);
+      }
 
       db.prepare(`
-        INSERT INTO email_logs (campaign_id, contact_id, database_record_id, recipient_email, variant, subject, status, sent_at, sent_date, message_id)
-        VALUES (?, ?, ?, ?, ?, ?, 'SENT', ?, ?, ?)
+        INSERT INTO email_logs (
+          campaign_id, contact_id, database_record_id, recipient_email, variant,
+          subject, status, sent_at, sent_date, message_id, step_number
+        ) VALUES (?, ?, ?, ?, ?, ?, 'SENT', ?, ?, ?, ?)
       `).run(
         jobId,
         isIsolated ? null : contact.id,
@@ -360,7 +474,8 @@ async function runCampaignWorker(campaignId) {
         result.subject,
         nowIso,
         todayStr,
-        result.messageId
+        result.messageId,
+        currentStepNum
       );
 
       // Update counters directly from true state
@@ -380,7 +495,7 @@ async function runCampaignWorker(campaignId) {
         `).run(nowIso, jobId);
       }
 
-      job.lastLog = `✓ Sent to ${contact.email}`;
+      job.lastLog = `✓ Sent Step ${currentStepNum} to ${contact.email}`;
     } catch (err) {
       // Record failure
       db.prepare(`
@@ -391,8 +506,10 @@ async function runCampaignWorker(campaignId) {
 
       try {
         db.prepare(`
-          INSERT INTO email_logs (campaign_id, contact_id, database_record_id, recipient_email, variant, status, error_message, sent_at, sent_date)
-          VALUES (?, ?, ?, ?, ?, 'FAILED', ?, ?, ?)
+          INSERT INTO email_logs (
+            campaign_id, contact_id, database_record_id, recipient_email, variant,
+            status, error_message, sent_at, sent_date, step_number
+          ) VALUES (?, ?, ?, ?, ?, 'FAILED', ?, ?, ?, ?)
         `).run(
           jobId,
           isIsolated ? null : contact.id,
@@ -401,7 +518,8 @@ async function runCampaignWorker(campaignId) {
           contact.assigned_variant || 'A',
           err.message,
           nowIso,
-          todayStr
+          todayStr,
+          currentStepNum
         );
       } catch (logErr) {
         console.error('[StrokeCRM Log Failure]:', logErr.message);
@@ -423,7 +541,7 @@ async function runCampaignWorker(campaignId) {
         `).run(nowIso, jobId);
       }
 
-      job.lastLog = `✗ Failed sending to ${contact.email}: ${err.message}`;
+      job.lastLog = `✗ Failed sending Step ${currentStepNum} to ${contact.email}: ${err.message}`;
     }
 
     // 7. Humanized Pacing Jitter Delay
@@ -630,6 +748,46 @@ function getCampaignQueueStatus(campaignId) {
     WHERE id = ?
   `).run(totalContacts, sentCount, failedCount, id);
 
+  // Step-wise metrics for drip sequence funnel
+  const stepLogs = db.prepare(`
+    SELECT step_number, COUNT(*) as count 
+    FROM email_logs 
+    WHERE campaign_id = ? AND status = 'SENT'
+    GROUP BY step_number
+  `).all(id);
+
+  const stepStats = {
+    step1_sent: 0,
+    step2_sent: 0,
+    step3_sent: 0,
+    step2_scheduled: 0,
+    step3_scheduled: 0
+  };
+  stepLogs.forEach(r => {
+    if (r.step_number === 1) stepStats.step1_sent = r.count;
+    else if (r.step_number === 2) stepStats.step2_sent = r.count;
+    else if (r.step_number === 3) stepStats.step3_sent = r.count;
+  });
+
+  const scheduledRows = campaign.database_id
+    ? db.prepare(`
+        SELECT current_step, COUNT(*) as count 
+        FROM database_records 
+        WHERE database_id = ? AND included = 1 AND status = 'PENDING' AND current_step > 1
+        GROUP BY current_step
+      `).all(campaign.database_id)
+    : db.prepare(`
+        SELECT current_step, COUNT(*) as count 
+        FROM contacts 
+        WHERE campaign_id = ? AND status = 'PENDING' AND current_step > 1
+        GROUP BY current_step
+      `).all(id);
+
+  scheduledRows.forEach(r => {
+    if (r.current_step === 2) stepStats.step2_scheduled = r.count;
+    else if (r.current_step === 3) stepStats.step3_scheduled = r.count;
+  });
+
   // If all contacts are processed and was running or paused, mark as COMPLETED
   let campaignStatus = campaign.status;
   if (pendingCount === 0 && totalContacts > 0 && campaignStatus !== 'DRAFT') {
@@ -682,6 +840,7 @@ function getCampaignQueueStatus(campaignId) {
     delayDurationSec: job ? job.delayDurationSec : 0,
     currentContactEmail: job ? job.currentContactEmail : null,
     lastLog: currentLog,
+    stepStats,
     recentLogs
   };
 }
@@ -689,7 +848,7 @@ function getCampaignQueueStatus(campaignId) {
 /**
  * Send a single test email preview to specified recipient
  */
-async function sendTestEmail(campaignId, testRecipient, senderOverride = null) {
+async function sendTestEmail(campaignId, testRecipient, senderOverride = null, stepNumber = 1) {
   const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(campaignId);
   if (!campaign) {
     throw new Error('Campaign not found.');
@@ -710,11 +869,25 @@ async function sendTestEmail(campaignId, testRecipient, senderOverride = null) {
     })
   };
 
-  const result = await dispatchSingleEmail(transportContext, sampleContact, campaign);
+  let stepConfig = null;
+  const targetStep = Number(stepNumber) || 1;
+  if (targetStep > 1) {
+    stepConfig = db.prepare('SELECT * FROM campaign_drip_steps WHERE campaign_id = ? AND step_number = ?').get(campaignId, targetStep);
+  }
+
+  const result = await dispatchSingleEmail(
+    transportContext,
+    sampleContact,
+    campaign,
+    senderOverride || campaign.sender_provider,
+    stepConfig,
+    '<preview-thread-anchor@strokecrm.preview>'
+  );
+
   const providerLabel = transportContext.provider === 'custom_domain' ? 'Custom Domain SMTP' : 'Gmail';
   return {
     success: true,
-    message: `Test email successfully sent to ${testRecipient} via ${providerLabel}!`,
+    message: `Test email for Step ${targetStep} successfully sent to ${testRecipient} via ${providerLabel}!`,
     messageId: result.messageId
   };
 }

@@ -133,6 +133,25 @@ db.exec(`
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS campaign_drip_steps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id INTEGER NOT NULL,
+    step_number INTEGER NOT NULL, -- 1 = Initial, 2 = Follow-up 1, 3 = Follow-up 2
+    delay_days INTEGER NOT NULL DEFAULT 3,
+    delay_hours INTEGER NOT NULL DEFAULT 0,
+    template_id INTEGER REFERENCES templates(id) ON DELETE SET NULL,
+    subject_a TEXT DEFAULT '',
+    body_a TEXT DEFAULT '',
+    subject_b TEXT DEFAULT '',
+    body_b TEXT DEFAULT '',
+    thread_reply INTEGER DEFAULT 1, -- 1 = thread as Re: previous, 0 = standalone
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+    UNIQUE (campaign_id, step_number)
+  );
 `);
 
 // Create physical storage directory for database files
@@ -166,6 +185,33 @@ try {
   }
   if (!campaignColumns.includes('sender_provider')) {
     db.exec("ALTER TABLE campaigns ADD COLUMN sender_provider TEXT DEFAULT 'default'");
+  }
+
+  // Phase 11: Multi-Step Drip Sequence Columns
+  if (!recordColumns.includes('current_step')) {
+    db.exec("ALTER TABLE database_records ADD COLUMN current_step INTEGER DEFAULT 1");
+  }
+  if (!recordColumns.includes('initial_message_id')) {
+    db.exec("ALTER TABLE database_records ADD COLUMN initial_message_id TEXT");
+  }
+  if (!recordColumns.includes('next_step_scheduled_at')) {
+    db.exec("ALTER TABLE database_records ADD COLUMN next_step_scheduled_at TEXT");
+  }
+
+  const contactColumns = db.prepare("PRAGMA table_info(contacts)").all().map(c => c.name);
+  if (!contactColumns.includes('current_step')) {
+    db.exec("ALTER TABLE contacts ADD COLUMN current_step INTEGER DEFAULT 1");
+  }
+  if (!contactColumns.includes('initial_message_id')) {
+    db.exec("ALTER TABLE contacts ADD COLUMN initial_message_id TEXT");
+  }
+  if (!contactColumns.includes('next_step_scheduled_at')) {
+    db.exec("ALTER TABLE contacts ADD COLUMN next_step_scheduled_at TEXT");
+  }
+
+  const logColumns = db.prepare("PRAGMA table_info(email_logs)").all().map(c => c.name);
+  if (!logColumns.includes('step_number')) {
+    db.exec("ALTER TABLE email_logs ADD COLUMN step_number INTEGER DEFAULT 1");
   }
 } catch (e) {
   console.warn('Column migration notice:', e.message);

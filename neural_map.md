@@ -103,3 +103,9 @@ flowchart TD
 - Sent emails per day timeline graph.
 - Delivery status distribution.
 - Hourly send velocity heatmaps.
+
+### 6. Multi-Step Drip Cadence & Organic Threading Engine
+- **Linear Cadence**: Step 1 (Initial Pitch), Step 2 (Follow-up), Step 3 (Breakup / Closing) with independent day and hour delays.
+- **Dynamic Header Variables**: Binds template variables directly from the campaign's attached database schema with quick-click insertion.
+- **RFC 2822 Organic Threading**: Follow-up emails inject `In-Reply-To` and `References` headers referencing the Step 1 `Message-ID`, landing naturally in the recipient's existing thread.
+- **Non-Destructive Scheduled Delay Dispatch**: When Step 1 completes, contacts transition to `current_step = 2, next_step_scheduled_at = now + delay`. The worker enters `WAITING_SCHEDULE` and automatically dispatches follow-ups once their scheduled window arrives.
