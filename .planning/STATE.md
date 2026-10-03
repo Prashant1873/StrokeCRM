@@ -19,26 +19,20 @@ progress:
 
 See: `.planning/PROJECT.md` (updated 2026-10-03)
 
-**Core value:** Reliable, throttle-safe, and personalized bulk cold email dispatch directly from the user's Gmail account with dynamic Excel/CSV variable mapping and zero duplicate sends.  
-**Current focus:** Milestone v1.0 shipped; ready for next milestone planning.
+**Core value:** Reliable, throttle-safe, and personalized bulk cold email dispatch directly from the user's Gmail or custom domain mail account with dynamic Excel/CSV variable mapping, multi-step drip cadence, and automatic reply disarming.  
+**Current focus:** Milestone v2.0: Custom Domains & Automated Drips.
 
 ## Current Phase
 
-- **Active Phase**: All Phases Complete (Milestone v1.0)
-- **Status**: Complete & Verified
+- **Active Phase**: Phase 10: Custom Domain SMTP & IMAP Account Gateway
+- **Status**: Ready to plan
 - **Blocked by**: None
 
 ## Phase Progress
 
-- [x] Phase 1: Project Scaffolding & Dual Gmail Authentication Gateway (Completed 2026-10-03)
-- [x] Phase 2: Lead Ingestion & Variable Header Mapping (Completed 2026-10-03)
-- [x] Phase 3: Template Personalization Engine & Spam Preflight (Completed 2026-10-03)
-- [x] Phase 4: Resilient Queue & Pacing Dispatcher (Completed 2026-10-03)
-- [x] Phase 5: A/B Testing Studio (Completed 2026-10-03)
-- [x] Phase 6: Day-Wise Analytics Dashboard & Polish (Completed 2026-10-03)
-- [x] Phase 7: Traceable Routing, Breadcrumb System & App Shell (Completed 2026-10-03)
-- [x] Phase 8: Multi-Step Wizards & Contextual Preflight Option Controls (Completed 2026-10-03)
-- [x] Phase 9: Frontend-Skill Polish, Apple Fluid Motion & WCAG 2.2 AA (Completed 2026-10-03)
+- [ ] Phase 10: Custom Domain SMTP & IMAP Account Gateway
+- [ ] Phase 11: Multi-Step Drip Sequence Engine & Builder Studio
+- [ ] Phase 12: Inbound IMAP Reply Scanner, Sequence Disarm & Funnel Analytics
 
 ## Recent Decisions
 
@@ -53,11 +47,11 @@ See: `.planning/PROJECT.md` (updated 2026-10-03)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Phase 10: Custom Domain SMTP & IMAP Account Gateway
 Plan: —
-Status: Defining requirements
-Last activity: 2026-10-03 — Milestone v2.0 started
+Status: Ready to plan
+Last activity: 2026-10-03 — Milestone v2.0 roadmap created
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Plan Phase 10 with /gsd-plan-phase 10 (or discuss with /gsd-discuss-phase 10)

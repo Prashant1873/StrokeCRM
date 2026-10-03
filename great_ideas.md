@@ -66,6 +66,20 @@ This document records high-value user inputs, design ideas, and creative directi
     - Highlights subject preview with variable pills, body excerpt, detected variables, spam risk rating, and actions (Open Composer, Duplicate, Delete).
     - Dedicated "+ Create Template" CTA.
   - **Template Composer Detail (`#/templates/:id` or `#/templates/new`)**:
-    - Focused studio for designing, previewing against sample database leads, and running spam scoring algorithms.
+    - Focused studio for designing, previewing against sample database leads, and running spam scoring algorithms.---
 
-
+## 5. Custom Domain Mail Support & Automated Drip Sequences (Logged: 2026-10-03)
+- **Problem Solved**:
+  - Many businesses, founders, and agencies send cold outreach from custom business domain emails (e.g. `alex@mycompany.com`, `contact@startup.io`) hosted on private mail servers, Zoho, Fastmail, or custom SMTP/IMAP relays, rather than strictly `@gmail.com` accounts.
+- **Strategic Direction for v2.0**:
+  - **Custom Domain Email Integration**:
+    - Add universal SMTP/IMAP configuration controls (Host, Port, Secure/TLS, Username, Password/App Key).
+    - Provide instant connection verification for custom domain servers.
+    - Seamlessly select between connected accounts (Gmail vs Custom Domain Mail) when launching campaigns.
+  - **Automated Drip Follow-Up Sequences**:
+    - Multi-step sequence editor: Step 1 (Initial Outreach), Step 2 (Follow-up after X days), Step 3 (Breakup email after Y days).
+  - **Inbound IMAP Reply Detection**:
+    - Monitor inbox via IMAP to detect replies from contacted leads.
+    - Automatically halt scheduled follow-up steps for replied contacts to prevent embarrassing follow-ups after a response.
+  - **Deprioritized / Out of Scope for v2.0**:
+    - AI icebreaker generator and multi-account rotation deferred to maintain maximum simplicity and core deliverability focus.
