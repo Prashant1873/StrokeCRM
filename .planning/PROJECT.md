@@ -33,15 +33,17 @@ Shipped **v1.0 Initial MVP** on 2026-10-03 across 9 complete phases and 18 git c
 - ✓ App Shell & Breadcrumbs: URL hash routing, browser history traversal, Esc back-key — v1.0
 - ✓ Preflight Launch Cockpit: Working hours switch with 24/7 bypass, test-send verification — v1.0
 
-### Active (Next Milestone Candidates)
+### Active (Milestone v2.0: Custom Domains & Automated Drips)
 
-- [ ] Automated multi-step follow-up sequences (Drip step 2 and 3 after X days)
-- [ ] Inbound reply detection via IMAP to automatically cancel scheduled follow-ups
-- [ ] AI personalized icebreaker generator (LLM-based personalized openers per lead row)
-- [ ] Multi-account Gmail inbox rotation (spreading send batches across multiple Gmail accounts)
+- [ ] Custom domain email connectivity: Universal SMTP & IMAP configuration (host, port, SSL/TLS, credentials) with connection verification.
+- [ ] Multi-step follow-up sequences: Drip cadence builder allowing Step 1 (Initial), Step 2 (+N days), and Step 3 (+M days) with custom subject/body templates.
+- [ ] Inbound IMAP reply detection: Background IMAP polling that detects lead replies, updates contact state to `REPLIED`, and halts pending sequence steps.
+- [ ] Drip stage analytics & visual sequence timeline: Step-by-step funnel tracking (Step 1 sent, Step 2 scheduled, Step 3 sent, replies received).
 
 ### Out of Scope
 
+- AI personalized icebreaker generator (deferred per user decision to prioritize clean deliverability and core CRM operations).
+- Multi-account Gmail inbox rotation (deferred to maintain simplicity and focus on single custom domain / Gmail sender setups).
 - Cloud SaaS multi-tenant hosting (StrokeCRM runs locally on the user's machine to keep credentials and lead data 100% private).
 - Sending spam or buying bulk scraped lead lists (focused on clean, opt-out compliant B2B outreach).
 - Direct browser extension DOM hacking (StrokeCRM runs as a dedicated local web app for stability and background task resilience).
