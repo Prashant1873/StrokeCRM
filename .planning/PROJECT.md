@@ -14,22 +14,31 @@ Reliable, throttle-safe, and personalized bulk cold email dispatch directly from
 - **Revenue model**: 100% Free, open-source / local self-hosted tool (no paywalls, no monthly subscription fees).
 - **Success metric**: 100% accurate variable interpolation, zero spam penalty flags due to automated pacing/jitter, and seamless campaign management.
 
+## Current State
+
+Shipped **v1.0 Initial MVP** on 2026-10-03 across 9 complete phases and 18 git commits. Complete full-stack local CRM with dual Gmail authentication (App Password + OAuth2), lead ingestion (.xlsx, .xls, .csv), rich template editor with Handlebars substitution and spam buzzword detection, SQLite throttle-safe queue with jitter pacing, A/B testing studio, day-wise analytics, and an interactive dark cockpit UI with breadcrumb navigation.
+
 ## Requirements
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ Dual Gmail connectivity: Google App Password (SMTP) & OAuth2 — v1.0
+- ✓ Excel/CSV ingestion: Parse `.xlsx`, `.xls`, `.csv` with auto-detected headers & email column — v1.0
+- ✓ Template & variable mapping: Rich HTML, Handlebars `{{var | fallback}}`, live per-lead preview — v1.0
+- ✓ Pacing & humanized dispatch: Min/max jitter delays, daily limits, working hours — v1.0
+- ✓ Campaign state machine: SQLite queue tracking `PENDING`, `SENDING`, `SENT`, `FAILED` with pause/resume — v1.0
+- ✓ Day-wise analytics dashboard: Timeline chart of sends, Gmail quota gauge, live feed, CSV audit export — v1.0
+- ✓ Dedicated A/B testing suite: 50/50 recipient cohort split with comparative scorecards — v1.0
+- ✓ Spam preflight guard: Real-time scan of high-risk deliverability buzzwords — v1.0
+- ✓ App Shell & Breadcrumbs: URL hash routing, browser history traversal, Esc back-key — v1.0
+- ✓ Preflight Launch Cockpit: Working hours switch with 24/7 bypass, test-send verification — v1.0
 
-### Active
+### Active (Next Milestone Candidates)
 
-- [ ] Dual Gmail connectivity: Support Google App Password (instant SMTP setup) and official Google OAuth2.
-- [ ] Excel/CSV ingestion: Parse `.xlsx`, `.xls`, `.csv` with arbitrary headers and detect email columns.
-- [ ] Template & variable mapping: Visual template editor with `{{variable}}` substitution and real-time live preview.
-- [ ] Pacing & humanized dispatch engine: Configurable delays, randomized jitter, daily send caps, and working-hour scheduling.
-- [ ] Campaign state machine & audit log: SQLite-backed queue tracking `PENDING`, `SENDING`, `SENT`, `FAILED`, and `REPLIED` states with pause/resume support.
-- [ ] Day-wise analytics dashboard: Visual timeline of emails sent per day, quota consumption monitor, and delivery health.
-- [ ] Dedicated A/B testing suite: Split recipient lists between Variant A and Variant B with comparative metrics.
-- [ ] Spam preflight & deliverability guard: Highlight spam words and deliverability hazards before campaign launch.
+- [ ] Automated multi-step follow-up sequences (Drip step 2 and 3 after X days)
+- [ ] Inbound reply detection via IMAP to automatically cancel scheduled follow-ups
+- [ ] AI personalized icebreaker generator (LLM-based personalized openers per lead row)
+- [ ] Multi-account Gmail inbox rotation (spreading send batches across multiple Gmail accounts)
 
 ### Out of Scope
 
@@ -57,17 +66,8 @@ Reliable, throttle-safe, and personalized bulk cold email dispatch directly from
 | Local Web App over Chrome Extension | Chrome Extensions have strict background service-worker termination rules (sleeps after 30s) and break when Gmail UI updates. Local web app runs background queues indefinitely. | ✓ Good |
 | Dual Gmail Auth (App Password + OAuth2) | App Passwords allow 1-minute instant launch with zero Google Cloud setup; OAuth2 provides advanced API capabilities. | ✓ Good |
 | SQLite for persistent dispatch state | Zero-configuration, file-backed, ACID-compliant database prevents duplicate sends and survives app restarts. | ✓ Good |
-
-## Evolution
-
-This document evolves at phase transitions and milestone boundaries.
-
-**After each phase transition**:
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
+| URL Hash Routing & Breadcrumb Trail | Zero server-side rewrites needed, enables native browser back/forward buttons and single-key navigation without losing background queue state. | ✓ Good |
+| Dedicated Campaign Preflight Cockpit | Provides tactile Working Hours enforcement switch (with 24/7 bypass), jitter tuning, and test-send verification prior to queue ignition. | ✓ Good |
 
 ---
-*Last updated: 2026-10-03 after project initialization*
+*Last updated: 2026-10-03 after v1.0 milestone*
