@@ -13,7 +13,7 @@ const queueService = require('./queueService');
 const replyScannerService = require('./replyScannerService');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 // Multer memory storage for in-memory file parsing
 const upload = multer({
