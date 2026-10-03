@@ -6,9 +6,9 @@
 ## v2 Requirements
 
 ### Custom Domain Mail Connectivity
-- [ ] **DOM-01**: User can configure custom domain SMTP connection (host, port 465 SSL / 587 STARTTLS, SSL toggle, username, password) with test-connection verification.
-- [ ] **DOM-02**: User can configure custom domain IMAP connection (host, port 993 SSL / 143 STARTTLS, username, password) with test-connection verification.
-- [ ] **DOM-03**: User can switch the active sender account between Gmail (App Password/OAuth2) and Custom Domain SMTP in Settings and Campaign Preflight.
+- [x] **DOM-01**: User can configure custom domain SMTP connection (host, port 465 SSL / 587 STARTTLS, SSL toggle, username, password) with test-connection verification.
+- [x] **DOM-02**: User can configure custom domain IMAP connection (host, port 993 SSL / 143 STARTTLS, username, password) with test-connection verification.
+- [x] **DOM-03**: User can switch the active sender account between Gmail (App Password/OAuth2) and Custom Domain SMTP in Settings and Campaign Preflight.
 
 ### Multi-Step Drip Sequences
 - [x] **DRIP-01**: User can configure multiple sequence steps for a campaign (Step 1 Initial, Step 2 Follow-up, Step 3 Final) with customizable delay intervals in days and hours.
@@ -17,14 +17,14 @@
 - [x] **DRIP-04**: Queue engine evaluates `scheduled_at` timestamps to dispatch due follow-up steps while respecting working hours, jitter pacing, and daily caps.
 
 ### Inbound IMAP Reply Detection & Safety
-- [ ] **REPLY-01**: System scans the configured IMAP inbox (periodic background polling and manual "Scan Replies" trigger) for incoming responses from active leads.
-- [ ] **REPLY-02**: System automatically marks replied leads as `REPLIED` and immediately cancels all subsequent pending drip steps for that lead.
-- [ ] **REPLY-03**: System filters out automated out-of-office and bounce auto-responses (`Auto-Submitted`, `X-Autoreply`) to prevent false-positive sequence halts.
-- [ ] **REPLY-04**: User can manually click "Mark as Replied" or "Cancel Follow-ups" for any contact in the campaign lead list.
+- [x] **REPLY-01**: System scans the configured IMAP inbox (periodic background polling and manual "Scan Replies" trigger) for incoming responses from active leads.
+- [x] **REPLY-02**: System automatically marks replied leads as `REPLIED` and immediately cancels all subsequent pending drip steps for that lead.
+- [x] **REPLY-03**: System filters out automated out-of-office and bounce auto-responses (`Auto-Submitted`, `X-Autoreply`) to prevent false-positive sequence halts.
+- [x] **REPLY-04**: User can manually click "Mark as Replied" or "Cancel Follow-ups" for any contact in the campaign lead list.
 
 ### Drip Funnel & Sequence Analytics
-- [ ] **DASH2-01**: Campaign Cockpit displays a visual step-by-step conversion funnel (Contacts -> Step 1 Sent -> Step 2 Sent -> Step 3 Sent -> Replies).
-- [ ] **DASH2-02**: Downloadable CSV audit export and live feed record sequence step numbers and reply event timestamps.
+- [x] **DASH2-01**: Campaign Cockpit displays a visual step-by-step conversion funnel (Contacts -> Step 1 Sent -> Step 2 Sent -> Step 3 Sent -> Replies).
+- [x] **DASH2-02**: Downloadable CSV audit export and live feed record sequence step numbers and reply event timestamps.
 
 ## Future Requirements (v3+)
 
@@ -52,12 +52,12 @@
 | DRIP-02 | Phase 11 | Complete |
 | DRIP-03 | Phase 11 | Complete |
 | DRIP-04 | Phase 11 | Complete |
-| REPLY-01 | Phase 12 | Pending |
-| REPLY-02 | Phase 12 | Pending |
-| REPLY-03 | Phase 12 | Pending |
-| REPLY-04 | Phase 12 | Pending |
-| DASH2-01 | Phase 12 | Pending |
-| DASH2-02 | Phase 12 | Pending |
+| REPLY-01 | Phase 12 | Complete |
+| REPLY-02 | Phase 12 | Complete |
+| REPLY-03 | Phase 12 | Complete |
+| REPLY-04 | Phase 12 | Complete |
+| DASH2-01 | Phase 12 | Complete |
+| DASH2-02 | Phase 12 | Complete |
 
 **Coverage:**
 - v2 requirements: 13 total
