@@ -57,10 +57,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| THEME-01 | Phase 13 | Pending |
-| THEME-02 | Phase 13 | Pending |
-| THEME-03 | Phase 13 | Pending |
-| THEME-04 | Phase 13 | Pending |
+| THEME-01 | Phase 13 | Complete |
+| THEME-02 | Phase 13 | Complete |
+| THEME-03 | Phase 13 | Complete |
+| THEME-04 | Phase 13 | Complete |
 | COPY-01 | Phase 14 | Pending |
 | COPY-02 | Phase 14 | Pending |
 | COPY-03 | Phase 14 | Pending |
