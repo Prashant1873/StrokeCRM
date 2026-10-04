@@ -1,75 +1,99 @@
 # Project Research Summary
 
-**Project:** StrokeCRM  
-**Domain:** Cold Email Outreach, Custom Domain SMTP/IMAP & Drip Automation  
-**Researched:** 2026-10-03  
+**Project:** StrokeCRM (Free, Self-Hosted Cold Outreach Platform)  
+**Domain:** Local Cold Email Outreach & Privacy-First CRM  
+**Researched:** 2026-10-05  
 **Confidence:** HIGH  
+
+---
 
 ## Executive Summary
 
-StrokeCRM Milestone v2.0 expands beyond the single Gmail account paradigm to empower users with custom domain emails (e.g. `user@mycompany.com`) via standard SMTP/IMAP protocols, and introduces automated multi-step follow-up sequences that halt immediately upon receiving lead replies.
+Milestone v3.0 expands StrokeCRM into an aesthetically elevated, dual-theme workspace featuring professional B2B outreach copywriting, curated starter sequences, and automated free AI inbound reply sentiment intelligence. 
 
-The recommended architectural approach builds natively upon StrokeCRM's existing Node.js + Express + SQLite foundation. Outbound sending continues through `nodemailer` with dynamic transport configuration (supporting custom SMTP host, port 465 SSL, port 587 STARTTLS, and custom credentials alongside existing Gmail options). Inbound reply detection leverages `imapflow` (the modern, async/await native IMAP client by the Nodemailer author) and `mailparser` to inspect inbox replies, match `In-Reply-To` and sender addresses, and atomically disarm pending follow-up steps in SQLite.
+Following our core ethos of **100% free, private, self-hosted operation with zero monthly fees**, the architecture leverages:
+1. **CSS Variable Design Tokens** for instant, flash-free Dark and Light mode toggling that preserves tactile feel and WCAG AA contrast.
+2. **Standardized B2B Outreach Copywriting** paired with a built-in gallery of proven cold email starter presets.
+3. **Zero-Cost AI Classification** using Google's Gemini 1.5 Flash free tier (1,500 requests/day free forever) via native Node `fetch`, reinforced by an immediate local regex/keyword heuristic fallback that runs offline or without an API key.
 
-Per explicit user direction, high-defect features like AI icebreaker generation and multi-account burner inbox rotation are excluded, concentrating engineering effort on deliverability, rock-solid threading, and dependable sequence automation.
+All sentiment data is persisted directly in SQLite, and all AI keys remain strictly local to the user's machine.
+
+---
 
 ## Key Findings
 
 ### Recommended Stack
-- **Outbound SMTP**: `nodemailer` (already installed) configured with custom host/port/secure settings.
-- **Inbound IMAP**: `imapflow` (^1.0.160) for robust, async/await connection management, folder inspection, and reply retrieval.
-- **MIME Parsing**: `mailparser` (^3.7.1) for extracting headers (`In-Reply-To`, `References`, `From`, `Auto-Submitted`) and reply text.
-- **Date & Cadence Logic**: `date-fns` (^4.1.0) for timezone-aware business-day offsets and interval calculations.
-- **Persistence**: `better-sqlite3` (already installed) for ACID transaction integrity across sequence state transitions.
+- **Theming**: CSS custom properties (`:root`, `[data-theme="dark"]`, `[data-theme="light"]`) bridged to Tailwind utility classes. Avoids heavy runtime CSS-in-JS libraries and prevents unstyled theme flashing.
+- **Inference**: Native Node `fetch` accessing Google Gemini 1.5 Flash REST endpoint. Zero npm bloat, zero cost, fast JSON response mode.
+- **Failover**: Local rule-based keyword/regex classifier for zero-network dependency and instant execution.
+- **Persistence**: SQLite non-destructive schema migrations (`reply_sentiment`, `reply_confidence`, `reply_summary` on `database_records`; `gemini_api_key` on `settings`).
 
 ### Expected Features
-
-**Must have (table stakes):**
-- **Universal Custom SMTP/IMAP Configuration**: Support custom domain mail servers with test connection verification.
-- **Multi-Step Drip Sequences**: Step 1 (Initial), Step 2 (+N days), Step 3 (+M days) with independent templates and pacing.
-- **Inbound IMAP Reply Detection**: Background IMAP scan that identifies lead replies and marks contact status as `REPLIED`.
-- **Automatic Sequence Disarming**: Immediate cancellation of subsequent pending steps once a reply is detected.
-- **Organic Email Threading**: Follow-up emails sent as replies in the exact same thread via `In-Reply-To` and `References` headers.
-
-**Should have (competitive):**
-- **Step-by-Step Funnel Analytics**: Visual drop-off and conversion rates across sequence touches.
-- **Out-of-Office / Auto-Reply Filter**: Avoid false-positive reply halts when an automated auto-responder fires.
-- **Manual "Mark as Replied" button**: One-click override if a prospect replies via LinkedIn or phone.
-
-**Out of Scope (v2.0):**
-- AI Personalized Icebreaker Generation (dropped).
-- Multi-Account Burner Inbox Rotation (dropped).
+- **Must Have (Table Stakes)**:
+  - Global Dark / Light theme toggle with `localStorage` persistence and system preference detection.
+  - Complete UI overhaul of cards, tables, modals, and breadcrumbs following `frontend-skill` standards.
+  - Systematic text cleanup and professional copywriting across all views, alerts, and tooltips.
+  - Curated cold outreach starter presets (Problem Pitch, Case Study Teaser, 3-Day Bump, Breakup Email).
+  - Automated inbound reply sentiment classification (`Interested`, `Question`, `Follow Up`, `Not Interested`, `Unsubscribe`).
+  - Sentiment badges, confidence scores, and quick-filter tabs in the Campaign Cockpit and Database Inspector.
+  - Settings panel for Gemini free API key with connection verification.
+- **Should Have (Competitive)**:
+  - Local heuristic classifier fallback when API key is not present.
+  - 1-click manual sentiment override in the cockpit inspector.
 
 ### Architecture Approach
-- **Settings Store**: Extend `settings` in SQLite to store custom SMTP and IMAP host, port, credentials, and active provider choice (`gmail_app_password` vs `custom_smtp`).
-- **Campaign Steps**: New `campaign_steps` table defining ordered steps (1, 2, 3), delay offsets (`delay_days`, `delay_hours`), and assigned template IDs.
-- **Queue Engine**: Upgrade `queueService.js` to index `scheduled_at` and `step_number`. When Step 1 completes, Step 2 is scheduled for `now() + delay`.
-- **IMAP Reply Service**: Dedicated `replyService.js` running on scheduled intervals or manual trigger, comparing incoming email headers against active lead queues.
+- **Theme Engine**: `ThemeContext` provides `theme` state and synchronizes `data-theme` on `document.documentElement` while an inline `<script>` in `index.html` prevents theme flashing.
+- **Sentiment Integration**: Asynchronous hook in `replyScannerService.js` triggers after lead sequence disarming, sanitizes reply text (strips quoted email history), queries Gemini/heuristic, and updates SQLite.
+- **Cockpit Filters**: Campaign Cockpit incorporates sentiment filter chips to isolate hot positive leads from unsubscribes instantly.
 
 ### Critical Pitfalls
-1. **Port & SSL Mismatch**: Auto-configure `secure: true` for port 465 and `secure: false` for port 587/25 with inline test verification.
-2. **False Positive Reply Halting**: Inspect `Auto-Submitted` and `X-Autoreply` headers to ignore out-of-office autoreponders.
-3. **Threading Breakage**: Always store RFC `message_id` on initial send and pass it as `inReplyTo` and `references` for subsequent steps.
+1. **Invisible Text in Light Mode**: Avoid hardcoded Tailwind color utilities; rely strictly on semantic variables (`text-primary`, `bg-surface`).
+2. **AI Throttling Blocking IMAP Scanner**: Always execute sequence disarming first atomically, then wrap sentiment analysis in a non-blocking timeout with automatic heuristic fallback.
+3. **Quoted Thread Noise**: Sanitize inbound email bodies by removing historical quoted threads before evaluation to prevent classifying the sender's own pitch.
+
+---
 
 ## Implications for Roadmap
 
-Suggested phase structure for Milestone v2.0:
+The research directly informs a clean 3-phase execution roadmap:
 
-### Phase 10: Custom Domain SMTP & IMAP Account Gateway
-- **Rationale**: Foundation for custom email support before building multi-step drips.
-- **Delivers**: Custom SMTP settings, IMAP settings, connection testers for both, and dynamic transport resolver in backend.
-- **Avoids**: Port and TLS mismatch pitfalls.
+### Phase 13: Dual-Theme Architecture & Design Token Engine
+- **Rationale**: Theming foundation must be laid first so subsequent component modernization and copywriting can be built directly on unified tokens.
+- **Delivers**: CSS variables design token palette in `client/src/index.css`, `ThemeContext` provider, tactile Sun/Moon header toggle, FOUT-free inline loader, and WCAG AA contrast validation.
+- **Avoids**: Incomplete styling, flash of unstyled theme on page load.
 
-### Phase 11: Multi-Step Drip Sequence Engine & Builder UI
-- **Rationale**: Enables campaigns to define Step 1, Step 2, and Step 3 with customizable delays.
-- **Delivers**: `campaign_steps` schema, interactive step builder in Campaign Cockpit, `scheduled_at` queue processor, and email threading preservation (`In-Reply-To`).
-- **Avoids**: Thread breakage pitfalls.
+### Phase 14: System-Wide UI Modernization & Professional UX Copywriting
+- **Rationale**: Elevate component aesthetics and replace raw developer strings with authoritative B2B SaaS terminology across all views, and provide vetted starter templates.
+- **Delivers**: Overhauled card layouts, sleek tables, fluid transitions, polished tooltips, standardized action verbs, and the Curated Cold Outreach Starter Presets gallery.
+- **Avoids**: Tone inconsistency, generic jargon, clutter.
 
-### Phase 12: Inbound IMAP Reply Scanner & Auto-Disarm Safeguard
-- **Rationale**: Protects user reputation by ensuring follow-ups never send to prospects who have already responded.
-- **Delivers**: `replyService.js` with `ImapFlow` and `mailparser`, auto-reply detection, atomic sequence disarming (`CANCELLED_REPLIED`), manual "Mark Replied" override, and step funnel analytics.
-- **Avoids**: False-positive auto-responder halts and race conditions.
+### Phase 15: Free AI Inbound Reply Sentiment Engine & Cockpit Intelligence
+- **Rationale**: Builds directly on top of Phase 12's IMAP reply scanner and Phase 14's updated cockpit UI.
+- **Delivers**: Free Gemini 1.5 Flash REST client, local rule-based heuristic fallback, automatic classification on detected replies, SQLite sentiment persistence, visual cockpit badges, quick-filters, and manual operator overrides.
+- **Avoids**: Throttling delays, quoted thread confusion, lack of human-in-the-loop controls.
 
 ---
-*Project research summary for: StrokeCRM v2.0*  
-*Researched: 2026-10-03*
+
+## Confidence Assessment
+
+| Area | Confidence | Notes |
+|------|------------|-------|
+| Stack | HIGH | Native Node `fetch` and CSS variables require zero external package risks. |
+| Features | HIGH | Directly maps to user request and validated cold outreach workflows. |
+| Architecture | HIGH | Non-destructive SQLite migration and decoupled async sentiment analysis protect existing queues. |
+| Pitfalls | HIGH | Clear mitigation strategies for theming contrasts, rate limits, and email thread stripping. |
+
+**Overall confidence:** HIGH
+
+---
+
+## Sources
+
+### Primary (HIGH confidence)
+- Google AI Studio Gemini API Documentation (Free tier limits, REST endpoint specifications, JSON mode).
+- WCAG 2.2 AA Contrast Guidelines & W3C Design Token specifications.
+- StrokeCRM Phase 12 IMAP Reply Scanner implementation (`server/services/replyScannerService.js`).
+
+---
+*Research completed: 2026-10-05*  
+*Ready for roadmap: yes*  

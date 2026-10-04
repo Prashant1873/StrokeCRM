@@ -1,95 +1,124 @@
-# Architecture Research
+# Architecture Research: UI Overhaul, Light Mode & Free AI Reply Intelligence
 
-**Domain:** Cold Email Outreach, Custom Domain Mail & Drip Sequences  
-**Researched:** 2026-10-03  
-**Confidence:** HIGH  
-
-## System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    React Client (UI)                        │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────────┐  ┌──────────────────┐  ┌───────────┐  │
-│  │ Settings View    │  │ Campaign Drip    │  │ Sequence  │  │
-│  │ Custom SMTP/IMAP │  │ Step Builder     │  │ Funnel UI │  │
-│  └─────────┬────────┘  └────────┬─────────┘  └─────┬─────┘  │
-├────────────┼────────────────────┼──────────────────┼────────┤
-│            ▼                    ▼                  ▼        │
-│                    Express REST API                         │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────────┐  ┌──────────────────┐  ┌───────────┐  │
-│  │ /api/settings    │  │ /api/campaigns/  │  │ /api/imap │  │
-│  │ (SMTP/IMAP test) │  │ :id/steps        │  │ /scan     │  │
-│  └─────────┬────────┘  └────────┬─────────┘  └─────┬─────┘  │
-├────────────┼────────────────────┼──────────────────┼────────┤
-│            ▼                    ▼                  ▼        │
-│                Background Engine & Daemons                  │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ Pacing Queue Worker (queueService.js)                │    │
-│  │ - Evaluates scheduled_at <= now() for active steps  │    │
-│  │ - Dispatches Step N via Nodemailer custom transport │    │
-│  │ - Stores original Message-ID in SQLite queue record │    │
-│  └─────────────────────────────────────────────────────┘    │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ IMAP Reply Scanner (replyService.js)                 │    │
-│  │ - Periodically connects via ImapFlow to INBOX       │    │
-│  │ - Fetches messages since campaign start date        │    │
-│  │ - Matches In-Reply-To / References / From address   │    │
-│  │ - Executes atomic transaction: marks contact REPLIED│    │
-│  │   and cancels pending subsequent steps              │    │
-│  └─────────────────────────────────────────────────────┘    │
-├─────────────────────────────────────────────────────────────┤
-│                     SQLite Storage                          │
-│  - settings (smtp_host, smtp_port, imap_host, etc.)         │
-│  - campaign_steps (id, campaign_id, step_number, delay_days)│
-│  - campaign_queue (contact_id, step_number, message_id,     │
-│                    status, scheduled_at, replied_at)        │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## Data Model Extensions
-
-### 1. Settings Schema
-Add custom domain mail fields to `settings` table:
-- `mail_provider`: `'gmail_app_password' | 'gmail_oauth2' | 'custom_smtp'`
-- `smtp_host`, `smtp_port`, `smtp_secure` (boolean: true for 465 SSL, false for 587 STARTTLS)
-- `smtp_user`, `smtp_pass`
-- `imap_host`, `imap_port`, `imap_secure`
-- `imap_user`, `imap_pass`
-
-### 2. Campaign Steps Schema (`campaign_steps`)
-- `id` (INTEGER PRIMARY KEY)
-- `campaign_id` (INTEGER REFERENCES campaigns(id))
-- `step_number` (INTEGER, 1 = initial, 2 = first follow-up, 3 = second follow-up)
-- `delay_days` (INTEGER, days after previous step was sent)
-- `delay_hours` (INTEGER, additional hour offset)
-- `template_id` (INTEGER REFERENCES templates(id))
-- `thread_reply` (BOOLEAN, 1 = send as reply in same thread with `In-Reply-To`, 0 = new thread)
-
-### 3. Queue Evolution (`campaign_queue`)
-Add fields:
-- `step_number` (INTEGER DEFAULT 1)
-- `message_id` (TEXT, RFC Message-ID returned by Nodemailer on send)
-- `in_reply_to` (TEXT, Message-ID of preceding step for threading)
-- `scheduled_at` (DATETIME, when this step is eligible for dispatch)
-- `status`: `'PENDING' | 'SENDING' | 'SENT' | 'FAILED' | 'PAUSED' | 'CANCELLED_REPLIED'`
-
-## Reply Matching Algorithm
-
-1. On periodic interval (or user clicking "Scan Replies"):
-   - Connect to IMAP inbox using user's configured IMAP credentials via `ImapFlow`.
-   - Query messages with `SINCE [Campaign Created Date]`.
-   - For each message:
-     - Check `envelope.from[0].address`.
-     - Check `inReplyTo` and `references` headers.
-     - Match against contacts in active campaigns who have sent messages.
-     - If match found:
-       - Update contact status to `REPLIED` and record `replied_at`.
-       - Query pending subsequent steps (`step_number > current_step`) for that contact and update status to `CANCELLED_REPLIED`.
-       - Emit WebSocket / SSE or update state so UI dashboard instantly highlights the reply.
+**Milestone:** v3.0  
+**Domain:** Local Cold Email Outreach & Privacy-First CRM  
+**Date:** 2026-10-05  
 
 ---
-*Architecture research for: StrokeCRM v2.0 Custom Domains & Automated Drips*  
-*Researched: 2026-10-03*
+
+## 1. System Architecture Overview
+
+Milestone v3.0 integrates three architectural pillars into the existing StrokeCRM stack without breaking any existing dispatch queue or IMAP polling mechanisms:
+
+```mermaid
+flowchart TD
+    subgraph Frontend ["Frontend Architecture (React + Vite + Design Tokens)"]
+        ThemeEngine["Theme Manager (useTheme Hook + data-theme)"]
+        TokenCSS["CSS Variable Design System (Light / Dark Tokens)"]
+        CopyLayer["Standardized UX Copy Dictionary & Tooltips"]
+        TemplatesHub["Templates Hub & Curated Presets Modal"]
+        CockpitUI["Campaign Cockpit (Sentiment Badges, Filters & Override)"]
+        SettingsUI["Settings (Gemini Free API Key & Mode Controls)"]
+
+        ThemeEngine --> TokenCSS
+        TokenCSS --> CockpitUI
+        TokenCSS --> TemplatesHub
+        TokenCSS --> SettingsUI
+    end
+
+    subgraph Backend ["Backend Architecture (Node.js + Express + SQLite)"]
+        SettingsService["Settings Store (API Keys & Preferences)"]
+        PresetsService["Starter Presets Seeder & Registry"]
+        SentimentRouter["/api/sentiment Endpoints (Analyze & Override)"]
+        SentimentEngine["Sentiment Analysis Engine"]
+        GeminiClient["Gemini 1.5 Flash Free REST Client"]
+        HeuristicFallback["Rule-Based Keyword Heuristic Classifier"]
+        ReplyScanner["Inbound IMAP Reply Scanner (Phase 12 Core)"]
+        SQLiteDB[("SQLite Database (database_records + settings)")]
+
+        ReplyScanner -->|Detected Inbound Email| SentimentEngine
+        SentimentEngine -->|If API Key Exists| GeminiClient
+        SentimentEngine -->|If No Key / Failover| HeuristicFallback
+        SentimentEngine -->|Persist Sentiment| SQLiteDB
+        SentimentRouter -->|Manual Override| SQLiteDB
+        PresetsService -->|Query Presets| TemplatesHub
+        SettingsService -->|Manage Keys| SQLiteDB
+    end
+
+    CockpitUI --> SentimentRouter
+    SettingsUI --> SettingsService
+```
+
+---
+
+## 2. Component Integration Details
+
+### 1. Dual-Theme CSS Token Architecture
+- **Root Declaration (`client/src/index.css`)**:
+  - Dark Theme (`:root`, `[data-theme="dark"]`):
+    - `--bg-canvas`: `#09090b` (zinc-950)
+    - `--bg-surface`: `#18181b` (zinc-900)
+    - `--bg-elevated`: `#27272a` (zinc-800)
+    - `--border-subtle`: `rgba(255, 255, 255, 0.08)`
+    - `--text-primary`: `#f4f4f5` (zinc-100)
+    - `--text-secondary`: `#a1a1aa` (zinc-400)
+    - `--text-muted`: `#71717a` (zinc-500)
+  - Light Theme (`[data-theme="light"]`):
+    - `--bg-canvas`: `#f8fafc` (slate-50)
+    - `--bg-surface`: `#ffffff` (white)
+    - `--bg-elevated`: `#f1f5f9` (slate-100)
+    - `--border-subtle`: `rgba(0, 0, 0, 0.08)`
+    - `--text-primary`: `#0f172a` (slate-900)
+    - `--text-secondary`: `#475569` (slate-600)
+    - `--text-muted`: `#94a3b8` (slate-400)
+- **Theme Provider / Hook (`client/src/context/ThemeContext.jsx`)**:
+  - Exposes `theme` (`'dark' | 'light'`) and `toggleTheme()`.
+  - Sets `document.documentElement.setAttribute('data-theme', theme)` and stores in `localStorage.getItem('strokecrm_theme')`.
+
+### 2. Inbound Sentiment Analysis Engine (`server/services/sentimentService.js`)
+- **Pipeline Flow**:
+  1. Triggered automatically in `server/services/replyScannerService.js` whenever a valid inbound lead email is parsed.
+  2. Input sanitization: strips previous quoted history (`> On ... wrote:`, `-----Original Message-----`) so only the lead's new reply text is evaluated.
+  3. API check:
+     - If `gemini_api_key` is set in SQLite `settings`:
+       - Dispatches POST request to `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}` using global `fetch`.
+       - Prompt provides strict classification instructions and requests `response_mime_type: "application/json"`.
+     - If no key or API call throws (timeout, rate limit):
+       - Automatically invokes `server/services/sentimentHeuristics.js`.
+  4. Database Persistence:
+     - Updates `database_records` atomically:
+       ```sql
+       UPDATE database_records 
+       SET reply_sentiment = ?, 
+           reply_confidence = ?, 
+           reply_summary = ?, 
+           reply_analyzed_at = CURRENT_TIMESTAMP
+       WHERE id = ?
+       ```
+
+### 3. Starter Presets Registry (`server/services/starterPresets.js`)
+- Static, vetted catalog of 4 high-converting cold outreach sequences:
+  - *Direct Executive Pitch*
+  - *Value-Add / Case Study Teaser*
+  - *Gentle Cadence Follow-Up*
+  - *Graceful Closing / Breakup*
+- Endpoint `GET /api/templates/starter-presets` returns the catalog.
+- Endpoint `POST /api/templates/from-preset/:presetId` clones a preset into the user's active templates table.
+
+### 4. Database Schema Migrations (`server/database.js`)
+- Add non-destructive column checks:
+  ```javascript
+  const recordColumns = db.prepare("PRAGMA table_info(database_records)").all();
+  if (!recordColumns.some(c => c.name === 'reply_sentiment')) {
+    db.prepare("ALTER TABLE database_records ADD COLUMN reply_sentiment TEXT").run();
+    db.prepare("ALTER TABLE database_records ADD COLUMN reply_confidence REAL").run();
+    db.prepare("ALTER TABLE database_records ADD COLUMN reply_summary TEXT").run();
+    db.prepare("ALTER TABLE database_records ADD COLUMN reply_analyzed_at TEXT").run();
+  }
+
+  const settingsColumns = db.prepare("PRAGMA table_info(settings)").all();
+  if (!settingsColumns.some(c => c.name === 'gemini_api_key')) {
+    db.prepare("ALTER TABLE settings ADD COLUMN gemini_api_key TEXT").run();
+    db.prepare("ALTER TABLE settings ADD COLUMN sentiment_auto_analyze INTEGER DEFAULT 1").run();
+  }
+  ```

@@ -1,48 +1,77 @@
-# Stack Research
+# Stack Research: UI Overhaul, Light Mode & Free AI Reply Intelligence
 
-**Domain:** Cold Email Outreach, Custom Domain SMTP/IMAP & Drip Automation  
-**Researched:** 2026-10-03  
-**Confidence:** HIGH  
-
-## Recommended Stack
-
-### Core Technologies
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| `nodemailer` | ^10.0.13 | Outbound SMTP dispatch | Already installed; natively supports arbitrary custom SMTP relays (port 587 STARTTLS, 465 SSL, custom host, auth credentials) without third-party lock-in. |
-| `imapflow` | ^1.0.160 | Inbound IMAP reply monitoring | Modern, actively maintained (by Nodemailer author), pure async/await Promise API, built-in connection recovery and TLS support. Far superior to legacy `node-imap`. |
-| `mailparser` | ^3.7.1 | MIME & RFC-822 email parsing | De-facto standard for extracting `In-Reply-To`, `References`, subject headers, and plain-text body from raw IMAP email messages. |
-| `better-sqlite3` | ^13.0.3 | Sequence & queue persistence | Already installed; handles atomic transaction updates for drip steps, reply status mutations, and prevents duplicate sends. |
-
-### Supporting Libraries
-
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| `date-fns` | ^4.1.0 | Date & cadence interval calculation | Computing sequence delays (e.g. "+3 business days", "+5 days at 09:00 AM local time") cleanly. |
-
-## Installation
-
-```bash
-# Inbound IMAP monitoring & parsing
-npm install imapflow mailparser date-fns
-```
-
-## Alternatives Considered
-
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| `imapflow` | `node-imap` | Legacy codebase only. `node-imap` has had no major updates for years, relies heavily on complex event emitters, and suffers from connection deadlock bugs. |
-| `imapflow` | `imap-simple` | `imap-simple` is merely a thin wrapper around `node-imap`. Inherits all underlying deadlocks. |
-| Custom cron / timer loop | `bullmq` / `agenda` | `bullmq` requires Redis. In a local single-user self-hosted CRM, SQLite indexed timestamps + lightweight in-memory interval worker is 100x simpler with zero external daemons. |
-
-## What NOT to Use
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| External Redis / Celery | Over-engineering for a local desktop CRM tool; requires user to install and run Docker/Redis services. | SQLite-backed task scheduler with `scheduled_at` timestamp indexing. |
-| Scraping webmail interfaces | Fragile, violates TOS, breaks constantly when webmail DOM changes. | Standard RFC-compliant SMTP and IMAP protocols. |
+**Milestone:** v3.0  
+**Domain:** Local Cold Email Outreach & Privacy-First CRM  
+**Date:** 2026-10-05  
 
 ---
-*Stack research for: StrokeCRM v2.0 Custom Domains & Automated Drips*  
-*Researched: 2026-10-03*
+
+## 1. UI Theming & Styling Stack
+
+### Recommended Stack Additions
+- **CSS Variable Semantic Tokens (`client/src/index.css`)**:
+  - Implement a two-tier CSS variable system (`:root` / `[data-theme="dark"]` and `[data-theme="light"]`).
+  - Core tokens:
+    - Backgrounds: `--bg-canvas` (main app background), `--bg-surface` (cards, panels), `--bg-elevated` (modals, dropdowns), `--bg-subtle` (hover states, badges).
+    - Borders: `--border-subtle`, `--border-default`, `--border-focus`.
+    - Typography: `--text-primary`, `--text-secondary`, `--text-muted`, `--text-inverse`.
+    - Accents: `--accent-primary` (indigo/violet), `--accent-primary-hover`, `--accent-ring`.
+    - Semantic States: `--color-success` (green), `--color-warning` (amber), `--color-danger` (rose), `--color-info` (cyan/blue).
+- **Tailwind CSS Integration**:
+  - Configure Tailwind in `tailwind.config.js` to map semantic utility classes (`bg-canvas`, `bg-surface`, `text-primary`, etc.) to the CSS variables.
+  - Allows seamless usage: `className="bg-surface text-primary border border-subtle"` that instantly adapts when theme switches.
+- **Lucide React Icons (Existing)**:
+  - Continue leveraging `lucide-react` for theme toggle (`Sun`, `Moon`), sentiment badges (`CheckCircle2`, `HelpCircle`, `Clock`, `XCircle`, `Ban`), and status indicators.
+- **What NOT to Add**:
+  - **Do NOT add bulky UI frameworks (e.g., MUI, Chakra, Mantine)**: They bring heavy runtime overhead, style collision with custom components, and bloated bundle size.
+  - **Do NOT use Tailwind's raw `dark:` variants everywhere**: Hardcoding `dark:bg-zinc-900 bg-white` across 40+ components creates maintainability nightmares. Semantic CSS variables solve both themes cleanly in one declaration.
+
+---
+
+## 2. Free AI Sentiment Analysis Stack
+
+### Recommended AI Stack
+- **Native Node `fetch` + Google Gemini 1.5 Flash Free Tier**:
+  - **Zero External Dependencies**: Google Gemini 1.5 Flash REST API can be invoked directly using Node 18+'s native global `fetch`. No need to install heavy client SDKs (`@google/genai` or `@langchain/core`).
+  - **Free Tier Specifications**:
+    - Rate limits: 15 Requests Per Minute (RPM), 1,000,000 Tokens Per Minute (TPM), 1,500 Requests Per Day (RPD).
+    - Cost: **100% Free** (No credit card required for standard free API key at Google AI Studio).
+    - Latency: Fast response (< 500ms) with lightweight JSON response mode (`response_mime_type: "application/json"`).
+  - **Structured Classification Prompt**:
+    - Enforce strict JSON output with schema:
+      ```json
+      {
+        "sentiment": "INTERESTED | QUESTION | FOLLOW_UP | NOT_INTERESTED | UNSUBSCRIBE",
+        "confidence": 0.95,
+        "summary": "Recipient is interested and asked for a 15-minute demo on Thursday."
+      }
+      ```
+- **Local Rule-Based Heuristic Fallback Engine**:
+  - Built-in zero-dependency regex and keyword classifier (`server/services/sentimentHeuristics.js`).
+  - Evaluates subject and body for high-confidence markers:
+    - *Unsubscribe*: "unsubscribe", "remove me", "stop emailing", "take off your list".
+    - *Interested*: "calendly.com", "schedule", "book a time", "let's talk", "call me", "send over details", "pricing".
+    - *Follow Up*: "next month", "next quarter", "reconnect in", "circle back", "busy right now".
+    - *Not Interested*: "not interested", "no thanks", "not a fit", "we use an in-house".
+  - Runs automatically when no Gemini API key is configured, or as a seamless failover if network/quota is exceeded.
+
+---
+
+## 3. Database Persistence Stack
+
+- **SQLite Schema Evolution (`server/database.js`)**:
+  - Non-destructive `ALTER TABLE` migrations:
+    - `database_records`: Add `reply_sentiment TEXT`, `reply_confidence REAL`, `reply_summary TEXT`, `reply_analyzed_at TEXT`.
+    - `settings`: Add `gemini_api_key TEXT`, `sentiment_auto_analyze INTEGER DEFAULT 1`, `sentiment_model TEXT DEFAULT 'gemini-1.5-flash'`.
+  - Maintains existing `better-sqlite3` synchronous performance and ACID safety.
+
+---
+
+## 4. Stack Evaluation Summary
+
+| Subsystem | Selected Tool / Pattern | Alternative Considered | Rationale |
+|-----------|-------------------------|------------------------|-----------|
+| Theming | CSS Variables + `data-theme` | Tailwind `dark:` utility sprawl | Centralized design tokens prevent missed styles and simplify dual-mode maintenance. |
+| AI Inference | Gemini 1.5 Flash REST via Node `fetch` | Ollama / Local LLM | Free, requires zero GPU/RAM overhead on user's machine, fast, and structured JSON output. |
+| AI Fallback | Rule-based Heuristic Regex | HuggingFace Inference API | Zero dependencies, instant execution, zero network failure risk. |
+| Persistence | SQLite via `better-sqlite3` | File-based JSON | Atomic transactions, query indexing, and schema consistency with existing CRM state. |
