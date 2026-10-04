@@ -7,17 +7,19 @@ flowchart TD
     subgraph UI ["Frontend / User Control Center (Hierarchical & Traceable)"]
         Router["App Router & History Stack (Hash/URL Indexed)"]
         Breadcrumbs["Breadcrumb Tracker & Back-Trace Engine"]
+        ThemeManager["Theme Engine: Dark / Light Mode & Token System"]
         Dashboard["Analytics & Daily Cap Monitor"]
         DatabaseHub["Databases Hub: Isolated File Uploads, Schemas & Inspection"]
-        TemplatesLibrary["Templates Library: Saved Collection & Management (#/templates)"]
+        TemplatesLibrary["Templates Library & Curated Presets Gallery (#/templates)"]
         TemplateStudio["Templates Studio: Composer, Variable Ingestion & Spam Radar (#/templates/:id)"]
         CampaignsHub["Campaigns Directory: Card-List Overview & Management (#/campaigns)"]
-        CampaignCockpit["Campaign Cockpit: Live Pacing Radar, 1:1 Triad & Queue (#/campaigns/:id)"]
+        CampaignCockpit["Campaign Cockpit: Pacing Radar, Funnel & Reply Sentiment Badges (#/campaigns/:id)"]
         PreflightControls["Preflight Gates (Working Hours Toggle, Jitter, Test Mail)"]
         ABTesting["A/B Testing Studio"]
-        Settings["Gmail Auth & Throttle Settings"]
+        Settings["Credentials, Throttle & Free AI Key Settings"]
 
         Router --> Breadcrumbs
+        Router --> ThemeManager
         Router --> Dashboard
         Router --> DatabaseHub
         Router --> TemplatesLibrary
@@ -116,4 +118,23 @@ flowchart TD
 - **Atomic Disarm Invariant**: Detected replies atomically set `status = 'REPLIED'`, `replied_at = receivedAt`, and `next_step_scheduled_at = NULL` in `database_records`, permanently halting all future drip follow-ups.
 - **Visual Funnel & Audit CSV**: Real-time conversion drop-off funnel (Audience -> Step 1 -> Step 2 -> Step 3 -> Replies) with conversion percentages and downloadable RFC 4180 audit CSV export (`/api/campaigns/:id/export-audit`).
 - **Manual Cockpit Overrides**: 1-click manual "Mark Replied" and "Cancel Next" controls in the Database Inspector table for immediate operator intervention.
+
+### 8. Dual-Theme Architecture & Design Token Engine (v3.0)
+- **CSS Semantic Tokens**: Centralized variables (`--bg-canvas`, `--bg-surface`, `--bg-elevated`, `--text-primary`, `--border-subtle`) in `client/src/index.css` mapped dynamically to `[data-theme="dark"]` and `[data-theme="light"]`.
+- **Theme Switcher**: React Context (`ThemeContext.jsx`) synchronizing state with `localStorage` and `document.documentElement`.
+- **FOUT Prevention**: Synchronous pre-render script in `client/index.html` preventing theme flash on refresh.
+- **Accessibility**: High-contrast WCAG 2.2 AA compliant palette (>4.5:1 text contrast) across both modes.
+
+### 9. UX Copywriting Polish & Curated Starter Presets Gallery (v3.0)
+- **Standardized Outreach Vocabulary**: Authoritative B2B terminology across all navigation items, toasts, modals, and error boundaries.
+- **Contextual Tooltips**: Interactive explanatory tooltips for technical email deliverability parameters (jitter, limits, threading, disarm).
+- **Curated Starter Presets Gallery**: Static vetted outreach templates (Problem Pitch, Social Proof, 3-Day Bump, Breakup) clonable directly into the active templates library with dynamic variable pill bindings.
+
+### 10. Free AI Reply Sentiment Intelligence & Cockpit Filtering (v3.0)
+- **Zero-Cost Inference**: Google Gemini 1.5 Flash REST client via native Node `fetch`, using free API tier keys stored locally in SQLite `settings`.
+- **Dual Engine Architecture**: Automatically runs local rule-based regex/keyword heuristic analyzer if no API key is provided or during network timeouts.
+- **Thread Sanitization**: Strips historical quoted email text before AI analysis to evaluate only the recipient's new message.
+- **Taxonomy**: Classifies responses into `Interested`, `Question`, `Follow Up`, `Not Interested`, and `Unsubscribe` with 1-sentence summaries.
+- **Cockpit Observability**: Color-coded badges, confidence scores, 1-click filter tabs, and operator manual override controls in the Campaign Cockpit and Database Inspector.
+
 
