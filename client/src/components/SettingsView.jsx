@@ -16,7 +16,10 @@ import {
   Send,
   Copy,
   Mail,
-  Check
+  Check,
+  Sparkles,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 const PROVIDER_PRESETS = {
@@ -121,6 +124,14 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState(null);
 
+  // Phase 15: Google Gemini 1.5 Flash Free AI state
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
+  const [isTestingGemini, setIsTestingGemini] = useState(false);
+  const [geminiTestResult, setGeminiTestResult] = useState(null);
+  const [isSavingGemini, setIsSavingGemini] = useState(false);
+  const [geminiSaveMessage, setGeminiSaveMessage] = useState(null);
+
   useEffect(() => {
     // Populate existing account info if available
     if (authStatus?.connected && authStatus.account) {
@@ -177,6 +188,7 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
           setEnforceSchedule(data.enforce_schedule === '1' || data.enforce_schedule === 'true' || data.enforce_schedule === true);
         }
         if (data.gmail_quota_type) setQuotaType(data.gmail_quota_type);
+        if (data.gemini_api_key) setGeminiApiKey(data.gemini_api_key);
       })
       .catch(err => console.error('Failed to load settings:', err));
   }, [authStatus]);
@@ -442,6 +454,52 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
       }
     } catch (err) {
       alert('Failed to save settings: ' + err.message);
+    }
+  };
+
+  // Phase 15: Handshake Test for Google Gemini API Key (SENT-01)
+  const handleTestGeminiKey = async () => {
+    setIsTestingGemini(true);
+    setGeminiTestResult(null);
+    try {
+      const res = await fetch('/api/settings/test-gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: geminiApiKey })
+      });
+      const data = await res.json();
+      setGeminiTestResult(data);
+    } catch (err) {
+      setGeminiTestResult({
+        success: false,
+        message: 'Network error connecting to Gemini test endpoint: ' + err.message
+      });
+    } finally {
+      setIsTestingGemini(false);
+    }
+  };
+
+  // Phase 15: Save Gemini API Key
+  const handleSaveGeminiKey = async () => {
+    setIsSavingGemini(true);
+    setGeminiSaveMessage(null);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gemini_api_key: geminiApiKey.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGeminiSaveMessage({ type: 'success', text: 'Gemini 1.5 Flash API Key saved successfully!' });
+        setTimeout(() => setGeminiSaveMessage(null), 4000);
+      } else {
+        setGeminiSaveMessage({ type: 'error', text: data.message || 'Failed to save Gemini key.' });
+      }
+    } catch (err) {
+      setGeminiSaveMessage({ type: 'error', text: err.message });
+    } finally {
+      setIsSavingGemini(false);
     }
   };
 
@@ -1161,6 +1219,160 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Free AI Reply Intelligence Card (Phase 15 / SENT-01) */}
+      <div className="bg-surface border border-subtle rounded-xl p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-subtle pb-4 mb-6 gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-primary">Free AI Reply Sentiment Intelligence</h2>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  Google Gemini 1.5 Flash (Free Tier)
+                </span>
+              </div>
+              <p className="text-xs text-secondary mt-0.5">
+                Automatically categorizes inbound lead replies into Interested, Question, Follow Up, Not Interested, or Unsubscribe with zero subscription fees.
+              </p>
+            </div>
+          </div>
+
+          <a
+            href="https://aistudio.google.com/app/apikey"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition-colors shrink-0 self-start sm:self-auto"
+          >
+            <span>Get Free API Key</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-medium text-secondary">
+                Google Gemini API Key
+              </label>
+              <span className="text-[11px] text-muted">
+                100% Free • 1,500 queries/day • No credit card required
+              </span>
+            </div>
+
+            <div className="relative">
+              <input
+                type={showGeminiKey ? 'text' : 'password'}
+                value={geminiApiKey}
+                onChange={(e) => setGeminiApiKey(e.target.value)}
+                placeholder="AIzaSy..."
+                className="w-full pl-3.5 pr-24 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary font-mono placeholder-muted focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setShowGeminiKey(!showGeminiKey)}
+                  className="p-1.5 text-muted hover:text-primary transition-colors cursor-pointer rounded"
+                  title={showGeminiKey ? 'Hide Key' : 'Reveal Key'}
+                >
+                  {showGeminiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Handshake Result Feedback */}
+          {geminiTestResult && (
+            <div className={`p-3.5 rounded-lg border text-xs flex items-start gap-2.5 animate-in fade-in duration-150 ${
+              geminiTestResult.success
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300'
+                : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
+            }`}>
+              {geminiTestResult.success ? (
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
+              )}
+              <div className="flex-1">
+                <div className="font-semibold">
+                  {geminiTestResult.success ? 'Gemini 1.5 Flash Connected' : 'Verification Failed'}
+                </div>
+                <div className="mt-0.5 text-[11px] opacity-90">
+                  {geminiTestResult.message}
+                </div>
+                {geminiTestResult.latencyMs && (
+                  <div className="mt-1 font-mono text-[10px] opacity-75">
+                    Roundtrip Latency: {geminiTestResult.latencyMs}ms • Model: {geminiTestResult.model || 'gemini-1.5-flash'}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Heuristic fallback guarantee note */}
+          <div className="p-3 bg-subtle/60 border border-subtle rounded-lg flex items-start gap-2.5 text-xs text-secondary">
+            <ShieldCheck className="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-medium text-primary">Zero-Dependency Heuristic Fallback Engine</span>
+              <p className="text-[11px] text-muted mt-0.5">
+                If no API key is set, or during network timeouts, StrokeCRM automatically categorizes inbound replies offline using its built-in rule-based keyword classifier. Your outreach is never blocked.
+              </p>
+            </div>
+          </div>
+
+          {geminiSaveMessage && (
+            <div className={`p-3 rounded-lg text-xs border ${
+              geminiSaveMessage.type === 'success' 
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300' 
+                : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
+            }`}>
+              {geminiSaveMessage.text}
+            </div>
+          )}
+
+          <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={handleTestGeminiKey}
+              disabled={isTestingGemini || !geminiApiKey}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-canvas hover:bg-subtle border border-subtle text-primary transition-all tap-press disabled:opacity-50 cursor-pointer"
+            >
+              {isTestingGemini ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-500" />
+                  <span>Verifying Handshake...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Test Handshake</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSaveGeminiKey}
+              disabled={isSavingGemini}
+              className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 transition-all tap-press disabled:opacity-50 cursor-pointer"
+            >
+              {isSavingGemini ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Save AI Configuration</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Sending Pacing & Safeguards Card */}

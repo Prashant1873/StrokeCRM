@@ -42,12 +42,21 @@ flowchart TD
         ABEngine["Cohort Splitter & Stats Aggregator"]
     end
 
-    subgraph GmailGateway ["Gmail Gateway & Transport Layer"]
-        AuthManager["OAuth2 Refresh Token / App Password Manager"]
-        QuotaMonitor["Daily Limit Guard (500 free / 2000 Workspace)"]
-        Dispatcher["Gmail REST API / Nodemailer SMTP Sender"]
+    subgraph SentimentEngine ["Free AI Sentiment Engine (Zero Cost & Offline Resilience)"]
+        Sanitizer["Thread Sanitizer: RFC 2822 Quote & Header Stripper"]
+        ClassifierSwitch{"Gemini API Key Valid?"}
+        GeminiREST["Google Gemini 1.5 Flash (Native Fetch REST, 1500/day Free)"]
+        Heuristics["Local Rule Heuristic Fallback (Zero-Dependency Regex)"]
+        SentimentDB["SQLite Sentiment Annotations (Confidence, Summary, Provider)"]
+        ManualOverride["Operator Manual Override (Provider Precedence Lock)"]
+    end
+
+    subgraph GmailGateway ["Gmail & Custom IMAP Gateway"]
+        AuthManager["OAuth2 Refresh Token / App Password / Custom SMTP"]
+        QuotaMonitor["Daily Limit Guard (500 free / 2000 Workspace / Custom)"]
+        Dispatcher["Universal Nodemailer SMTP / REST Dispatcher"]
         SentTracker["Thread & Message-ID Registry"]
-        ReplyDetector["Gmail Thread Reply Poller (Watch/History API)"]
+        ReplyDetector["Inbound IMAP Reply Scanner (Port 993 SSL)"]
     end
 
     DatabaseHub -->|Upload raw sheet| DiskStore
@@ -65,7 +74,16 @@ flowchart TD
     Dispatcher -->|Send message| GmailGateway
     Dispatcher -->|Confirm send| SentTracker
     SentTracker -->|Update state: SENT / FAILED| Queue
-    ReplyDetector -->|Detected inbound reply| Queue
+    ReplyDetector -->|Atomic sequence disarm| Queue
+    ReplyDetector -->|Sanitize inbound body| Sanitizer
+    Sanitizer --> ClassifierSwitch
+    ClassifierSwitch -->|Yes & Online| GeminiREST
+    ClassifierSwitch -->|No / Timeout / 429| Heuristics
+    GeminiREST --> SentimentDB
+    Heuristics --> SentimentDB
+    ManualOverride --> SentimentDB
+    SentimentDB --> CampaignCockpit
+    SentimentDB --> DatabaseHub
     Queue -->|Push real-time progress| Dashboard
     SentTracker -->|Increment daily metrics| Dashboard
 ```

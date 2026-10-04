@@ -15,9 +15,43 @@ import {
   Unlock, 
   X, 
   Send,
-  MessageSquare
+  MessageSquare,
+  Sparkles,
+  HelpCircle,
+  Clock,
+  XCircle,
+  UserX,
+  Tag
 } from 'lucide-react';
 import Switch from './common/Switch';
+
+const SENTIMENT_CONFIG = {
+  INTERESTED: {
+    label: 'Interested',
+    badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+    icon: Sparkles
+  },
+  QUESTION: {
+    label: 'Question',
+    badgeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+    icon: HelpCircle
+  },
+  FOLLOW_UP: {
+    label: 'Follow Up',
+    badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+    icon: Clock
+  },
+  NOT_INTERESTED: {
+    label: 'Not Interested',
+    badgeClass: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 border-zinc-500/30',
+    icon: XCircle
+  },
+  UNSUBSCRIBE: {
+    label: 'Unsubscribe',
+    badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30',
+    icon: UserX
+  }
+};
 
 export default function DatabasesView({ setActiveTab, navigate, currentRoute }) {
   const [databases, setDatabases] = useState([]);
@@ -44,6 +78,8 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
   const [inspectLoading, setInspectLoading] = useState(false);
   const [inspectSearch, setInspectSearch] = useState('');
   const [inspectPage, setInspectPage] = useState(0);
+  const [inspectSentiment, setInspectSentiment] = useState('ALL');
+  const [updatingRecordId, setUpdatingRecordId] = useState(null);
 
   const fileInputRef = useRef(null);
 
@@ -193,14 +229,14 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
   };
 
   // Open inspector modal and load paginated records
-  const handleOpenInspector = async (dbItem) => {
-    setInspectDb(dbItem);
+  const loadInspectRecords = async (dbId, sentiment = 'ALL') => {
     setInspectLoading(true);
-    setInspectPage(0);
-    setInspectSearch('');
-
     try {
-      const res = await fetch(`/api/databases/${dbItem.id}?limit=50&offset=0`);
+      let url = `/api/databases/${dbId}?limit=50&offset=0`;
+      if (sentiment && sentiment !== 'ALL') {
+        url += `&sentiment=${encodeURIComponent(sentiment)}`;
+      }
+      const res = await fetch(url);
       const data = await res.json();
       if (data.database) {
         setInspectDb(data.database);
@@ -211,6 +247,56 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
       console.error('Failed to load audience details:', err);
     } finally {
       setInspectLoading(false);
+    }
+  };
+
+  const handleOpenInspector = async (dbItem) => {
+    setInspectDb(dbItem);
+    setInspectSentiment('ALL');
+    setInspectPage(0);
+    setInspectSearch('');
+    await loadInspectRecords(dbItem.id, 'ALL');
+  };
+
+  const handleSentimentFilterChange = async (sentiment) => {
+    setInspectSentiment(sentiment);
+    if (inspectDb) {
+      await loadInspectRecords(inspectDb.id, sentiment);
+    }
+  };
+
+  // Manual Sentiment Override for a Record in Database Inspector (SENT-07)
+  const handleOverrideRecordSentiment = async (recordId, newSentiment) => {
+    if (!inspectDb) return;
+    setUpdatingRecordId(recordId);
+    try {
+      const res = await fetch(`/api/databases/${inspectDb.id}/records/${recordId}/sentiment`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sentiment: newSentiment })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInspectRecords(prev => prev.map(r => {
+          if (r.id === recordId) {
+            return {
+              ...r,
+              sentiment: newSentiment,
+              sentiment_provider: 'manual',
+              sentiment_confidence: 1.0,
+              sentiment_summary: `Manually classified as ${newSentiment} by operator.`,
+              status: r.status === 'PENDING' || r.status === 'SENT' ? 'REPLIED' : r.status
+            };
+          }
+          return r;
+        }));
+      } else {
+        alert(data.message || 'Failed to update sentiment.');
+      }
+    } catch (err) {
+      alert('Error updating sentiment: ' + err.message);
+    } finally {
+      setUpdatingRecordId(null);
     }
   };
 
@@ -658,7 +744,7 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
       {/* Inspector Modal */}
       {inspectDb && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-surface border border-subtle rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl p-6 text-left">
+          <div className="bg-surface border border-subtle rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl p-6 text-left">
             <div className="flex items-center justify-between border-b border-subtle pb-3 mb-4">
               <div>
                 <div className="flex items-center gap-2">
@@ -700,6 +786,43 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
               </div>
             </div>
 
+            {/* Quick Sentiment Filter Tabs (SENT-06) */}
+            <div className="flex flex-wrap items-center gap-1.5 mb-3 pb-2 border-b border-subtle">
+              <span className="text-[10px] font-semibold text-secondary uppercase tracking-wider mr-1">
+                Filter Sentiment:
+              </span>
+              <button
+                type="button"
+                onClick={() => handleSentimentFilterChange('ALL')}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                  inspectSentiment === 'ALL'
+                    ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                    : 'bg-subtle text-secondary hover:text-primary hover:bg-subtle/80'
+                }`}
+              >
+                All Records
+              </button>
+              {Object.entries(SENTIMENT_CONFIG).map(([key, cfg]) => {
+                const IconComponent = cfg.icon;
+                const isSelected = inspectSentiment === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => handleSentimentFilterChange(key)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
+                      isSelected
+                        ? `${cfg.badgeClass} font-semibold ring-1 ring-offset-1 ring-current`
+                        : 'bg-surface text-secondary border-subtle hover:text-primary hover:bg-subtle'
+                    }`}
+                  >
+                    <IconComponent className="w-3 h-3" />
+                    <span>{cfg.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Table Records with Sticky Blurred Header */}
             <div className="flex-1 overflow-auto border border-subtle rounded-lg min-h-[300px] relative">
               {inspectLoading ? (
@@ -709,7 +832,7 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                 </div>
               ) : inspectRecords.length === 0 ? (
                 <div className="py-20 text-center text-xs text-muted">
-                  No records stored in this audience.
+                  No records stored in this audience matching filter.
                 </div>
               ) : (
                 <table className="w-full text-left text-xs text-secondary">
@@ -720,6 +843,7 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                       <th className="px-3 py-2.5 font-medium">First Name</th>
                       <th className="px-3 py-2.5 font-medium">Company</th>
                       <th className="px-3 py-2.5 font-medium">Dispatch Status</th>
+                      <th className="px-3 py-2.5 font-medium">AI Sentiment</th>
                       <th className="px-3 py-2.5 font-medium">Custom Fields</th>
                       <th className="px-3 py-2.5 font-medium text-right">Actions</th>
                     </tr>
@@ -757,6 +881,84 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-sans bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-medium">
                                 {r.next_step_scheduled_at ? 'WAITING DISPATCH' : 'PENDING'}
                               </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2">
+                            {r.sentiment && SENTIMENT_CONFIG[r.sentiment] ? (
+                              (() => {
+                                const cfg = SENTIMENT_CONFIG[r.sentiment];
+                                const IconComponent = cfg.icon;
+                                const isUpdating = updatingRecordId === r.id;
+                                return (
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-sans font-semibold border ${cfg.badgeClass}`}>
+                                        <IconComponent className="w-2.5 h-2.5" />
+                                        {cfg.label}
+                                      </span>
+                                      {r.sentiment_confidence != null && (
+                                        <span className="text-[9px] text-muted font-sans font-medium" title={`Confidence: ${Math.round(r.sentiment_confidence * 100)}%`}>
+                                          {Math.round(r.sentiment_confidence * 100)}%
+                                        </span>
+                                      )}
+                                      <span className={`text-[8px] uppercase tracking-wider font-mono px-1 rounded ${
+                                        r.sentiment_provider === 'gemini' 
+                                          ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' 
+                                          : r.sentiment_provider === 'manual'
+                                          ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                          : 'bg-zinc-500/10 text-zinc-500'
+                                      }`}>
+                                        {r.sentiment_provider || 'rule'}
+                                      </span>
+                                    </div>
+                                    {r.sentiment_summary && (
+                                      <p className="text-[10px] text-secondary font-sans line-clamp-1 max-w-[200px]" title={r.sentiment_summary}>
+                                        {r.sentiment_summary}
+                                      </p>
+                                    )}
+                                    <div className="flex items-center gap-1 font-sans">
+                                      <label htmlFor={`override-sentiment-${r.id}`} className="sr-only">Override sentiment for {r.email}</label>
+                                      <select
+                                        id={`override-sentiment-${r.id}`}
+                                        aria-label={`Override sentiment for ${r.email}`}
+                                        disabled={isUpdating}
+                                        value={r.sentiment}
+                                        onChange={(e) => handleOverrideRecordSentiment(r.id, e.target.value)}
+                                        className="text-[9px] bg-subtle border border-subtle rounded px-1 py-0.5 text-secondary hover:text-primary cursor-pointer disabled:opacity-50"
+                                      >
+                                        <option value="INTERESTED">Interested</option>
+                                        <option value="QUESTION">Question</option>
+                                        <option value="FOLLOW_UP">Follow Up</option>
+                                        <option value="NOT_INTERESTED">Not Interested</option>
+                                        <option value="UNSUBSCRIBE">Unsubscribe</option>
+                                      </select>
+                                      {isUpdating && <RefreshCw className="w-2.5 h-2.5 text-indigo-500 animate-spin" />}
+                                    </div>
+                                  </div>
+                                );
+                              })()
+                            ) : isReplied ? (
+                              <div className="flex items-center gap-1 font-sans">
+                                <label htmlFor={`assign-sentiment-${r.id}`} className="sr-only">Assign sentiment for {r.email}</label>
+                                <select
+                                  id={`assign-sentiment-${r.id}`}
+                                  aria-label={`Assign sentiment for ${r.email}`}
+                                  defaultValue=""
+                                  onChange={(e) => {
+                                    if (e.target.value) handleOverrideRecordSentiment(r.id, e.target.value);
+                                  }}
+                                  className="text-[10px] bg-subtle border border-subtle rounded px-1.5 py-0.5 text-secondary hover:text-primary cursor-pointer"
+                                >
+                                  <option value="" disabled>Set Sentiment...</option>
+                                  <option value="INTERESTED">Interested</option>
+                                  <option value="QUESTION">Question</option>
+                                  <option value="FOLLOW_UP">Follow Up</option>
+                                  <option value="NOT_INTERESTED">Not Interested</option>
+                                  <option value="UNSUBSCRIBE">Unsubscribe</option>
+                                </select>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-muted">-</span>
                             )}
                           </td>
                           <td className="px-3 py-2 text-[10px] text-muted truncate max-w-[160px]" title={JSON.stringify(custom)}>

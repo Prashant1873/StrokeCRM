@@ -8,9 +8,43 @@ import {
   AlertCircle, 
   ChevronDown, 
   ChevronUp,
-  Inbox
+  Inbox,
+  Sparkles,
+  HelpCircle,
+  Clock,
+  XCircle,
+  UserX,
+  Tag
 } from 'lucide-react';
 import DeliverabilityBeacon from './common/DeliverabilityBeacon';
+
+const SENTIMENT_CONFIG = {
+  INTERESTED: {
+    label: 'Interested',
+    badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+    icon: Sparkles
+  },
+  QUESTION: {
+    label: 'Question',
+    badgeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+    icon: HelpCircle
+  },
+  FOLLOW_UP: {
+    label: 'Follow Up',
+    badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+    icon: Clock
+  },
+  NOT_INTERESTED: {
+    label: 'Not Interested',
+    badgeClass: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 border-zinc-500/30',
+    icon: XCircle
+  },
+  UNSUBSCRIBE: {
+    label: 'Unsubscribe',
+    badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30',
+    icon: UserX
+  }
+};
 
 export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) {
   const [funnelData, setFunnelData] = useState(null);
@@ -20,6 +54,47 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
   const [scanNotice, setScanNotice] = useState(null);
   const [showRepliesList, setShowRepliesList] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [sentimentFilter, setSentimentFilter] = useState('ALL');
+  const [updatingReplyId, setUpdatingReplyId] = useState(null);
+
+  const handleOverrideSentiment = async (reply, newSentiment) => {
+    if (!campaign?.id || !reply) return;
+    const recordId = reply.database_record_id || reply.contact_id;
+    if (!recordId) return;
+
+    setUpdatingReplyId(reply.id);
+    const isContact = Boolean(reply.contact_id && !reply.database_record_id);
+
+    try {
+      const res = await fetch(`/api/campaigns/${campaign.id}/records/${recordId}/sentiment${isContact ? '?isContact=true' : ''}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sentiment: newSentiment })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setReplies(prev => prev.map(r => {
+          if (r.id === reply.id || (r.database_record_id && r.database_record_id === recordId) || (r.contact_id && r.contact_id === recordId)) {
+            return {
+              ...r,
+              sentiment: newSentiment,
+              sentiment_confidence: 1.0,
+              sentiment_summary: `Manually set to ${newSentiment} by operator.`,
+              sentiment_provider: 'manual'
+            };
+          }
+          return r;
+        }));
+        if (onUpdate) onUpdate();
+      } else {
+        alert(data.message || 'Failed to update sentiment.');
+      }
+    } catch (err) {
+      alert('Network error updating sentiment: ' + err.message);
+    } finally {
+      setUpdatingReplyId(null);
+    }
+  };
 
   const fetchFunnelAndReplies = async () => {
     if (!campaign?.id) return;
@@ -328,59 +403,152 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
         {/* Collapsible Detected Inbound Replies Feed */}
         {showRepliesList && (
           <div className="border border-subtle rounded-xl overflow-hidden bg-surface divide-y divide-subtle animate-in fade-in duration-150">
-            <div className="p-3 bg-canvas border-b border-subtle flex items-center justify-between text-xs">
+            <div className="p-3 bg-canvas border-b border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-2">
                 <Inbox className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="font-semibold text-primary">Inbound Replies & Disarm Log</span>
+                <span className="font-semibold text-primary">Inbound Replies & AI Sentiment Radar</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-subtle text-secondary border border-subtle">
                   {humanReplies.length} Disarmed
                 </span>
               </div>
-              <span className="text-[11px] text-muted font-mono">
-                Recent IMAP Matches
-              </span>
+
+              {/* 1-Click Sentiment Quick-Filter Tabs (SENT-06) */}
+              <div className="flex items-center gap-1 overflow-x-auto py-0.5">
+                {[
+                  { id: 'ALL', label: 'All', count: humanReplies.length },
+                  { id: 'INTERESTED', label: 'Interested', count: humanReplies.filter(r => (r.sentiment || '').toUpperCase() === 'INTERESTED').length },
+                  { id: 'QUESTION', label: 'Questions', count: humanReplies.filter(r => (r.sentiment || 'QUESTION').toUpperCase() === 'QUESTION').length },
+                  { id: 'FOLLOW_UP', label: 'Follow Up', count: humanReplies.filter(r => (r.sentiment || '').toUpperCase() === 'FOLLOW_UP').length },
+                  { id: 'NOT_INTERESTED', label: 'Not Interested', count: humanReplies.filter(r => (r.sentiment || '').toUpperCase() === 'NOT_INTERESTED').length },
+                  { id: 'UNSUBSCRIBE', label: 'Unsubscribe', count: humanReplies.filter(r => (r.sentiment || '').toUpperCase() === 'UNSUBSCRIBE').length }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setSentimentFilter(tab.id)}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-all cursor-pointer whitespace-nowrap border ${
+                      sentimentFilter === tab.id
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                        : 'bg-canvas text-secondary hover:text-primary border-subtle'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className="ml-1 opacity-70 font-mono">({tab.count})</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="max-h-64 overflow-y-auto divide-y divide-subtle">
+            <div className="max-h-72 overflow-y-auto divide-y divide-subtle">
               {humanReplies.length === 0 ? (
                 <div className="p-8 text-center text-muted text-xs font-sans">
                   No human replies recorded yet. Once a prospect replies to an email, their sequence will automatically halt here.
                 </div>
+              ) : humanReplies
+                  .filter(r => {
+                    if (sentimentFilter === 'ALL') return true;
+                    return (r.sentiment || 'QUESTION').toUpperCase() === sentimentFilter;
+                  })
+                  .length === 0 ? (
+                <div className="p-8 text-center text-muted text-xs font-sans">
+                  No replies matching the "{sentimentFilter.toLowerCase().replace('_', ' ')}" sentiment filter.
+                </div>
               ) : (
-                humanReplies.map((reply) => {
-                  const replyDate = reply.received_at ? new Date(reply.received_at) : null;
-                  const dateFormatted = replyDate 
-                    ? `${replyDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${replyDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                    : 'Just now';
+                humanReplies
+                  .filter(r => {
+                    if (sentimentFilter === 'ALL') return true;
+                    return (r.sentiment || 'QUESTION').toUpperCase() === sentimentFilter;
+                  })
+                  .map((reply) => {
+                    const replyDate = reply.received_at ? new Date(reply.received_at) : null;
+                    const dateFormatted = replyDate 
+                      ? `${replyDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${replyDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                      : 'Just now';
 
-                  return (
-                    <div key={reply.id} className="p-3 hover:bg-subtle transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <span className="w-6 h-6 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                        </span>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-primary truncate">{reply.sender_email}</span>
-                            {reply.first_name && (
-                              <span className="text-secondary text-[11px]">({reply.first_name} {reply.company ? `@ ${reply.company}` : ''})</span>
-                            )}
-                            <span className="text-[9px] uppercase px-1.5 py-0.2 rounded font-sans font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                              Disarmed
+                    const rawSent = (reply.sentiment || 'QUESTION').toUpperCase();
+                    const config = SENTIMENT_CONFIG[rawSent] || SENTIMENT_CONFIG.QUESTION;
+                    const IconComp = config.icon;
+                    const isUpdating = updatingReplyId === reply.id;
+
+                    return (
+                      <div key={reply.id} className="p-3.5 hover:bg-subtle transition-colors flex flex-col gap-2 text-xs">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <span className="w-6 h-6 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
                             </span>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-primary truncate">{reply.sender_email}</span>
+                                {reply.first_name && (
+                                  <span className="text-secondary text-[11px]">({reply.first_name} {reply.company ? `@ ${reply.company}` : ''})</span>
+                                )}
+                                <span className="text-[9px] uppercase px-1.5 py-0.2 rounded font-sans font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                  Disarmed
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-secondary truncate mt-0.5 font-mono">
+                                {reply.subject || 'Re: Outreach message'}
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-[11px] text-secondary truncate mt-0.5 font-mono">
-                            {reply.subject || 'Re: Outreach message'}
-                          </p>
-                        </div>
-                      </div>
 
-                      <div className="text-right shrink-0 font-mono text-[11px] text-muted">
-                        {dateFormatted}
+                          <div className="text-right shrink-0 font-mono text-[11px] text-muted">
+                            {dateFormatted}
+                          </div>
+                        </div>
+
+                        {/* Sentiment Badge, Confidence & 1-Click Override Dropdown (SENT-05, SENT-07) */}
+                        <div className="flex items-center justify-between gap-2 pl-9 pt-1 border-t border-subtle/40">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="relative group/sent inline-flex items-center">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border ${config.badgeClass}`}>
+                                <IconComp className="w-3 h-3" />
+                                <span>{config.label}</span>
+                                {reply.sentiment_confidence && (
+                                  <span className="text-[9px] opacity-75 font-mono">
+                                    {Math.round(reply.sentiment_confidence * 100)}%
+                                  </span>
+                                )}
+                              </span>
+
+                              {/* Interactive Select for Manual Reclassification */}
+                              <select
+                                value={rawSent}
+                                disabled={isUpdating}
+                                onChange={(e) => handleOverrideSentiment(reply, e.target.value)}
+                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                                title="Click to manually override or correct sentiment"
+                              >
+                                {Object.entries(SENTIMENT_CONFIG).map(([k, v]) => (
+                                  <option key={k} value={k}>{v.label}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <span className="text-[10px] text-muted">
+                              (Click to override)
+                            </span>
+
+                            {reply.sentiment_provider && (
+                              <span className="text-[9px] text-muted font-mono">
+                                • {reply.sentiment_provider === 'gemini_1.5_flash' ? 'Google Gemini 1.5' : reply.sentiment_provider === 'manual' ? 'Manual Override' : 'Offline Heuristic'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Sentiment Summary Snippet */}
+                        {reply.sentiment_summary && (
+                          <div className="pl-9">
+                            <p className="text-[11px] text-secondary italic font-sans bg-canvas/70 px-2.5 py-1 rounded border border-subtle/50">
+                              "{reply.sentiment_summary}"
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  })
               )}
             </div>
           </div>

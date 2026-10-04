@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 Initial MVP** — Phases 1-9 (shipped 2026-10-03)
 - ✅ **v2.0 Custom Domains & Automated Drips** — Phases 10-12 (shipped 2026-10-03)
-- 🟡 **v3.0 UI Overhaul, Light Mode & Free AI Reply Intelligence** — Phases 13-15 (active)
+- ✅ **v3.0 UI Overhaul, Light Mode & Free AI Reply Intelligence** — Phases 13-15 (shipped 2026-10-05)
 
 ---
 
@@ -38,11 +38,14 @@ See: `.planning/milestones/v2.0-ROADMAP.md`
 
 </details>
 
-### Milestone v3.0: UI Overhaul, Light Mode & Free AI Reply Intelligence
+<details open>
+<summary>✅ v3.0 UI Overhaul, Light Mode & Free AI Reply Intelligence (Phases 13-15) — SHIPPED 2026-10-05</summary>
 
 - [x] **Phase 13: Dual-Theme Architecture & Design Token Engine** (completed 2026-10-05)
 - [x] **Phase 14: System-Wide UI Modernization & Professional UX Copywriting** (completed 2026-10-05)
-- [ ] **Phase 15: Free AI Inbound Reply Sentiment Engine & Cockpit Intelligence**
+- [x] **Phase 15: Free AI Inbound Reply Sentiment Engine & Cockpit Intelligence** (completed 2026-10-05)
+
+</details>
 
 ---
 

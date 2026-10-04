@@ -240,6 +240,47 @@ try {
   if (!campaignColumns.includes('reply_count')) {
     db.exec("ALTER TABLE campaigns ADD COLUMN reply_count INTEGER DEFAULT 0");
   }
+
+  // Phase 15: Free AI Reply Sentiment Columns
+  if (!recordColumns.includes('sentiment')) {
+    db.exec("ALTER TABLE database_records ADD COLUMN sentiment TEXT");
+  }
+  if (!recordColumns.includes('sentiment_confidence')) {
+    db.exec("ALTER TABLE database_records ADD COLUMN sentiment_confidence REAL");
+  }
+  if (!recordColumns.includes('sentiment_summary')) {
+    db.exec("ALTER TABLE database_records ADD COLUMN sentiment_summary TEXT");
+  }
+  if (!recordColumns.includes('sentiment_provider')) {
+    db.exec("ALTER TABLE database_records ADD COLUMN sentiment_provider TEXT");
+  }
+
+  if (!contactColumns.includes('sentiment')) {
+    db.exec("ALTER TABLE contacts ADD COLUMN sentiment TEXT");
+  }
+  if (!contactColumns.includes('sentiment_confidence')) {
+    db.exec("ALTER TABLE contacts ADD COLUMN sentiment_confidence REAL");
+  }
+  if (!contactColumns.includes('sentiment_summary')) {
+    db.exec("ALTER TABLE contacts ADD COLUMN sentiment_summary TEXT");
+  }
+  if (!contactColumns.includes('sentiment_provider')) {
+    db.exec("ALTER TABLE contacts ADD COLUMN sentiment_provider TEXT");
+  }
+
+  const replyColumns = db.prepare("PRAGMA table_info(reply_logs)").all().map(c => c.name);
+  if (!replyColumns.includes('sentiment')) {
+    db.exec("ALTER TABLE reply_logs ADD COLUMN sentiment TEXT");
+  }
+  if (!replyColumns.includes('sentiment_confidence')) {
+    db.exec("ALTER TABLE reply_logs ADD COLUMN sentiment_confidence REAL");
+  }
+  if (!replyColumns.includes('sentiment_summary')) {
+    db.exec("ALTER TABLE reply_logs ADD COLUMN sentiment_summary TEXT");
+  }
+  if (!replyColumns.includes('sentiment_provider')) {
+    db.exec("ALTER TABLE reply_logs ADD COLUMN sentiment_provider TEXT");
+  }
 } catch (e) {
   console.warn('Column migration notice:', e.message);
 }
@@ -364,7 +405,8 @@ const defaultSettings = [
   ['custom_imap_port', '993'],
   ['custom_imap_secure', '1'],
   ['custom_imap_user', ''],
-  ['custom_imap_pass', '']
+  ['custom_imap_pass', ''],
+  ['gemini_api_key', '']
 ];
 
 const insertSettingStmt = db.prepare(`

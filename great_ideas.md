@@ -100,4 +100,8 @@ This document records high-value user inputs, design ideas, and creative directi
     - Integrate a zero-cost AI classifier (e.g., Google Gemini 1.5 Flash free API tier or lightweight local zero-cost model) requiring only the user's free API key.
     - Automatically classify detected inbound replies into actionable categories: `Interested / Call Requested`, `Information / Question`, `Follow Up Later`, `Not Interested`, and `Unsubscribe`.
     - Present visual sentiment badges, confidence ratings, and quick-filter tabs in the Campaign Cockpit and Database Inspector.
+    - **Heuristic + Zero-SDK Architecture**: Pair Google Gemini 1.5 Flash structured JSON mode via native REST `fetch` with an instant offline weighted regex fallback, guaranteeing that slow network, quota exhaustion (429), or missing keys never delay cold outreach or sequence disarming.
+    - **Atomic Disarm Invariant**: Sequence follow-ups are halted atomically in SQLite before triggering async sentiment evaluation.
+    - **Operator Precedence Guarantee**: When an operator manually overrides sentiment, the tag `sentiment_provider = 'manual'` guarantees automated scans will never overwrite human judgment.
+
 

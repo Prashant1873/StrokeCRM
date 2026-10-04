@@ -11,6 +11,7 @@ const databaseService = require('./databaseService');
 const templateService = require('./templateService');
 const queueService = require('./queueService');
 const replyScannerService = require('./replyScannerService');
+const sentimentService = require('./sentimentService');
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -67,6 +68,22 @@ app.post('/api/settings', (req, res) => {
     res.json({ success: true, message: 'Settings saved successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Test Google Gemini API Key Handshake (SENT-01)
+app.post('/api/settings/test-gemini', async (req, res) => {
+  try {
+    const { apiKey } = req.body || {};
+    let keyToTest = apiKey;
+    if (!keyToTest) {
+      const settings = db.getSettings ? db.getSettings() : {};
+      keyToTest = settings.gemini_api_key;
+    }
+    const result = await sentimentService.verifyGeminiKey(keyToTest);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
@@ -505,11 +522,12 @@ app.get('/api/databases', (req, res) => {
 // Get a single database with its custom headers & paginated records
 app.get('/api/databases/:id', (req, res) => {
   try {
-    const { limit = 50, offset = 0, search = '' } = req.query;
+    const { limit = 50, offset = 0, search = '', sentiment = '' } = req.query;
     const data = databaseService.getDatabaseById(req.params.id, {
       limit: Number(limit),
       offset: Number(offset),
-      search: String(search || '')
+      search: String(search || ''),
+      sentiment: String(sentiment || '')
     });
     if (!data) {
       return res.status(404).json({ error: 'Database not found' });
@@ -1181,6 +1199,137 @@ app.post('/api/campaigns/:id/records/:recordId/cancel-followup', (req, res) => {
     const isContact = req.query.isContact === 'true';
     const updated = replyScannerService.cancelFollowupsManually(recordId, campaignId, isContact);
     res.json({ success: true, message: 'Pending follow-up cancelled for lead.', record: updated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Manual Sentiment Override for a Campaign Record (SENT-07)
+app.put('/api/campaigns/:id/records/:recordId/sentiment', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const recordId = Number(req.params.recordId);
+    const { sentiment, summary } = req.body || {};
+    const isContact = req.query.isContact === 'true';
+
+    const cleanSentiment = String(sentiment || '').toUpperCase().trim();
+    if (!sentimentService.SENTIMENT_CATEGORIES[cleanSentiment]) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid sentiment. Must be one of: ${Object.keys(sentimentService.SENTIMENT_CATEGORIES).join(', ')}` 
+      });
+    }
+
+    const table = isContact ? 'contacts' : 'database_records';
+    const rec = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(recordId);
+    if (!rec) {
+      return res.status(404).json({ success: false, message: 'Record not found.' });
+    }
+
+    const cleanSummary = (summary && typeof summary === 'string' && summary.trim().length > 0)
+      ? summary.trim()
+      : `Manually classified as ${cleanSentiment} by operator.`;
+
+    const nowIso = new Date().toISOString();
+
+    const overrideTx = db.transaction(() => {
+      db.prepare(`
+        UPDATE ${table}
+        SET sentiment = ?, sentiment_confidence = 1.0, sentiment_summary = ?, sentiment_provider = 'manual',
+            status = CASE WHEN status = 'REPLIED' THEN status ELSE 'REPLIED' END,
+            replied_at = coalesce(replied_at, ?)
+        WHERE id = ?
+      `).run(cleanSentiment, cleanSummary, nowIso, recordId);
+
+      const log = isContact
+        ? db.prepare('SELECT id FROM reply_logs WHERE contact_id = ? ORDER BY id DESC LIMIT 1').get(recordId)
+        : db.prepare('SELECT id FROM reply_logs WHERE database_record_id = ? ORDER BY id DESC LIMIT 1').get(recordId);
+
+      if (log) {
+        db.prepare(`
+          UPDATE reply_logs 
+          SET sentiment = ?, sentiment_confidence = 1.0, sentiment_summary = ?, sentiment_provider = 'manual'
+          WHERE id = ?
+        `).run(cleanSentiment, cleanSummary, log.id);
+      } else {
+        db.prepare(`
+          INSERT INTO reply_logs (
+            campaign_id, database_record_id, contact_id, sender_email,
+            subject, snippet, in_reply_to, message_id, is_auto_reply,
+            sentiment, sentiment_confidence, sentiment_summary, sentiment_provider,
+            received_at, created_at
+          ) VALUES (?, ?, ?, ?, '[Manual Sentiment Override]', ?, NULL, NULL, 0, ?, 1.0, ?, 'manual', ?, ?)
+        `).run(
+          campaignId || rec.campaign_id,
+          isContact ? null : recordId,
+          isContact ? recordId : null,
+          rec.email,
+          cleanSummary,
+          cleanSentiment,
+          cleanSummary,
+          nowIso,
+          nowIso
+        );
+      }
+    });
+
+    overrideTx();
+
+    const updated = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(recordId);
+    res.json({ success: true, message: `Sentiment updated to ${cleanSentiment}.`, record: updated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Manual Sentiment Override for a Database Record in Database Inspector (SENT-07)
+app.put('/api/databases/:dbId/records/:recordId/sentiment', (req, res) => {
+  try {
+    const recordId = Number(req.params.recordId);
+    const { sentiment, summary } = req.body || {};
+
+    const cleanSentiment = String(sentiment || '').toUpperCase().trim();
+    if (!sentimentService.SENTIMENT_CATEGORIES[cleanSentiment]) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid sentiment. Must be one of: ${Object.keys(sentimentService.SENTIMENT_CATEGORIES).join(', ')}` 
+      });
+    }
+
+    const rec = db.prepare('SELECT * FROM database_records WHERE id = ?').get(recordId);
+    if (!rec) {
+      return res.status(404).json({ success: false, message: 'Record not found.' });
+    }
+
+    const cleanSummary = (summary && typeof summary === 'string' && summary.trim().length > 0)
+      ? summary.trim()
+      : `Manually classified as ${cleanSentiment} by operator.`;
+
+    const nowIso = new Date().toISOString();
+
+    const overrideTx = db.transaction(() => {
+      db.prepare(`
+        UPDATE database_records
+        SET sentiment = ?, sentiment_confidence = 1.0, sentiment_summary = ?, sentiment_provider = 'manual',
+            status = CASE WHEN status = 'REPLIED' THEN status ELSE 'REPLIED' END,
+            replied_at = coalesce(replied_at, ?)
+        WHERE id = ?
+      `).run(cleanSentiment, cleanSummary, nowIso, recordId);
+
+      const log = db.prepare('SELECT id FROM reply_logs WHERE database_record_id = ? ORDER BY id DESC LIMIT 1').get(recordId);
+      if (log) {
+        db.prepare(`
+          UPDATE reply_logs 
+          SET sentiment = ?, sentiment_confidence = 1.0, sentiment_summary = ?, sentiment_provider = 'manual'
+          WHERE id = ?
+        `).run(cleanSentiment, cleanSummary, log.id);
+      }
+    });
+
+    overrideTx();
+
+    const updated = db.prepare('SELECT * FROM database_records WHERE id = ?').get(recordId);
+    res.json({ success: true, message: `Sentiment updated to ${cleanSentiment}.`, record: updated });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

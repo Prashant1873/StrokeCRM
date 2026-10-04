@@ -25,13 +25,13 @@
 
 ### Free AI Reply Sentiment Intelligence (`SENT`)
 
-- [ ] **SENT-01**: User can enter and verify a free Google Gemini 1.5 Flash API key in Settings with real-time handshake check.
-- [ ] **SENT-02**: Inbound IMAP reply scanner triggers asynchronous sentiment analysis on newly detected lead replies immediately following atomic sequence disarming.
-- [ ] **SENT-03**: Sentiment engine sanitizes email bodies (strips quoted thread history) and classifies replies into: `Interested`, `Question`, `Follow Up`, `Not Interested`, or `Unsubscribe`, along with a 1-sentence summary.
-- [ ] **SENT-04**: System includes a built-in zero-dependency regex/keyword heuristic classifier that operates offline or as an instant fallback when no API key is provided.
-- [ ] **SENT-05**: User can view color-coded sentiment badges, confidence scores, and reply summaries in the Campaign Cockpit and Database Inspector.
-- [ ] **SENT-06**: User can filter campaign leads by sentiment category (`All`, `Interested`, `Questions`, `Follow Up`, `Not Interested`) with 1-click tab controls.
-- [ ] **SENT-07**: User can manually override or correct any lead's classified sentiment directly from the Database Inspector.
+- [x] **SENT-01**: User can enter and verify a free Google Gemini 1.5 Flash API key in Settings with real-time handshake check.
+- [x] **SENT-02**: Inbound IMAP reply scanner triggers asynchronous sentiment analysis on newly detected lead replies immediately following atomic sequence disarming.
+- [x] **SENT-03**: Sentiment engine sanitizes email bodies (strips quoted thread history) and classifies replies into: `Interested`, `Question`, `Follow Up`, `Not Interested`, or `Unsubscribe`, along with a 1-sentence summary.
+- [x] **SENT-04**: System includes a built-in zero-dependency regex/keyword heuristic classifier that operates offline or as an instant fallback when no API key is provided.
+- [x] **SENT-05**: User can view color-coded sentiment badges, confidence scores, and reply summaries in the Campaign Cockpit and Database Inspector.
+- [x] **SENT-06**: User can filter campaign leads by sentiment category (`All`, `Interested`, `Questions`, `Follow Up`, `Not Interested`) with 1-click tab controls.
+- [x] **SENT-07**: User can manually override or correct any lead's classified sentiment directly from the Database Inspector.
 
 ---
 
@@ -66,10 +66,10 @@
 | COPY-03 | Phase 14 | Complete |
 | COPY-04 | Phase 14 | Complete |
 | COPY-05 | Phase 14 | Complete |
-| SENT-01 | Phase 15 | Pending |
-| SENT-02 | Phase 15 | Pending |
-| SENT-03 | Phase 15 | Pending |
-| SENT-04 | Phase 15 | Pending |
-| SENT-05 | Phase 15 | Pending |
-| SENT-06 | Phase 15 | Pending |
-| SENT-07 | Phase 15 | Pending |
+| SENT-01 | Phase 15 | Complete |
+| SENT-02 | Phase 15 | Complete |
+| SENT-03 | Phase 15 | Complete |
+| SENT-04 | Phase 15 | Complete |
+| SENT-05 | Phase 15 | Complete |
+| SENT-06 | Phase 15 | Complete |
+| SENT-07 | Phase 15 | Complete |

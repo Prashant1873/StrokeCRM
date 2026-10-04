@@ -1,6 +1,22 @@
 const { ImapFlow } = require('imapflow');
 const db = require('./db');
 const authService = require('./authService');
+const sentimentService = require('./sentimentService');
+
+/**
+ * Reads a stream into a UTF-8 string up to maxBytes
+ */
+async function streamToString(stream, maxBytes = 16384) {
+  if (!stream) return '';
+  const chunks = [];
+  let totalBytes = 0;
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+    totalBytes += chunk.length;
+    if (totalBytes >= maxBytes) break;
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
 
 /**
  * In-memory scan state tracking to prevent concurrent overlapping scans
@@ -282,6 +298,26 @@ async function scanInboxForReplies({ campaignId = null, lookbackDays = 14 } = {}
         continue;
       }
 
+      // Extract reply body text for sentiment analysis
+      let bodyText = '';
+      try {
+        const download = await client.download(String(message.seq), '1', { maxBytes: 16384 });
+        if (download && download.content) {
+          bodyText = await streamToString(download.content, 16384);
+        }
+      } catch (dlErr) {
+        try {
+          const download = await client.download(String(message.seq), null, { maxBytes: 16384 });
+          if (download && download.content) {
+            bodyText = await streamToString(download.content, 16384);
+          }
+        } catch {
+          // ignore download error; fallback to subject-based classification
+        }
+      }
+
+      let insertedReplyId = null;
+
       // Valid human lead response -> Atomically disarm sequence!
       const disarmTx = db.transaction(() => {
         if (matchedRecord) {
@@ -298,7 +334,7 @@ async function scanInboxForReplies({ campaignId = null, lookbackDays = 14 } = {}
           `).run(receivedAt, matchedContact.id);
         }
 
-        db.prepare(`
+        const insertInfo = db.prepare(`
           INSERT INTO reply_logs (
             campaign_id, database_record_id, contact_id, sender_email, 
             subject, snippet, in_reply_to, message_id, is_auto_reply, 
@@ -317,6 +353,8 @@ async function scanInboxForReplies({ campaignId = null, lookbackDays = 14 } = {}
           nowIso
         );
 
+        insertedReplyId = insertInfo.lastInsertRowid;
+
         if (effectiveCampaignId) {
           db.prepare(`
             UPDATE campaigns 
@@ -332,6 +370,48 @@ async function scanInboxForReplies({ campaignId = null, lookbackDays = 14 } = {}
 
       disarmTx();
       matchedReplies++;
+
+      // Asynchronously trigger sentiment classification (SENT-02)
+      const leadRecordId = matchedRecord ? matchedRecord.id : null;
+      const leadContactId = matchedContact ? matchedContact.id : null;
+      const effectiveSubj = subject;
+      const effectiveBody = bodyText;
+      const replyLogId = insertedReplyId;
+
+      sentimentService.classifyReply(effectiveBody, effectiveSubj)
+        .then(res => {
+          try {
+            const updateSentimentTx = db.transaction(() => {
+              if (leadRecordId) {
+                db.prepare(`
+                  UPDATE database_records 
+                  SET sentiment = ?, sentiment_confidence = ?, sentiment_summary = ?, sentiment_provider = ?
+                  WHERE id = ? AND (sentiment_provider != 'manual' OR sentiment IS NULL)
+                `).run(res.sentiment, res.confidence, res.summary, res.provider, leadRecordId);
+              } else if (leadContactId) {
+                db.prepare(`
+                  UPDATE contacts 
+                  SET sentiment = ?, sentiment_confidence = ?, sentiment_summary = ?, sentiment_provider = ?
+                  WHERE id = ? AND (sentiment_provider != 'manual' OR sentiment IS NULL)
+                `).run(res.sentiment, res.confidence, res.summary, res.provider, leadContactId);
+              }
+
+              if (replyLogId) {
+                db.prepare(`
+                  UPDATE reply_logs 
+                  SET snippet = ?, sentiment = ?, sentiment_confidence = ?, sentiment_summary = ?, sentiment_provider = ?
+                  WHERE id = ? AND (sentiment_provider != 'manual' OR sentiment IS NULL)
+                `).run(res.sanitizedSnippet || '', res.sentiment, res.confidence, res.summary, res.provider, replyLogId);
+              }
+            });
+            updateSentimentTx();
+          } catch (updateErr) {
+            console.warn('[Sentiment] Failed to update lead with sentiment:', updateErr.message);
+          }
+        })
+        .catch(err => {
+          console.warn('[Sentiment] Async classification failed:', err.message);
+        });
     }
 
     lastScanResult = {
@@ -380,7 +460,11 @@ function markLeadRepliedManually(recordId, campaignId, isContactTable = false) {
   const markTx = db.transaction(() => {
     db.prepare(`
       UPDATE ${table} 
-      SET status = 'REPLIED', replied_at = ?, next_step_scheduled_at = NULL 
+      SET status = 'REPLIED', replied_at = ?, next_step_scheduled_at = NULL,
+          sentiment = coalesce(sentiment, 'QUESTION'),
+          sentiment_confidence = coalesce(sentiment_confidence, 1.0),
+          sentiment_summary = coalesce(sentiment_summary, 'Manually marked as replied by operator in CRM cockpit.'),
+          sentiment_provider = coalesce(sentiment_provider, 'manual')
       WHERE id = ?
     `).run(nowIso, recordId);
 
@@ -388,8 +472,9 @@ function markLeadRepliedManually(recordId, campaignId, isContactTable = false) {
       INSERT INTO reply_logs (
         campaign_id, database_record_id, contact_id, sender_email, 
         subject, snippet, in_reply_to, message_id, is_auto_reply, 
+        sentiment, sentiment_confidence, sentiment_summary, sentiment_provider,
         received_at, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, 0, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, 0, 'QUESTION', 1.0, 'Manually marked as replied by operator in CRM cockpit.', 'manual', ?, ?)
     `).run(
       effectiveCampaignId,
       isContactTable ? null : recordId,

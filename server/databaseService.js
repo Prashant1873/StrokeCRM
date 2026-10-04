@@ -292,7 +292,7 @@ function getDatabases() {
 /**
  * Gets a single database with its headers and paginated records
  */
-function getDatabaseById(id, { limit = 100, offset = 0, search = '' } = {}) {
+function getDatabaseById(id, { limit = 100, offset = 0, search = '', sentiment = '' } = {}) {
   const database = db.prepare(`
     SELECT 
       d.*,
@@ -318,6 +318,14 @@ function getDatabaseById(id, { limit = 100, offset = 0, search = '' } = {}) {
     countQuery += ' AND (email LIKE ? OR first_name LIKE ? OR company LIKE ?)';
     params.push(q, q, q);
     countParams.push(q, q, q);
+  }
+
+  if (sentiment && sentiment.trim() && sentiment.trim().toUpperCase() !== 'ALL') {
+    const s = sentiment.trim().toUpperCase();
+    query += ' AND sentiment = ?';
+    countQuery += ' AND sentiment = ?';
+    params.push(s);
+    countParams.push(s);
   }
 
   query += ' ORDER BY id ASC LIMIT ? OFFSET ?';

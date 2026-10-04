@@ -452,11 +452,53 @@
   - **Description**: When route is `#/templates/:id` (or `#/templates/new`), render the full Studio Composer with subject/body editor, variable chips, lead switcher, live preview pane, and spam analysis radar. Add "← Back to Saved Templates" button.
   - **Verification**: Editing a template updates it, saves changes, and allows returning to the collection.
 
-## Checkpoint 13: Hub-and-Spoke Navigation & Management Verified
-- [ ] Opening Campaigns or Templates from the sidebar presents a complete card-based overview instead of jumping directly into a single item.
-- [ ] Full campaign and template deletion with safety confirmations.
-- [ ] Breadcrumbs and backward navigation trace cleanly between directories and detail studios.
 
+---
 
+## Phase 15: Free AI Inbound Reply Sentiment Engine & Cockpit Intelligence
 
+- [x] **Task 15.1**: Implement `server/sentimentService.js` (Sanitizer, Gemini 1.5 Flash client, offline heuristic classifier, and API key handshake tester)
+  - *Acceptance Criteria*:
+    - Email quote-stripping removes quoted lines (`> `) and headers (`On ... wrote:`).
+    - Offline heuristic classifier matches outreach intents (`INTERESTED`, `QUESTION`, `FOLLOW_UP`, `NOT_INTERESTED`, `UNSUBSCRIBE`) with confidence scoring.
+    - Gemini 1.5 Flash REST client calls Google endpoint with JSON mode and 10s timeout.
+    - `verifyGeminiKey` verifies API key handshake in real-time.
+  - *Verification*: Node unit test confirms heuristic categorization and sanitizer.
 
+- [x] **Task 15.2**: SQLite Database Schema & API Endpoints
+  - *Acceptance Criteria*:
+    - Add `sentiment`, `sentiment_confidence`, `sentiment_summary`, `sentiment_provider` columns to `database_records`, `contacts`, and `reply_logs`.
+    - Add `gemini_api_key` to default settings.
+    - Implement `POST /api/settings/test-gemini` endpoint.
+    - Implement manual sentiment override endpoints for leads and database records.
+    - Update lead query endpoints to support optional `?sentiment=` query param.
+  - *Verification*: Verify SQLite columns via `PRAGMA table_info` and test endpoints with mock payload.
+
+- [x] **Task 15.3**: Integrate Asynchronous Sentiment Classification into Inbound Reply Scanner
+  - *Acceptance Criteria*:
+    - Update `server/replyScannerService.js` to extract reply message body.
+    - Maintain atomic sequence disarm invariant before kicking off async sentiment.
+    - Asynchronously classify response and store sentiment, confidence, and summary in SQLite.
+  - *Verification*: Test scan flow and verify disarm succeeds without waiting for slow external network.
+
+- [x] **Task 15.4**: Settings View UI for Free AI Key & Real-Time Handshake Check
+  - *Acceptance Criteria*:
+    - Add "Free AI Reply Intelligence" card in `SettingsView.jsx`.
+    - Masked API key input with reveal toggle.
+    - "Test Handshake" action button showing model name, latency (ms), and status pill.
+    - Explanatory callouts on 100% free tier (1,500/day) and offline heuristic guarantee.
+  - *Verification*: `npm run build --prefix client` succeeds.
+
+- [x] **Task 15.5**: Campaign Cockpit & Database Inspector Sentiment Badges, Filters & Manual Override
+  - *Acceptance Criteria*:
+    - Display color-coded sentiment chips in Cockpit and Database lead tables.
+    - Add 1-click sentiment filter tabs (`All`, `Interested`, `Questions`, `Follow Up`, `Not Interested`).
+    - Interactive dropdown on sentiment badges to manually reclassify or override sentiment.
+    - Summary tooltip/display for classified replies.
+    - Fully adheres to `frontend-skill` with Apple fluid transitions and WCAG AA contrast.
+  - *Verification*: `npm run build --prefix client` and `npm run lint --prefix client` succeed cleanly.
+
+## Checkpoint 15: AI Reply Sentiment Intelligence Verified
+- [x] Gemini API key handshake verified with live test.
+- [x] Inbound replies categorized automatically with zero-dependency heuristic fallback.
+- [x] Sentiment badges, filters, and manual overrides operational in Cockpit and Database Inspector.
