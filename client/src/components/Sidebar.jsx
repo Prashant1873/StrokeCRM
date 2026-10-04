@@ -37,12 +37,12 @@ export default function Sidebar({ currentRoute, navigate, isCollapsed, setIsColl
 
   return (
     <aside 
-      className={`h-screen sticky top-0 flex flex-col bg-[#080c14] border-r border-slate-800/80 transition-all duration-200 z-40 select-none ${
+      className={`h-screen sticky top-0 flex flex-col bg-surface border-r border-subtle transition-all duration-200 z-40 select-none ${
         isCollapsed ? 'w-16' : 'w-64'
       }`}
     >
       {/* Brand Header */}
-      <div className={`h-16 flex items-center border-b border-slate-800/80 ${
+      <div className={`h-16 flex items-center border-b border-subtle ${
         isCollapsed ? 'justify-center px-0' : 'justify-between px-3'
       }`}>
         <button
@@ -59,13 +59,13 @@ export default function Sidebar({ currentRoute, navigate, isCollapsed, setIsColl
 
           {!isCollapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5 truncate">
+              <span className="text-sm font-bold tracking-tight text-primary flex items-center gap-1.5 truncate">
                 StrokeCRM
-                <span className="text-[9px] font-semibold uppercase px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <span className="text-[9px] font-semibold uppercase px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                   Local
                 </span>
               </span>
-              <span className="text-[10px] text-slate-400 truncate">Cold Outreach Engine</span>
+              <span className="text-[10px] text-secondary truncate">Cold Outreach Engine</span>
             </div>
           )}
         </button>
@@ -75,7 +75,7 @@ export default function Sidebar({ currentRoute, navigate, isCollapsed, setIsColl
           <button
             type="button"
             onClick={() => setIsCollapsed(true)}
-            className="flex items-center justify-center w-7 h-7 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="flex items-center justify-center w-7 h-7 rounded-md text-secondary hover:text-primary hover:bg-subtle transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             title="Collapse sidebar"
             aria-label="Collapse sidebar"
           >
@@ -95,23 +95,23 @@ export default function Sidebar({ currentRoute, navigate, isCollapsed, setIsColl
               key={item.id}
               type="button"
               onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all group relative ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all group relative cursor-pointer ${
                 active
-                  ? 'bg-indigo-600/15 text-white border border-indigo-500/30 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/80 border border-transparent'
+                  ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 shadow-xs font-semibold'
+                  : 'text-secondary hover:text-primary hover:bg-subtle border border-transparent'
               } ${isCollapsed ? 'justify-center px-0' : ''}`}
               title={isCollapsed ? item.label : undefined}
             >
               <Icon 
                 className={`w-4 h-4 shrink-0 transition-colors ${
-                  active ? 'text-indigo-400' : 'text-slate-400 group-hover:text-slate-200'
+                  active ? 'text-indigo-600 dark:text-indigo-400' : 'text-secondary group-hover:text-primary'
                 }`} 
               />
 
               {!isCollapsed && (
                 <div className="flex-1 flex items-center justify-between truncate">
                   <span className="truncate">{item.label}</span>
-                  <span className="text-[10px] font-mono text-slate-600 group-hover:text-slate-500">
+                  <span className="text-[10px] font-mono text-muted group-hover:text-secondary">
                     {item.shortcut}
                   </span>
                 </div>
@@ -127,12 +127,12 @@ export default function Sidebar({ currentRoute, navigate, isCollapsed, setIsColl
       </nav>
 
       {/* Sidebar Footer */}
-      <div className="p-3 border-t border-slate-800/80 space-y-2 text-xs">
+      <div className="p-3 border-t border-subtle space-y-2 text-xs">
         {/* Collapse / Expand Toggle Button in Footer */}
         <button
           type="button"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className={`w-full flex items-center py-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg text-xs font-medium transition-colors border border-slate-800/60 ${
+          className={`w-full flex items-center py-1.5 text-secondary hover:text-primary hover:bg-subtle rounded-lg text-xs font-medium transition-colors border border-subtle cursor-pointer ${
             isCollapsed ? 'justify-center px-0' : 'justify-between px-2.5'
           }`}
           title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -145,12 +145,12 @@ export default function Sidebar({ currentRoute, navigate, isCollapsed, setIsColl
         <button
           type="button"
           onClick={() => navigate('#/settings')}
-          className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors border ${
+          className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors border cursor-pointer ${
             authStatus?.connected
-              ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300 hover:bg-emerald-900/30'
-              : 'bg-amber-950/40 border-amber-500/30 text-amber-300 hover:bg-amber-900/30'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-500/20'
+              : 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-300 hover:bg-amber-500/20'
           } ${isCollapsed ? 'justify-center px-0' : ''}`}
-          title={authStatus?.connected ? `Connected: ${authStatus.account?.email}` : 'Gmail Not Connected'}
+          title={authStatus?.connected ? `Connected: ${authStatus.account?.email}` : 'Mail Not Connected'}
         >
           {authStatus?.connected ? (
             <span className="relative flex h-2 w-2 shrink-0">
@@ -158,20 +158,20 @@ export default function Sidebar({ currentRoute, navigate, isCollapsed, setIsColl
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
           ) : (
-            <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
           )}
 
           {!isCollapsed && (
             <span className="truncate">
-              {authStatus?.connected ? authStatus.account?.email : 'Connect Gmail'}
+              {authStatus?.connected ? authStatus.account?.email : 'Connect Mail'}
             </span>
           )}
         </button>
 
         {/* Database Status */}
         {!isCollapsed && (
-          <div className="flex items-center gap-1.5 px-2 text-[10px] text-slate-500">
-            <Database className="w-3 h-3 text-slate-500" />
+          <div className="flex items-center gap-1.5 px-2 text-[10px] text-muted">
+            <Database className="w-3 h-3 text-muted" />
             <span>SQLite ACID Engine</span>
           </div>
         )}

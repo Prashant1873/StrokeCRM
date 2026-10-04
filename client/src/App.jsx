@@ -7,6 +7,7 @@ import TemplatesView from './components/TemplatesView';
 import ABTestingView from './components/ABTestingView';
 import SettingsView from './components/SettingsView';
 import { useRouter } from './router';
+import { ThemeProvider } from './context/ThemeContext';
 
 export default function App() {
   const router = useRouter();
@@ -65,70 +66,72 @@ export default function App() {
   };
 
   return (
-    <AppShell
-      currentRoute={currentRoute}
-      navigate={navigate}
-      goBack={goBack}
-      canGoBack={canGoBack}
-      authStatus={authStatus}
-      entityNames={entityNames}
-    >
-      {loading ? (
-        <div className="flex items-center justify-center h-64 text-slate-400 text-sm">
-          <span className="animate-pulse">Loading StrokeCRM...</span>
-        </div>
-      ) : (
-        <>
-          {currentRoute.name === 'dashboard' && (
-            <DashboardView 
-              authStatus={authStatus} 
-              setActiveTab={handleSetActiveTab} 
-              navigate={navigate}
-            />
-          )}
+    <ThemeProvider>
+      <AppShell
+        currentRoute={currentRoute}
+        navigate={navigate}
+        goBack={goBack}
+        canGoBack={canGoBack}
+        authStatus={authStatus}
+        entityNames={entityNames}
+      >
+        {loading ? (
+          <div className="flex items-center justify-center h-64 text-secondary text-sm">
+            <span className="animate-pulse">Loading StrokeCRM...</span>
+          </div>
+        ) : (
+          <>
+            {currentRoute.name === 'dashboard' && (
+              <DashboardView 
+                authStatus={authStatus} 
+                setActiveTab={handleSetActiveTab} 
+                navigate={navigate}
+              />
+            )}
 
-          {currentRoute.name.startsWith('campaign') && (
-            <CampaignsView 
-              setActiveTab={handleSetActiveTab} 
-              navigate={navigate}
-              currentRoute={currentRoute}
-              onCampaignSelected={setActiveCampaignData}
-            />
-          )}
+            {currentRoute.name.startsWith('campaign') && (
+              <CampaignsView 
+                setActiveTab={handleSetActiveTab} 
+                navigate={navigate}
+                currentRoute={currentRoute}
+                onCampaignSelected={setActiveCampaignData}
+              />
+            )}
 
-          {(currentRoute.name.startsWith('database') || currentRoute.name.startsWith('leads')) && (
-            <DatabasesView 
-              setActiveTab={handleSetActiveTab} 
-              navigate={navigate}
-              currentRoute={currentRoute}
-            />
-          )}
+            {(currentRoute.name.startsWith('database') || currentRoute.name.startsWith('leads')) && (
+              <DatabasesView 
+                setActiveTab={handleSetActiveTab} 
+                navigate={navigate}
+                currentRoute={currentRoute}
+              />
+            )}
 
-          {currentRoute.name.startsWith('template') && (
-            <TemplatesView 
-              setActiveTab={handleSetActiveTab} 
-              navigate={navigate}
-              currentRoute={currentRoute}
-            />
-          )}
+            {currentRoute.name.startsWith('template') && (
+              <TemplatesView 
+                setActiveTab={handleSetActiveTab} 
+                navigate={navigate}
+                currentRoute={currentRoute}
+              />
+            )}
 
-          {currentRoute.name === 'abtesting' && (
-            <ABTestingView 
-              setActiveTab={handleSetActiveTab} 
-              navigate={navigate}
-            />
-          )}
+            {currentRoute.name === 'abtesting' && (
+              <ABTestingView 
+                setActiveTab={handleSetActiveTab} 
+                navigate={navigate}
+              />
+            )}
 
-          {currentRoute.name === 'settings' && (
-            <SettingsView 
-              authStatus={authStatus} 
-              refreshAuthStatus={refreshAuthStatus} 
-              setActiveTab={handleSetActiveTab}
-              navigate={navigate}
-            />
-          )}
-        </>
-      )}
-    </AppShell>
+            {currentRoute.name === 'settings' && (
+              <SettingsView 
+                authStatus={authStatus} 
+                refreshAuthStatus={refreshAuthStatus} 
+                setActiveTab={handleSetActiveTab}
+                navigate={navigate}
+              />
+            )}
+          </>
+        )}
+      </AppShell>
+    </ThemeProvider>
   );
 }
