@@ -83,3 +83,21 @@ This document records high-value user inputs, design ideas, and creative directi
     - Automatically halt scheduled follow-up steps for replied contacts to prevent embarrassing follow-ups after a response.
   - **Deprioritized / Out of Scope for v2.0**:
     - AI icebreaker generator and multi-account rotation deferred to maintain maximum simplicity and core deliverability focus.
+
+---
+
+## 6. UI Overhaul, Light Mode, Copywriting Polish & Free AI Reply Intelligence (Logged: 2026-10-05)
+- **Problem Solved**:
+  - The initial application relied heavily on a fixed dark cockpit aesthetic and functional but raw copy, lacking theme flexibility (light mode for daytime productivity) and crisp, professional SaaS copywriting. Furthermore, while incoming replies are disarmed automatically, operators still have to manually open and read each email body to determine whether a response is enthusiastic, an objection, a postponement, or a hard rejection.
+- **The v3.0 Evolution**:
+  - **Comprehensive UI Overhaul & Dual-Theme Architecture**:
+    - Implement a polished design token system supporting both Dark and Light themes with seamless toggling and persistent user preference.
+    - Elevate visual hierarchy, component typography, micro-interactions, and contrast ratios compliant with `frontend-skill` and WCAG AA standards.
+  - **Professional Copywriting & Text Cleanup**:
+    - Refine all UI copy, button labels, modal instructions, error messages, and onboarding hints into clean, authoritative B2B outreach terminology.
+    - Provide curated, professionally copywritten email starter presets for cold prospecting, partnership outreach, and follow-up cadences.
+  - **Free AI Inbound Reply Sentiment Analysis**:
+    - Integrate a zero-cost AI classifier (e.g., Google Gemini 1.5 Flash free API tier or lightweight local zero-cost model) requiring only the user's free API key.
+    - Automatically classify detected inbound replies into actionable categories: `Interested / Call Requested`, `Information / Question`, `Follow Up Later`, `Not Interested`, and `Unsubscribe`.
+    - Present visual sentiment badges, confidence ratings, and quick-filter tabs in the Campaign Cockpit and Database Inspector.
+

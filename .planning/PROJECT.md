@@ -14,9 +14,25 @@ Reliable, throttle-safe, and personalized bulk cold email dispatch directly from
 - **Revenue model**: 100% Free, open-source / local self-hosted tool (no paywalls, no monthly subscription fees).
 - **Success metric**: 100% accurate variable interpolation, zero spam penalty flags due to automated pacing/jitter, and seamless campaign management.
 
+## Current Milestone: v3.0 UI Overhaul, Light Mode & Free AI Reply Intelligence
+
+**Goal:** Elevate StrokeCRM into an aesthetically stunning, dual-theme (dark/light) cold outreach workspace with professional SaaS copy and automated free AI inbound reply sentiment classification.
+
+**Target features:**
+- Dual-Theme Architecture & UI Overhaul: Seamless Dark / Light mode toggle, refined design tokens, polished typography, and responsive layouts adhering to `frontend-skill`.
+- Professional UX Copywriting & Starter Presets: High-standard B2B SaaS tone across all views, modals, toasts, error messages, and curated cold outreach starter presets.
+- Free AI Inbound Reply Sentiment Analyzer: Categorize detected email responses (Interested / Call Requested, Question / Information, Follow Up Later, Not Interested, Unsubscribe) using free-tier AI (e.g. Gemini 1.5 Flash free tier) with sentiment badges and cockpit filters.
+
 ## Current State
 
 Shipped **v2.0 Custom Domains & Automated Drips** on 2026-10-03 across 3 phases (10–12) and 12 git commits. Delivered universal custom domain SMTP/IMAP gateway with 1-click presets (Zoho, Fastmail, Office 365, Namecheap PrivateEmail), multi-step drip sequence engine with delay scheduling and RFC 2822 organic threading, inbound IMAP reply scanner with automated sequence disarming, auto-responder filtering, 5-tier visual conversion funnel, and RFC 4180 audit CSV export.
+
+<details>
+<summary>v2.0 Custom Domains & Automated Drips (Shipped 2026-10-03)</summary>
+
+Delivered universal custom domain SMTP/IMAP gateway with 1-click presets, multi-step drip sequence engine with delay scheduling and RFC 2822 organic threading, inbound IMAP reply scanner with automated sequence disarming, auto-responder filtering, 5-tier visual conversion funnel, and RFC 4180 audit CSV export.
+
+</details>
 
 <details>
 <summary>v1.0 Initial MVP (Shipped 2026-10-03)</summary>
@@ -45,12 +61,17 @@ Shipped **v1.0 Initial MVP** on 2026-10-03 across 9 complete phases and 18 git c
 - ✓ Drip funnel analytics & CSV export: Visual 5-tier conversion drop-off funnel and downloadable RFC 4180 audit report — v2.0
 
 ### Active
-None (Milestone v2.0 Complete. Ready for next milestone).
+
+- [ ] Dual-Theme Architecture & Design Tokens: Persistent Dark / Light theme switch, CSS variables design system, WCAG AA compliant contrast.
+- [ ] UI Overhaul & Component Modernization: Elevated dashboard cards, sleek tables, fluid spring toggles, and responsive views following `frontend-skill`.
+- [ ] Professional UX Copywriting: Clear, authoritative B2B outreach terminology across all navigation items, modals, tooltips, and status badges.
+- [ ] Curated Cold Outreach Starter Presets: High-converting built-in templates (Initial Pitch, Follow-Up, Re-engagement, Partnership) with pre-mapped variable tags.
+- [ ] Free AI Reply Sentiment Analyzer: Zero-cost classification (Interested, Question, Follow Up, Not Interested, Unsubscribe) via free-tier AI (e.g. Gemini 1.5 Flash).
+- [ ] Reply Intelligence Cockpit Integration: Visual sentiment badges, confidence scores, and one-click filtering in Campaign Cockpit and Database Inspector.
 
 ### Out of Scope
 
-- AI personalized icebreaker generator (deferred per user decision to prioritize clean deliverability and core CRM operations).
-- Multi-account Gmail inbox rotation (deferred to maintain simplicity and focus on single custom domain / Gmail sender setups).
+- Multi-account Gmail inbox rotation (deferred to maintain focus on UI elegance, copywriting, and reply intelligence).
 - Cloud SaaS multi-tenant hosting (StrokeCRM runs locally on the user's machine to keep credentials and lead data 100% private).
 - Sending spam or buying bulk scraped lead lists (focused on clean, opt-out compliant B2B outreach).
 - Direct browser extension DOM hacking (StrokeCRM runs as a dedicated local web app for stability and background task resilience).
@@ -66,7 +87,7 @@ None (Milestone v2.0 Complete. Ready for next milestone).
 
 - **Tech Stack**: Backend: Node.js (Express, SQLite, better-sqlite3, Nodemailer, xlsx/csv-parser). Frontend: React (Vite, Tailwind CSS, Lucide icons, Recharts).
 - **Platform**: Local web application accessible via `http://localhost:port`.
-- **Privacy & Security**: All credentials, tokens, and lead contact lists remain stored strictly on the local machine in encrypted/local SQLite.
+- **Privacy & Security**: All credentials, tokens, and lead contact lists remain stored strictly on the local machine in encrypted/local SQLite. Free AI keys remain strictly local in SQLite settings.
 
 ## Key Decisions
 
@@ -77,6 +98,24 @@ None (Milestone v2.0 Complete. Ready for next milestone).
 | SQLite for persistent dispatch state | Zero-configuration, file-backed, ACID-compliant database prevents duplicate sends and survives app restarts. | ✓ Good |
 | URL Hash Routing & Breadcrumb Trail | Zero server-side rewrites needed, enables native browser back/forward buttons and single-key navigation without losing background queue state. | ✓ Good |
 | Dedicated Campaign Preflight Cockpit | Provides tactile Working Hours enforcement switch (with 24/7 bypass), jitter tuning, and test-send verification prior to queue ignition. | ✓ Good |
+| Free AI API for Sentiment Analysis | Zero monthly subscription cost using free-tier API (e.g. Gemini 1.5 Flash free tier) or local model, keeping the tool 100% free and private. | Pending |
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
 
 ---
-*Last updated: 2026-10-03 after v1.0 milestone*
+*Last updated: 2026-10-05 for Milestone v3.0*
