@@ -16,6 +16,7 @@ data/*.db-shm
 
 # Imported lead sheets stay on this machine
 data/databases/
+data/attachments/
 
 # Environment & Logs
 .env

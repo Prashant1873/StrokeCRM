@@ -10,18 +10,18 @@
 
 ### Theme & Design Tokens (`THEME`)
 
-- [ ] **THEME-01**: User can toggle between Dark Mode and Light Mode with immediate visual transition and zero page reload.
-- [ ] **THEME-02**: System automatically persists theme preference in `localStorage` and falls back cleanly to OS `prefers-color-scheme` on first visit.
-- [ ] **THEME-03**: App prevents Flash of Unstyled Theme (FOUT) on load via synchronous pre-render theme attribute application.
-- [ ] **THEME-04**: Semantic CSS variable token system ensures WCAG AA compliant contrast (>4.5:1 for body copy) across both dark and light modes.
+- [x] **THEME-01**: User can toggle between Dark Mode and Light Mode with immediate visual transition and zero page reload.
+- [x] **THEME-02**: System automatically persists theme preference in `localStorage` and falls back cleanly to OS `prefers-color-scheme` on first visit.
+- [x] **THEME-03**: App prevents Flash of Unstyled Theme (FOUT) on load via synchronous pre-render theme attribute application.
+- [x] **THEME-04**: Semantic CSS variable token system ensures WCAG AA compliant contrast (>4.5:1 for body copy) across both dark and light modes.
 
 ### UI Modernization & UX Copywriting (`COPY`)
 
-- [ ] **COPY-01**: System-wide UX copy, headers, action verbs, and error notifications use clear, authoritative B2B SaaS outreach terminology.
-- [ ] **COPY-02**: Deliverability and configuration parameters feature clear explanatory tooltips (pacing jitter, RFC 2822 threading, daily caps, IMAP reply disarm).
-- [ ] **COPY-03**: User can browse and preview a built-in gallery of high-converting cold outreach starter templates (Direct Pitch, Social Proof Teaser, Follow-Up Bump, Breakup Closing).
-- [ ] **COPY-04**: User can clone any starter preset into their active templates collection with pre-mapped variable pills with a single click.
-- [ ] **COPY-05**: Dashboard cards, data tables, and preflight controls feature elevated typography, subtle borders, and fluid spring micro-interactions adhering to `frontend-skill`.
+- [x] **COPY-01**: System-wide UX copy, headers, action verbs, and error notifications use clear, authoritative B2B SaaS outreach terminology.
+- [x] **COPY-02**: Deliverability and configuration parameters feature clear explanatory tooltips (pacing jitter, RFC 2822 threading, daily caps, IMAP reply disarm).
+- [x] **COPY-03**: User can browse and preview a built-in gallery of high-converting cold outreach starter templates (Direct Pitch, Social Proof Teaser, Follow-Up Bump, Breakup Closing).
+- [x] **COPY-04**: User can clone any starter preset into their active templates collection with pre-mapped variable pills with a single click.
+- [x] **COPY-05**: Dashboard cards, data tables, and preflight controls feature elevated typography, subtle borders, and fluid spring micro-interactions adhering to `frontend-skill`.
 
 ### Free AI Reply Sentiment Intelligence (`SENT`)
 
@@ -61,11 +61,11 @@
 | THEME-02 | Phase 13 | Complete |
 | THEME-03 | Phase 13 | Complete |
 | THEME-04 | Phase 13 | Complete |
-| COPY-01 | Phase 14 | Pending |
-| COPY-02 | Phase 14 | Pending |
-| COPY-03 | Phase 14 | Pending |
-| COPY-04 | Phase 14 | Pending |
-| COPY-05 | Phase 14 | Pending |
+| COPY-01 | Phase 14 | Complete |
+| COPY-02 | Phase 14 | Complete |
+| COPY-03 | Phase 14 | Complete |
+| COPY-04 | Phase 14 | Complete |
+| COPY-05 | Phase 14 | Complete |
 | SENT-01 | Phase 15 | Pending |
 | SENT-02 | Phase 15 | Pending |
 | SENT-03 | Phase 15 | Pending |

@@ -17,11 +17,11 @@ import {
 export default function Sidebar({ currentRoute, navigate, isCollapsed, setIsCollapsed, authStatus }) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', path: '#/dashboard', icon: LayoutDashboard, shortcut: '1' },
-    { id: 'campaigns', label: 'Campaigns', path: '#/campaigns', icon: Send, shortcut: '2' },
-    { id: 'databases', label: 'Databases', path: '#/databases', icon: Database, shortcut: '3' },
-    { id: 'templates', label: 'Templates & Spam', path: '#/templates', icon: FileText, shortcut: '4' },
-    { id: 'abtesting', label: 'A/B Testing', path: '#/ab-testing', icon: Split, shortcut: '5' },
-    { id: 'settings', label: 'Settings & Gmail', path: '#/settings', icon: Settings, shortcut: '6' },
+    { id: 'campaigns', label: 'Outreach Campaigns', path: '#/campaigns', icon: Send, shortcut: '2' },
+    { id: 'databases', label: 'Lead Audiences', path: '#/databases', icon: Database, shortcut: '3' },
+    { id: 'templates', label: 'Templates & Presets', path: '#/templates', icon: FileText, shortcut: '4' },
+    { id: 'abtesting', label: 'A/B Experiments', path: '#/ab-testing', icon: Split, shortcut: '5' },
+    { id: 'settings', label: 'Settings & Gateways', path: '#/settings', icon: Settings, shortcut: '6' },
   ];
 
   // Helper to determine if a nav item matches active route

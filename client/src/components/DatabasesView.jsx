@@ -9,20 +9,13 @@ import {
   Download, 
   Search, 
   RefreshCw,
-  SlidersHorizontal,
-  Mail,
-  Building,
-  User,
-  ShieldCheck,
+  Eye, 
+  Plus, 
+  Lock, 
+  Unlock, 
+  X, 
   Send,
-  Eye,
-  Plus,
-  Lock,
-  Unlock,
-  X,
-  ArrowRight,
-  MessageSquare,
-  Ban
+  MessageSquare
 } from 'lucide-react';
 import Switch from './common/Switch';
 
@@ -153,7 +146,7 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
           const errJson = JSON.parse(text);
           if (errJson.message) errMsg = errJson.message;
         } catch {}
-        alert('Upload failed: ' + errMsg);
+        alert('Import failed: ' + errMsg);
         return;
       }
 
@@ -165,10 +158,10 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
         setParsedData(null);
         fetchDatabases();
       } else {
-        alert('Upload failed: ' + data.message);
+        alert('Import failed: ' + data.message);
       }
     } catch (err) {
-      alert('Upload error: ' + err.message);
+      alert('Import error: ' + err.message);
     } finally {
       setIsUploading(false);
     }
@@ -177,11 +170,11 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
   // Delete database
   const handleDeleteDatabase = async (dbItem) => {
     if (dbItem.is_attached) {
-      if (!confirm(`Warning: This database is dedicated to campaign "${dbItem.campaign_name}". Deleting it will detach it. Continue?`)) {
+      if (!confirm(`Warning: This lead audience is dedicated to campaign "${dbItem.campaign_name}". Deleting it will detach it. Continue?`)) {
         return;
       }
     } else {
-      if (!confirm(`Are you sure you want to delete the database "${dbItem.name}"?`)) {
+      if (!confirm(`Are you sure you want to delete lead audience "${dbItem.name}"?`)) {
         return;
       }
     }
@@ -199,54 +192,68 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
     }
   };
 
-  // Open Inspector
+  // Open inspector modal and load paginated records
   const handleOpenInspector = async (dbItem) => {
     setInspectDb(dbItem);
     setInspectLoading(true);
     setInspectPage(0);
+    setInspectSearch('');
+
     try {
       const res = await fetch(`/api/databases/${dbItem.id}?limit=50&offset=0`);
       const data = await res.json();
-      if (data && data.database) {
+      if (data.database) {
         setInspectDb(data.database);
         setInspectRecords(data.records || []);
-        setInspectTotal(data.totalCount || 0);
+        setInspectTotal(data.total || 0);
       }
     } catch (err) {
-      console.error('Failed to load database details:', err);
+      console.error('Failed to load audience details:', err);
     } finally {
       setInspectLoading(false);
     }
   };
 
-  // Manual 1-click sequence disarm
+  // Manual 1-click Disarm
   const handleMarkReplied = async (recordId) => {
+    if (!inspectDb) return;
     try {
-      const campaignId = inspectDb?.campaign_id || 0;
-      const res = await fetch(`/api/campaigns/${campaignId}/records/${recordId}/mark-replied`, {
+      const campId = inspectDb.campaign_id || 0;
+      const res = await fetch(`/api/campaigns/${campId}/records/${recordId}/mark-replied`, {
         method: 'POST'
       });
       const data = await res.json();
       if (data.success) {
-        setInspectRecords(prev => prev.map(r => r.id === recordId ? { ...r, status: 'REPLIED', next_step_scheduled_at: null } : r));
+        setInspectRecords(prev => prev.map(r => {
+          if (r.id === recordId) {
+            return { ...r, status: 'REPLIED', replied_at: new Date().toISOString(), next_step_scheduled_at: null };
+          }
+          return r;
+        }));
       } else {
-        alert(data.message || 'Failed to mark as replied.');
+        alert(data.message || 'Failed to log reply.');
       }
     } catch (err) {
-      alert('Error marking as replied: ' + err.message);
+      alert('Error logging reply: ' + err.message);
     }
   };
 
-  // Manual 1-click follow-up cancellation
+  // Manual 1-click Cancel next follow-up
   const handleCancelFollowup = async (recordId) => {
+    if (!inspectDb) return;
     try {
-      const campaignId = inspectDb?.campaign_id || 0;
-      const res = await fetch(`/api/campaigns/${campaignId}/records/${recordId}/cancel-followup`, {
+      const campId = inspectDb.campaign_id || 0;
+      const res = await fetch(`/api/campaigns/${campId}/records/${recordId}/cancel-followup`, {
         method: 'POST'
       });
       const data = await res.json();
       if (data.success) {
-        setInspectRecords(prev => prev.map(r => r.id === recordId ? { ...r, status: 'CANCELLED', next_step_scheduled_at: null } : r));
+        setInspectRecords(prev => prev.map(r => {
+          if (r.id === recordId) {
+            return { ...r, status: 'CANCELLED', next_step_scheduled_at: null };
+          }
+          return r;
+        }));
       } else {
         alert(data.message || 'Failed to cancel follow-up.');
       }
@@ -269,16 +276,16 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-subtle pb-5">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 dark:text-indigo-400">
               <Database className="w-4 h-4" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-white">Databases</h1>
+            <h1 className="text-xl font-bold tracking-tight text-primary">Lead Audiences</h1>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Isolated spreadsheets and custom contact schemas. Each database belongs exclusively to one campaign.
+          <p className="text-xs text-secondary mt-1">
+            Isolated prospect datasets and custom column schemas. Each audience connects to cold outreach campaigns.
           </p>
         </div>
 
@@ -286,7 +293,7 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
           <button
             type="button"
             onClick={() => window.open('/api/leads/sample-csv', '_blank')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-subtle text-secondary hover:text-primary hover:bg-subtle text-xs font-medium transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             Sample CSV
@@ -295,10 +302,10 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
           <button
             type="button"
             onClick={() => setShowUploadModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all spring-press focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            Upload New Database
+            Import Lead Audience
           </button>
         </div>
       </div>
@@ -306,49 +313,49 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
       {/* Search & Stats Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search databases by name, file, or campaign..."
+            placeholder="Search audiences by name, file, or campaign..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-slate-900/80 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            className="w-full pl-9 pr-3 py-1.5 bg-surface border border-subtle rounded-lg text-xs text-primary placeholder-muted focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
           />
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-slate-400">
-          <span>Total Databases: <strong className="text-white">{databases.length}</strong></span>
+        <div className="flex items-center gap-3 text-xs text-secondary">
+          <span>Total Audiences: <strong className="text-primary">{databases.length}</strong></span>
           <span>•</span>
-          <span>Available: <strong className="text-emerald-400">{databases.filter(d => !d.is_attached).length}</strong></span>
+          <span>Available: <strong className="text-emerald-500 dark:text-emerald-400">{databases.filter(d => !d.is_attached).length}</strong></span>
           <span>•</span>
-          <span>Dedicated: <strong className="text-indigo-400">{databases.filter(d => d.is_attached).length}</strong></span>
+          <span>Dedicated: <strong className="text-indigo-500 dark:text-indigo-400">{databases.filter(d => d.is_attached).length}</strong></span>
         </div>
       </div>
 
       {/* Databases Grid */}
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center text-center">
-          <RefreshCw className="w-6 h-6 text-indigo-400 animate-spin mb-3" />
-          <p className="text-xs text-slate-400">Loading databases...</p>
+          <RefreshCw className="w-6 h-6 text-indigo-500 animate-spin mb-3" />
+          <p className="text-xs text-secondary">Loading lead audiences...</p>
         </div>
       ) : filteredDatabases.length === 0 ? (
-        <div className="border border-dashed border-slate-800 rounded-xl p-12 text-center bg-slate-900/30">
-          <div className="w-12 h-12 rounded-xl bg-slate-800/80 flex items-center justify-center text-slate-400 mx-auto mb-3">
+        <div className="border border-dashed border-subtle rounded-xl p-12 text-center bg-surface">
+          <div className="w-12 h-12 rounded-xl bg-subtle flex items-center justify-center text-muted mx-auto mb-3">
             <Database className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-semibold text-white mb-1">No databases found</h3>
-          <p className="text-xs text-slate-400 max-w-md mx-auto mb-5">
+          <h3 className="text-sm font-semibold text-primary mb-1">No lead audiences found</h3>
+          <p className="text-xs text-secondary max-w-md mx-auto mb-5">
             {searchQuery 
-              ? 'No databases matched your search query.' 
-              : 'Upload an Excel or CSV file to create your first isolated database. Each database retains its custom headers.'}
+              ? 'No audiences matched your search query.' 
+              : 'Import an Excel or CSV file to create your first isolated audience. Each list retains its custom variable headers.'}
           </p>
           <button
             type="button"
             onClick={() => setShowUploadModal(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all spring-press cursor-pointer"
           >
             <UploadCloud className="w-4 h-4" />
-            Upload Database Now
+            Import Audience Now
           </button>
         </div>
       ) : (
@@ -356,20 +363,20 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
           {filteredDatabases.map((dbItem) => (
             <div
               key={dbItem.id}
-              className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700/80 transition-all group"
+              className="bg-surface border border-subtle hover:border-default rounded-xl p-4 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-xl transition-all duration-200 group"
             >
               <div>
                 {/* Header row */}
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700/60 flex items-center justify-center text-indigo-400 shrink-0">
+                    <div className="w-9 h-9 rounded-lg bg-subtle border border-subtle flex items-center justify-center text-indigo-500 dark:text-indigo-400 shrink-0">
                       <FileSpreadsheet className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="text-xs font-bold text-white truncate group-hover:text-indigo-300 transition-colors" title={dbItem.name}>
+                      <h4 className="text-xs font-bold text-primary truncate group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors" title={dbItem.name}>
                         {dbItem.name}
                       </h4>
-                      <p className="text-[10px] text-slate-400 truncate" title={dbItem.filename}>
+                      <p className="text-[10px] text-muted truncate" title={dbItem.filename}>
                         {dbItem.filename}
                       </p>
                     </div>
@@ -378,14 +385,14 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                   {/* Attachment Status Badge */}
                   {dbItem.is_attached ? (
                     <span 
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shrink-0"
                       title={`Attached to Campaign: ${dbItem.campaign_name}`}
                     >
                       <Lock className="w-2.5 h-2.5" />
                       Dedicated
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
                       <Unlock className="w-2.5 h-2.5" />
                       Available
                     </span>
@@ -394,27 +401,27 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
 
                 {/* Attached Campaign Notice */}
                 {dbItem.is_attached && (
-                  <div className="mb-3 px-2.5 py-1.5 rounded-lg bg-indigo-950/30 border border-indigo-800/40 text-[11px] text-indigo-300 flex items-center gap-1.5">
+                  <div className="mb-3 px-2.5 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[11px] text-indigo-600 dark:text-indigo-300 flex items-center gap-1.5">
                     <Send className="w-3 h-3 shrink-0" />
-                    <span className="truncate">Campaign: <strong>{dbItem.campaign_name}</strong></span>
+                    <span className="truncate">Outreach: <strong>{dbItem.campaign_name}</strong></span>
                   </div>
                 )}
 
                 {/* Stats Metrics */}
-                <div className="grid grid-cols-2 gap-2 py-2 mb-3 border-y border-slate-800/60 text-xs">
+                <div className="grid grid-cols-2 gap-2 py-2 mb-3 border-y border-subtle text-xs">
                   <div>
-                    <span className="text-[10px] text-slate-500 block">Total Records</span>
-                    <span className="font-semibold text-white">{dbItem.row_count || 0}</span>
+                    <span className="text-[10px] text-muted block">Total Prospects</span>
+                    <span className="font-semibold text-primary">{dbItem.row_count || 0}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-500 block">Valid Emails</span>
-                    <span className="font-semibold text-emerald-400">{dbItem.valid_email_count || 0}</span>
+                    <span className="text-[10px] text-muted block">Valid Deliverables</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">{dbItem.valid_email_count || 0}</span>
                   </div>
                 </div>
 
                 {/* Column Headers Chips */}
                 <div className="mb-4">
-                  <span className="text-[10px] text-slate-500 font-medium block mb-1.5 uppercase tracking-wider">
+                  <span className="text-[10px] text-muted font-medium block mb-1.5 uppercase tracking-wider">
                     Header Schema ({Array.isArray(dbItem.headers) ? dbItem.headers.length : 0} Columns)
                   </span>
                   <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
@@ -423,15 +430,15 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                         key={i}
                         className={`text-[10px] px-1.5 py-0.5 rounded font-mono border ${
                           h === dbItem.email_column 
-                            ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-300 font-bold'
-                            : 'bg-slate-800/70 border-slate-700/50 text-slate-300'
+                            ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-600 dark:text-indigo-300 font-bold'
+                            : 'bg-subtle border-subtle text-secondary'
                         }`}
                       >
                         {`{{${h}}}`}
                       </span>
                     ))}
                     {Array.isArray(dbItem.headers) && dbItem.headers.length > 6 && (
-                      <span className="text-[10px] text-slate-500 px-1 py-0.5">
+                      <span className="text-[10px] text-muted px-1 py-0.5">
                         +{dbItem.headers.length - 6} more
                       </span>
                     )}
@@ -440,46 +447,21 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-between pt-3 border-t border-slate-800/60 gap-1.5">
+              <div className="flex items-center justify-between pt-3 border-t border-subtle gap-1.5">
                 <button
                   type="button"
                   onClick={() => handleOpenInspector(dbItem)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-white text-[11px] font-medium transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-subtle hover:bg-indigo-500/10 text-primary hover:text-indigo-600 dark:hover:text-indigo-400 text-[11px] font-medium transition-colors cursor-pointer"
                 >
-                  <Eye className="w-3 h-3 text-slate-400" />
-                  Inspect
-                </button>
-
-                {!dbItem.is_attached && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (navigate) {
-                        navigate('#/campaigns');
-                      }
-                    }}
-                    className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-[11px] font-medium transition-colors"
-                    title="Launch Campaign with this Database"
-                  >
-                    <Send className="w-3 h-3" />
-                    Launch
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => window.open(`/api/databases/${dbItem.id}/download`, '_blank')}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                  title="Download raw file"
-                >
-                  <Download className="w-3.5 h-3.5" />
+                  <Eye className="w-3 h-3 text-muted" />
+                  Inspect Audience
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleDeleteDatabase(dbItem)}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                  title="Delete database"
+                  className="p-1.5 rounded-lg text-muted hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                  title="Delete Audience"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -489,19 +471,19 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
         </div>
       )}
 
-      {/* Upload Database Modal */}
+      {/* Upload Spreadsheet Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="bg-surface border border-subtle rounded-2xl w-full max-w-lg shadow-2xl p-6 text-left">
+            <div className="flex items-center justify-between border-b border-subtle pb-3 mb-4">
               <div className="flex items-center gap-2">
-                <UploadCloud className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-sm font-bold text-white">Upload Isolated Database</h3>
+                <UploadCloud className="w-5 h-5 text-indigo-500" />
+                <h3 className="text-sm font-bold text-primary">Import Prospect Audience</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowUploadModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800"
+                className="text-muted hover:text-primary p-1 rounded-md hover:bg-subtle cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -520,22 +502,22 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
 
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-slate-700 hover:border-indigo-500/80 bg-slate-950/40 rounded-xl p-8 text-center cursor-pointer transition-all group"
+                  className="border-2 border-dashed border-subtle hover:border-indigo-500/80 bg-canvas rounded-xl p-8 text-center cursor-pointer transition-all group"
                 >
-                  <UploadCloud className="w-10 h-10 text-slate-500 group-hover:text-indigo-400 mx-auto mb-2 transition-colors" />
-                  <p className="text-xs font-semibold text-white mb-1">Click to select or drag and drop spreadsheet</p>
-                  <p className="text-[11px] text-slate-500">Supports .xlsx, .xls, .csv up to 15MB</p>
+                  <UploadCloud className="w-10 h-10 text-muted group-hover:text-indigo-500 mx-auto mb-2 transition-colors" />
+                  <p className="text-xs font-semibold text-primary mb-1">Click to select or drag and drop spreadsheet</p>
+                  <p className="text-[11px] text-muted">Supports .xlsx, .xls, .csv up to 15MB</p>
                 </div>
 
                 {isParsing && (
-                  <div className="flex items-center justify-center gap-2 text-xs text-indigo-400 py-3">
+                  <div className="flex items-center justify-center gap-2 text-xs text-indigo-500 py-3">
                     <RefreshCw className="w-4 h-4 animate-spin" />
                     <span>Analyzing file schema and columns...</span>
                   </div>
                 )}
 
                 {parseError && (
-                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center gap-2">
+                  <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-500 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>{parseError}</span>
                   </div>
@@ -545,24 +527,24 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
               /* Step 2: Configure & Map */
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-medium text-slate-300 block mb-1">Database Name</label>
+                  <label className="text-xs font-medium text-secondary block mb-1">Audience Name</label>
                   <input
                     type="text"
                     value={customDbName}
                     onChange={(e) => setCustomDbName(e.target.value)}
-                    className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-1.5 bg-canvas border border-subtle rounded-lg text-xs text-primary focus:outline-none focus:border-indigo-500"
                     placeholder="e.g., Q4 Enterprise Founders"
                   />
-                  <p className="text-[10px] text-slate-500 mt-1">Original file: {parsedData.filename} ({parsedData.totalRows} rows)</p>
+                  <p className="text-[10px] text-muted mt-1">Original file: {parsedData.filename} ({parsedData.totalRows} rows)</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="text-[11px] font-medium text-slate-300 block mb-1">Email Column *</label>
+                    <label className="text-[11px] font-medium text-secondary block mb-1">Email Column *</label>
                     <select
                       value={selectedEmailCol}
                       onChange={(e) => setSelectedEmailCol(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full px-2.5 py-1.5 bg-canvas border border-subtle rounded-lg text-xs text-primary focus:outline-none focus:border-indigo-500"
                     >
                       {parsedData.headers.map((h) => (
                         <option key={h} value={h}>{h}</option>
@@ -571,11 +553,11 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-medium text-slate-300 block mb-1">First Name (Opt.)</label>
+                    <label className="text-[11px] font-medium text-secondary block mb-1">First Name (Opt.)</label>
                     <select
                       value={selectedFirstNameCol}
                       onChange={(e) => setSelectedFirstNameCol(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full px-2.5 py-1.5 bg-canvas border border-subtle rounded-lg text-xs text-primary focus:outline-none focus:border-indigo-500"
                     >
                       <option value="">-- None --</option>
                       {parsedData.headers.map((h) => (
@@ -585,11 +567,11 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-medium text-slate-300 block mb-1">Company (Opt.)</label>
+                    <label className="text-[11px] font-medium text-secondary block mb-1">Company (Opt.)</label>
                     <select
                       value={selectedCompanyCol}
                       onChange={(e) => setSelectedCompanyCol(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full px-2.5 py-1.5 bg-canvas border border-subtle rounded-lg text-xs text-primary focus:outline-none focus:border-indigo-500"
                     >
                       <option value="">-- None --</option>
                       {parsedData.headers.map((h) => (
@@ -599,10 +581,10 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950/60 border border-slate-800">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-canvas border border-subtle">
                   <div>
-                    <span className="text-xs font-medium text-white block">Deduplicate Identical Emails</span>
-                    <span className="text-[10px] text-slate-500">Only save the first occurrence of each email address</span>
+                    <span className="text-xs font-medium text-primary block">Deduplicate Identical Emails</span>
+                    <span className="text-[10px] text-muted">Only save the first occurrence of each email address</span>
                   </div>
                   <Switch
                     checked={deduplicate}
@@ -613,19 +595,19 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
 
                 {/* Sample preview table */}
                 <div>
-                  <span className="text-[11px] font-medium text-slate-400 block mb-1.5">First 3 Rows Preview</span>
-                  <div className="border border-slate-800 rounded-lg overflow-x-auto max-h-36">
-                    <table className="w-full text-left text-[11px] text-slate-300">
-                      <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 sticky top-0">
+                  <span className="text-[11px] font-medium text-secondary block mb-1.5">First 3 Rows Preview</span>
+                  <div className="border border-subtle rounded-lg overflow-x-auto max-h-36">
+                    <table className="w-full text-left text-[11px] text-secondary">
+                      <thead className="bg-canvas text-muted border-b border-subtle sticky top-0">
                         <tr>
                           {parsedData.headers.slice(0, 5).map((h) => (
                             <th key={h} className="px-2.5 py-1.5 font-medium">{h}</th>
                           ))}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800/60">
+                      <tbody className="divide-y divide-subtle">
                         {parsedData.sampleRows.slice(0, 3).map((row, idx) => (
-                          <tr key={idx} className="hover:bg-slate-800/30">
+                          <tr key={idx} className="hover:bg-subtle">
                             {parsedData.headers.slice(0, 5).map((h) => (
                               <td key={h} className="px-2.5 py-1.5 truncate max-w-[120px]">{String(row[h] || '')}</td>
                             ))}
@@ -636,14 +618,14 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                <div className="flex items-center justify-between pt-3 border-t border-subtle">
                   <button
                     type="button"
                     onClick={() => {
                       setParsedData(null);
                       setUploadFile(null);
                     }}
-                    className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+                    className="px-3 py-1.5 text-xs text-secondary hover:text-primary cursor-pointer"
                   >
                     Change File
                   </button>
@@ -652,17 +634,17 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                     type="button"
                     onClick={handleConfirmUpload}
                     disabled={isUploading || !selectedEmailCol}
-                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all spring-press disabled:opacity-50 cursor-pointer"
                   >
                     {isUploading ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        Saving Database...
+                        Saving Audience...
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        Save Isolated Database
+                        Save Lead Audience
                       </>
                     )}
                   </button>
@@ -676,31 +658,31 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
       {/* Inspector Modal */}
       {inspectDb && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl p-6">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+          <div className="bg-surface border border-subtle rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl p-6 text-left">
+            <div className="flex items-center justify-between border-b border-subtle pb-3 mb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <Database className="w-4 h-4 text-indigo-400" />
-                  <h3 className="text-sm font-bold text-white">{inspectDb.name}</h3>
+                  <Database className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                  <h3 className="text-sm font-bold text-primary">{inspectDb.name}</h3>
                   {inspectDb.is_attached ? (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                       Dedicated to: {inspectDb.campaign_name}
                     </span>
                   ) : (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                       Available
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  File: {inspectDb.filename} • {inspectTotal} Total Records • Email Column: <strong className="text-white">{inspectDb.email_column}</strong>
+                <p className="text-[11px] text-secondary mt-0.5">
+                  File: {inspectDb.filename} • {inspectTotal} Total Records • Email Column: <strong className="text-primary">{inspectDb.email_column}</strong>
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setInspectDb(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800"
+                className="text-muted hover:text-primary p-1 rounded-md hover:bg-subtle cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -708,76 +690,76 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
 
             {/* Headers row */}
             <div className="mb-3">
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Available Dynamic Variable Tags:</span>
+              <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Available Dynamic Variable Tags:</span>
               <div className="flex flex-wrap gap-1">
                 {Array.isArray(inspectDb.headers) && inspectDb.headers.map((h, i) => (
-                  <span key={i} className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-slate-800 text-slate-300 border border-slate-700/60">
+                  <span key={i} className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-subtle text-secondary border border-subtle">
                     {`{{${h}}}`}
                   </span>
                 ))}
               </div>
             </div>
 
-            {/* Table Records */}
-            <div className="flex-1 overflow-auto border border-slate-800 rounded-lg min-h-[300px]">
+            {/* Table Records with Sticky Blurred Header */}
+            <div className="flex-1 overflow-auto border border-subtle rounded-lg min-h-[300px] relative">
               {inspectLoading ? (
                 <div className="py-20 flex flex-col items-center justify-center text-center">
-                  <RefreshCw className="w-6 h-6 text-indigo-400 animate-spin mb-2" />
-                  <p className="text-xs text-slate-400">Loading records...</p>
+                  <RefreshCw className="w-6 h-6 text-indigo-500 animate-spin mb-2" />
+                  <p className="text-xs text-secondary">Loading records...</p>
                 </div>
               ) : inspectRecords.length === 0 ? (
-                <div className="py-20 text-center text-xs text-slate-500">
-                  No records stored in this database.
+                <div className="py-20 text-center text-xs text-muted">
+                  No records stored in this audience.
                 </div>
               ) : (
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 sticky top-0">
+                <table className="w-full text-left text-xs text-secondary">
+                  <thead className="sticky top-0 z-20 backdrop-blur-md bg-surface/90 text-secondary border-b border-subtle">
                     <tr>
-                      <th className="px-3 py-2 font-medium">#</th>
-                      <th className="px-3 py-2 font-medium">Email</th>
-                      <th className="px-3 py-2 font-medium">First Name</th>
-                      <th className="px-3 py-2 font-medium">Company</th>
-                      <th className="px-3 py-2 font-medium">Status</th>
-                      <th className="px-3 py-2 font-medium">Custom Fields</th>
-                      <th className="px-3 py-2 font-medium text-right">Actions</th>
+                      <th className="px-3 py-2.5 font-medium">#</th>
+                      <th className="px-3 py-2.5 font-medium">Email</th>
+                      <th className="px-3 py-2.5 font-medium">First Name</th>
+                      <th className="px-3 py-2.5 font-medium">Company</th>
+                      <th className="px-3 py-2.5 font-medium">Dispatch Status</th>
+                      <th className="px-3 py-2.5 font-medium">Custom Fields</th>
+                      <th className="px-3 py-2.5 font-medium text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
+                  <tbody className="divide-y divide-subtle font-mono text-[11px]">
                     {inspectRecords.map((r, idx) => {
                       let custom = {};
                       try { custom = JSON.parse(r.custom_fields || '{}'); } catch {}
                       const isReplied = r.status === 'REPLIED';
                       const isCancelled = r.status === 'CANCELLED';
                       return (
-                        <tr key={r.id || idx} className="hover:bg-slate-800/30">
-                          <td className="px-3 py-2 text-slate-500">{idx + 1}</td>
-                          <td className="px-3 py-2 text-white font-medium">{r.email}</td>
-                          <td className="px-3 py-2 text-slate-300">{r.first_name || '-'}</td>
-                          <td className="px-3 py-2 text-slate-300">{r.company || '-'}</td>
+                        <tr key={r.id || idx} className="hover:bg-subtle transition-colors">
+                          <td className="px-3 py-2 text-muted">{idx + 1}</td>
+                          <td className="px-3 py-2 text-primary font-medium">{r.email}</td>
+                          <td className="px-3 py-2 text-secondary">{r.first_name || '-'}</td>
+                          <td className="px-3 py-2 text-secondary">{r.company || '-'}</td>
                           <td className="px-3 py-2">
                             {isReplied ? (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-sans font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                <MessageSquare className="w-2.5 h-2.5" /> REPLIED
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-sans font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                <MessageSquare className="w-2.5 h-2.5" /> REPLIED (DISARMED)
                               </span>
                             ) : isCancelled ? (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-sans bg-slate-800 text-slate-400 border border-slate-700">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-sans bg-subtle text-muted border border-subtle">
                                 CANCELLED
                               </span>
                             ) : r.status === 'SENT' ? (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-sans bg-emerald-500/10 text-emerald-400">
-                                SENT {r.current_step > 1 ? `(Step ${r.current_step})` : ''}
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-sans bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-medium">
+                                DISPATCHED {r.current_step > 1 ? `(Step ${r.current_step})` : ''}
                               </span>
                             ) : r.status === 'FAILED' ? (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-sans bg-red-500/10 text-red-400">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-sans bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-medium">
                                 FAILED
                               </span>
                             ) : (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-sans bg-amber-500/10 text-amber-400">
-                                {r.next_step_scheduled_at ? 'WAITING DELAY' : 'PENDING'}
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-sans bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-medium">
+                                {r.next_step_scheduled_at ? 'WAITING DISPATCH' : 'PENDING'}
                               </span>
                             )}
                           </td>
-                          <td className="px-3 py-2 text-[10px] text-slate-400 truncate max-w-[160px]" title={JSON.stringify(custom)}>
+                          <td className="px-3 py-2 text-[10px] text-muted truncate max-w-[160px]" title={JSON.stringify(custom)}>
                             {Object.entries(custom).slice(0, 3).map(([k, v]) => `${k}:${v}`).join(', ')}
                           </td>
                           <td className="px-3 py-2 text-right">
@@ -786,10 +768,10 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                                 <button
                                   type="button"
                                   onClick={() => handleMarkReplied(r.id)}
-                                  title="Mark lead as replied and halt future follow-ups"
-                                  className="px-2 py-0.5 rounded bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 text-[10px] font-medium transition-colors"
+                                  title="Log lead reply and permanently disarm remaining follow-ups"
+                                  className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold transition-colors spring-press cursor-pointer"
                                 >
-                                  Mark Replied
+                                  Log Reply & Disarm
                                 </button>
                               )}
                               {!isReplied && !isCancelled && (r.status === 'PENDING' || r.next_step_scheduled_at) && (
@@ -797,9 +779,9 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                                   type="button"
                                   onClick={() => handleCancelFollowup(r.id)}
                                   title="Cancel pending follow-up steps for this lead"
-                                  className="px-2 py-0.5 rounded bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-400 border border-slate-700 hover:border-rose-500/30 text-[10px] font-medium transition-colors"
+                                  className="px-2 py-0.5 rounded bg-subtle hover:bg-rose-500/15 text-secondary hover:text-rose-500 border border-subtle hover:border-rose-500/30 text-[10px] font-medium transition-colors spring-press cursor-pointer"
                                 >
-                                  Cancel Next
+                                  Cancel Scheduled Follow-up
                                 </button>
                               )}
                             </div>
@@ -812,12 +794,12 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
               )}
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-slate-800 mt-3 text-xs text-slate-400">
+            <div className="flex items-center justify-between pt-4 border-t border-subtle mt-3 text-xs text-secondary">
               <span>Showing {inspectRecords.length} of {inspectTotal} records</span>
               <button
                 type="button"
                 onClick={() => setInspectDb(null)}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-medium"
+                className="px-3 py-1.5 rounded-lg bg-subtle hover:bg-surface text-primary font-medium border border-subtle cursor-pointer"
               >
                 Close Inspector
               </button>

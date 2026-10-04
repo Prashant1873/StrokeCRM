@@ -744,22 +744,22 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold text-primary tracking-tight flex items-center gap-2.5">
               <Send className="w-6 h-6 text-indigo-400" />
-              Campaigns
+              Outreach Campaigns
             </h1>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-muted mt-1">
               {campaigns.length} campaign{campaigns.length !== 1 ? 's' : ''}
-              &nbsp;·&nbsp;1&nbsp;Campaign = 1&nbsp;Database = 1&nbsp;Template
+              &nbsp;·&nbsp;1&nbsp;Campaign = 1&nbsp;Lead Audience = 1&nbsp;Template
             </p>
           </div>
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 hover:-translate-y-0.5 active:translate-y-0"
           >
             <Plus className="w-3.5 h-3.5" />
-            New Campaign
+            New Outreach Campaign
           </button>
         </div>
 
@@ -771,24 +771,24 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
             : 'bg-rose-950/40 border-rose-500/30 text-rose-300'
           }`}>
             <span>{feedback.message}</span>
-            <button type="button" onClick={() => setFeedback(null)} className="text-slate-400 hover:text-white ml-4">Dismiss</button>
+            <button type="button" onClick={() => setFeedback(null)} className="text-muted hover:text-primary ml-4">Dismiss</button>
           </div>
         )}
 
         {/* Campaign Grid / Empty State */}
         {campaigns.length === 0 ? (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center max-w-2xl mx-auto space-y-4">
+          <div className="bg-surface border border-subtle rounded-2xl p-12 text-center max-w-2xl mx-auto space-y-4">
             <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto">
               <Send className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-white">No Campaigns Yet</h3>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
-              StrokeCRM organises cold outreach through a clean 1:1:1 Triad — 1 Campaign binds exactly 1 Database and 1 Template.
+            <h3 className="text-base font-bold text-primary">No Outreach Campaigns Yet</h3>
+            <p className="text-xs text-muted max-w-md mx-auto">
+              StrokeCRM organizes cold outreach through a clean 1:1:1 Triad — 1 Campaign binds exactly 1 Lead Audience and 1 Template.
             </p>
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all hover:-translate-y-0.5"
             >
               <Plus className="w-4 h-4" />
               Create Your First Campaign
@@ -806,14 +806,14 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
               return (
                 <div
                   key={c.id}
-                  className="group bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-5 flex flex-col gap-4 transition-all duration-200 hover:shadow-xl hover:shadow-black/30"
+                  className="group bg-surface border border-subtle hover:border-indigo-500/40 rounded-xl p-5 flex flex-col gap-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/20"
                 >
                   {/* Card Header */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="text-sm font-bold text-white truncate">{c.name}</h3>
+                      <h3 className="text-sm font-bold text-primary truncate">{c.name}</h3>
                       {c.created_at && (
-                        <p className="text-[10px] text-slate-500 mt-0.5">
+                        <p className="text-[10px] text-muted mt-0.5">
                           Created {new Date(c.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                         </p>
                       )}
@@ -827,8 +827,8 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   <div className="space-y-1.5 text-[11px]">
                     <div className="flex items-center gap-1.5">
                       <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.database_id ? 'bg-indigo-400' : 'bg-slate-600'}`} />
-                      <span className="text-slate-500">DB:</span>
-                      <span className={`truncate font-medium ${c.database_id ? 'text-slate-200' : 'text-amber-400'}`}>
+                      <span className="text-muted">Audience:</span>
+                      <span className={`truncate font-medium ${c.database_id ? 'text-primary' : 'text-amber-400'}`}>
                         {c.database_name || 'Not attached'}
                       </span>
                       {c.database_id && <Lock className="w-2.5 h-2.5 text-indigo-400 ml-auto shrink-0" />}
@@ -914,14 +914,14 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-300 block mb-1">2. Attach Database (1:1 Exclusive)</label>
+                  <label className="text-xs font-medium text-slate-300 block mb-1">2. Attach Lead Audience (1:1 Exclusive)</label>
                   <div className="flex items-center gap-2">
                     <select
                       value={newCampaignDbId}
                       onChange={(e) => setNewCampaignDbId(e.target.value)}
                       className="flex-1 min-w-0 px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
                     >
-                      <option value="">-- Attach Later / Pick Available Database --</option>
+                      <option value="">-- Attach Later / Pick Available Audience --</option>
                       {databases.map(d => (
                         <option key={d.id} value={d.id}>{d.name} ({d.row_count} contacts){d.is_attached && d.campaign_name ? ` — used in ${d.campaign_name}` : ''}</option>
                       ))}
@@ -1008,7 +1008,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
           className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors group"
         >
           <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
-          All Campaigns
+          All Outreach Campaigns
         </button>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -1028,7 +1028,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                 {queueStatus?.isRunning ? 'Live' : activeStatus === 'COMPLETED' ? '✓ Complete' : queueStatus?.isWaitingSchedule ? 'Scheduled' : activeStatus}
               </span>
             </h1>
-            <p className="text-xs text-slate-400 mt-1">1:1:1 Triad — 1 Campaign · 1 Database · 1 Template</p>
+            <p className="text-xs text-slate-400 mt-1">1:1:1 Triad — 1 Campaign · 1 Lead Audience · 1 Template</p>
           </div>
           <button
             type="button"
@@ -1077,14 +1077,14 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
           <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto">
             <Send className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold text-white">No Campaigns Created Yet</h3>
+          <h3 className="text-base font-bold text-white">No Outreach Campaigns Created Yet</h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            StrokeCRM organizes cold outreach through a clean 1:1:1 Triad: 1 Campaign binds exactly 1 isolated Database and 1 Template.
+            StrokeCRM organizes cold outreach through a clean 1:1:1 Triad: 1 Campaign binds exactly 1 isolated Lead Audience and 1 Template.
           </p>
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all hover:-translate-y-0.5"
           >
             <Plus className="w-4 h-4" />
             Create Your First Campaign
@@ -1102,7 +1102,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                     <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
                       <Database className="w-3.5 h-3.5" />
                     </div>
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">1. Attached Database</span>
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">1. Attached Lead Audience</span>
                   </div>
                   {selectedCampaign.database_id ? (
                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
@@ -1144,7 +1144,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                 ) : (
                   <div className="space-y-3 pt-1">
                     <p className="text-xs text-amber-300/80">
-                      This campaign requires an isolated database file to dispatch emails.
+                      This campaign requires an isolated lead audience file to dispatch emails.
                     </p>
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2">
@@ -1153,7 +1153,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                           onChange={(e) => setSelectedAttachDbId(e.target.value)}
                           className="flex-1 min-w-0 px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
                         >
-                          <option value="">-- Select Available Database --</option>
+                          <option value="">-- Select Available Lead Audience --</option>
                           {availableDatabases.map(d => (
                             <option key={d.id} value={d.id}>
                               {d.name} ({d.row_count} contacts){d.is_attached && d.campaign_name ? ` — used in ${d.campaign_name}` : ''}
@@ -1181,13 +1181,13 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                           disabled={!selectedAttachDbId || isAttachingDb}
                           className="flex-1 py-1 px-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
                         >
-                          {isAttachingDb ? 'Attaching...' : 'Attach Database'}
+                          {isAttachingDb ? 'Attaching...' : 'Attach Lead Audience'}
                         </button>
                         <button
                           type="button"
                           onClick={() => navigate ? navigate('#/databases') : null}
                           className="py-1 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors"
-                          title="Upload a new database"
+                          title="Upload a new lead audience"
                         >
                           + Upload
                         </button>

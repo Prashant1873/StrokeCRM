@@ -5,24 +5,20 @@ import {
   Send, 
   Zap, 
   Mail, 
-  Sliders, 
   AlertTriangle, 
   CheckCircle2, 
   ArrowLeft, 
   Play, 
-  Users, 
-  Database,
-  FileCheck,
   RefreshCw,
   Globe
 } from 'lucide-react';
 import Switch from './common/Switch';
+import DeliverabilityBeacon from './common/DeliverabilityBeacon';
 
 export default function CampaignPreflight({ campaignId, navigate, goBack }) {
   const [campaign, setCampaign] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authStatus, setAuthStatus] = useState(null);
-  const [dailyQuota, setDailyQuota] = useState(null);
 
   // Sender Account Gateway
   const [senderProvider, setSenderProvider] = useState('default'); // 'default' | 'gmail_app_password' | 'custom_domain'
@@ -30,7 +26,6 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
   // Preflight Option States
   const [enforceWorkingHours, setEnforceWorkingHours] = useState(true);
   const [pacingPreset, setPacingPreset] = useState('standard'); // 'conservative' | 'standard' | 'fast'
-  const [autoStopOnQuota, setAutoStopOnQuota] = useState(true);
 
   // Test Email Preflight
   const [testEmail, setTestEmail] = useState('');
@@ -89,13 +84,6 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
       const defaultEmail = authData?.custom_domain?.sender_email || authData?.account?.email || '';
       if (defaultEmail && !testEmail) {
         setTestEmail(defaultEmail);
-      }
-
-      // 3. Fetch daily quota
-      const quotaRes = await fetch('/api/analytics/daily');
-      if (quotaRes.ok) {
-        const quotaData = await quotaRes.json();
-        setDailyQuota(quotaData);
       }
     } catch (err) {
       console.error('Failed to load preflight data:', err);
@@ -175,8 +163,8 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto py-16 text-center text-slate-400">
-        <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-indigo-400" />
+      <div className="max-w-4xl mx-auto py-16 text-center text-secondary">
+        <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-indigo-500" />
         <p className="text-sm font-medium">Running preflight diagnostics...</p>
       </div>
     );
@@ -185,15 +173,15 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
   if (!campaign) {
     return (
       <div className="max-w-3xl mx-auto py-12 px-4 text-center">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-8">
-          <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-3" />
-          <h2 className="text-lg font-bold text-white">Campaign Not Found</h2>
-          <p className="text-xs text-slate-400 mt-1 mb-6">
-            The requested campaign does not exist or was removed.
+        <div className="bg-surface border border-subtle rounded-xl p-8">
+          <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
+          <h2 className="text-lg font-bold text-primary">Campaign Not Found</h2>
+          <p className="text-xs text-secondary mt-1 mb-6">
+            The requested outreach campaign does not exist or was removed.
           </p>
           <button
             onClick={() => navigate('#/campaigns')}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold spring-press cursor-pointer"
           >
             Return to Campaigns
           </button>
@@ -205,38 +193,38 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
   return (
     <div className="max-w-4xl mx-auto py-8 space-y-6 text-left">
       {/* Top Header with Back Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-subtle pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <button
               onClick={goBack}
-              className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-1 rounded-md text-secondary hover:text-primary hover:bg-subtle transition-colors cursor-pointer"
               title="Return to Campaign"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-              Launch Preflight Cockpit
+            <h1 className="text-2xl font-bold text-primary tracking-tight flex items-center gap-2">
+              Outreach Dispatch Preflight Gates
             </h1>
           </div>
-          <p className="text-xs text-slate-400">
-            Review delivery safeguards, configure timing rules, and verify credentials before unleashing outbound dispatch.
+          <p className="text-xs text-secondary">
+            Review deliverability safeguards, configure throttle jitter rules, and verify credentials before dispatching.
           </p>
         </div>
 
         {/* Campaign Identification Pill */}
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs">
-          <Send className="w-3.5 h-3.5 text-indigo-400" />
-          <span className="font-semibold text-white">{campaign.name}</span>
-          <span className="text-slate-500">•</span>
-          <span className="text-emerald-400 font-mono font-medium">{pendingLeads} Pending Leads</span>
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-surface border border-subtle rounded-lg text-xs">
+          <Send className="w-3.5 h-3.5 text-indigo-500" />
+          <span className="font-semibold text-primary">{campaign.name}</span>
+          <span className="text-muted">•</span>
+          <span className="text-emerald-600 dark:text-emerald-400 font-mono font-medium">{pendingLeads} Pending Prospects</span>
         </div>
       </div>
 
       {/* Error Feedback Banner */}
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-500/30 flex items-center gap-3 text-xs text-rose-300">
-          <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-center gap-3 text-xs text-rose-600 dark:text-rose-400">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
           <span className="font-medium">{errorMessage}</span>
         </div>
       )}
@@ -246,75 +234,78 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
         {/* Left 2 Columns: Configurable Options & Switches */}
         <div className="md:col-span-2 space-y-6">
           {/* Sender Account Gateway Selection */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 shadow-sm">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
+          <div className="bg-surface border border-subtle rounded-xl p-6 shadow-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-subtle mb-3">
               <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-sky-400" />
-                <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                  Outbound Sender Identity
+                <Globe className="w-4 h-4 text-sky-500" />
+                <h2 className="text-sm font-bold text-primary uppercase tracking-wider">
+                  Outreach Dispatch Gateway
                 </h2>
               </div>
-              <span className="text-[10px] text-slate-500">Sender for this campaign</span>
+              <span className="text-[10px] text-muted">Sender for this campaign</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <button
                 type="button"
                 onClick={() => setSenderProvider('default')}
-                className={`p-3 rounded-lg border text-left transition-all ${
+                className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
                   senderProvider === 'default'
-                    ? 'bg-indigo-600/15 border-indigo-500/50 text-white shadow-inner'
-                    : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                    ? 'bg-indigo-500/15 border-indigo-500/40 text-primary shadow-xs'
+                    : 'bg-canvas border-subtle text-secondary hover:border-default'
                 }`}
               >
-                <div className="font-bold text-xs text-white">Default Gateway</div>
-                <div className="text-[11px] text-indigo-400 mt-0.5 truncate">
-                  {authStatus?.active_provider === 'custom_domain' ? 'Custom Domain' : 'Gmail App Password'}
+                <div className="font-bold text-xs text-primary">Default Gateway</div>
+                <div className="text-[11px] text-indigo-600 dark:text-indigo-400 mt-0.5 truncate">
+                  {authStatus?.active_provider === 'custom_domain' ? 'Custom Domain SMTP' : 'Gmail App Password'}
                 </div>
-                <div className="text-[10px] text-slate-500 mt-1">From Global Settings</div>
+                <div className="text-[10px] text-muted mt-1">From Global Settings</div>
               </button>
 
               <button
                 type="button"
                 onClick={() => setSenderProvider('gmail_app_password')}
-                className={`p-3 rounded-lg border text-left transition-all ${
+                className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
                   senderProvider === 'gmail_app_password'
-                    ? 'bg-indigo-600/15 border-indigo-500/50 text-white shadow-inner'
-                    : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                    ? 'bg-indigo-500/15 border-indigo-500/40 text-primary shadow-xs'
+                    : 'bg-canvas border-subtle text-secondary hover:border-default'
                 }`}
               >
-                <div className="font-bold text-xs text-white">Gmail Account</div>
-                <div className="text-[11px] text-indigo-400 mt-0.5 truncate">
+                <div className="font-bold text-xs text-primary">Gmail Account</div>
+                <div className="text-[11px] text-indigo-600 dark:text-indigo-400 mt-0.5 truncate">
                   {authStatus?.account?.email || 'Gmail SMTP'}
                 </div>
-                <div className="text-[10px] text-slate-500 mt-1">App Password Direct</div>
+                <div className="text-[10px] text-muted mt-1">App Password Direct</div>
               </button>
 
               <button
                 type="button"
                 onClick={() => setSenderProvider('custom_domain')}
-                className={`p-3 rounded-lg border text-left transition-all ${
+                className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
                   senderProvider === 'custom_domain'
-                    ? 'bg-sky-600/15 border-sky-500/50 text-white shadow-inner'
-                    : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                    ? 'bg-sky-500/15 border-sky-500/40 text-primary shadow-xs'
+                    : 'bg-canvas border-subtle text-secondary hover:border-default'
                 }`}
               >
-                <div className="font-bold text-xs text-white">Custom Domain</div>
-                <div className="text-[11px] text-sky-400 mt-0.5 truncate">
+                <div className="font-bold text-xs text-primary">Custom Domain</div>
+                <div className="text-[11px] text-sky-600 dark:text-sky-400 mt-0.5 truncate">
                   {authStatus?.custom_domain?.sender_email || authStatus?.custom_domain?.user || 'Custom SMTP'}
                 </div>
-                <div className="text-[10px] text-slate-500 mt-1">Domain SMTP Relay</div>
+                <div className="text-[10px] text-muted mt-1">Domain SMTP Relay</div>
               </button>
             </div>
           </div>
 
           {/* Working Hours Enforcement Card */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 pb-3 border-b border-slate-800/80 mb-2">
-              <Clock className="w-4 h-4 text-indigo-400" />
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                Timing & Schedule Control
-              </h2>
+          <div className="bg-surface border border-subtle rounded-xl p-6 shadow-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-subtle mb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-indigo-500" />
+                <h2 className="text-sm font-bold text-primary uppercase tracking-wider">
+                  Timing & Send Windows
+                </h2>
+              </div>
+              <DeliverabilityBeacon preset="working_hours" />
             </div>
 
             {/* The Working Hours Toggle Switch */}
@@ -322,65 +313,69 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
               id="enforce-working-hours"
               checked={enforceWorkingHours}
               onChange={setEnforceWorkingHours}
-              label="Enforce Working Hours (9:00 AM - 6:00 PM)"
-              description="Sends emails strictly within local daytime business hours to maximize reply rates and protect sender reputation."
-              badge={enforceWorkingHours ? 'Safe Mode' : '24/7 Active'}
+              label="Enforce Recipient Working Hours (9:00 AM - 6:00 PM)"
+              description="Sends emails strictly within daytime business hours to maximize reply rates and prevent off-hours spam flagging."
+              badge={enforceWorkingHours ? 'Safe Business Hours' : 'Continuous 24/7'}
             />
 
             {!enforceWorkingHours && (
-              <div className="mt-3 p-3 rounded-lg bg-amber-950/30 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-200">
-                <Zap className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-start gap-2.5 text-xs text-amber-700 dark:text-amber-200">
+                <Zap className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold">Immediate 24/7 Dispatch Mode: </span>
-                  <span>The queue will send continuously around the clock without pausing for nighttime or off-hours.</span>
+                  <span className="font-bold">Continuous 24/7 Dispatch Active: </span>
+                  <span>The queue will send around the clock without pausing for nighttime or weekend hours.</span>
                 </div>
               </div>
             )}
 
-            <div className="border-t border-slate-800/80 mt-4 pt-4">
-              <label className="text-xs font-semibold text-slate-300 block mb-2">
-                Pacing Jitter Profile
-              </label>
+            {/* Throttle & Jitter Profile */}
+            <div className="border-t border-subtle mt-4 pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-primary flex items-center gap-1.5">
+                  Deliverability Throttle & Jitter
+                </label>
+                <DeliverabilityBeacon preset="jitter" />
+              </div>
               <div className="grid grid-cols-3 gap-2.5">
                 {[
-                  { id: 'conservative', label: 'Stealth', range: '60s - 120s', desc: 'Safest warmup' },
-                  { id: 'standard', label: 'Standard', range: '30s - 75s', desc: 'Balanced human' },
-                  { id: 'fast', label: 'Turbo', range: '15s - 35s', desc: 'High throughput' },
+                  { id: 'conservative', label: 'Stealth Pacing', range: '60s - 120s', desc: 'Safest domain warmup' },
+                  { id: 'standard', label: 'Balanced Human', range: '30s - 75s', desc: 'Recommended standard' },
+                  { id: 'fast', label: 'High Velocity', range: '15s - 35s', desc: 'Accelerated dispatch' },
                 ].map((preset) => (
                   <button
                     key={preset.id}
                     type="button"
                     onClick={() => setPacingPreset(preset.id)}
-                    className={`p-3 rounded-lg border text-left transition-all ${
+                    className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
                       pacingPreset === preset.id
-                        ? 'bg-indigo-600/15 border-indigo-500/50 text-white shadow-inner'
-                        : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-indigo-500/15 border-indigo-500/40 text-primary shadow-xs'
+                        : 'bg-canvas border-subtle text-secondary hover:border-default'
                     }`}
                   >
-                    <div className="font-bold text-xs text-white">{preset.label}</div>
-                    <div className="text-[11px] font-mono text-indigo-400 mt-0.5">{preset.range}</div>
-                    <div className="text-[10px] text-slate-500 mt-1">{preset.desc}</div>
+                    <div className="font-bold text-xs text-primary">{preset.label}</div>
+                    <div className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 mt-0.5">{preset.range}</div>
+                    <div className="text-[10px] text-muted mt-1">{preset.desc}</div>
                   </button>
                 ))}
               </div>
 
-              <div className="mt-3 text-[11px] text-slate-400 flex items-center justify-between">
-                <span>Estimated dispatch duration for {pendingLeads} leads:</span>
-                <span className="font-mono text-slate-200 font-semibold">~{estimatedMinutes} minutes</span>
+              <div className="mt-3 text-[11px] text-secondary flex items-center justify-between">
+                <span>Estimated dispatch time for {pendingLeads} prospects:</span>
+                <span className="font-mono text-primary font-semibold">~{estimatedMinutes} minutes</span>
               </div>
             </div>
           </div>
 
           {/* Test Email Preflight Gate Card */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 shadow-sm space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-slate-800/80">
-              <Mail className="w-4 h-4 text-indigo-400" />
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                Preflight Test Email Gate
+          <div className="bg-surface border border-subtle rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-subtle">
+              <Mail className="w-4 h-4 text-indigo-500" />
+              <h2 className="text-sm font-bold text-primary uppercase tracking-wider">
+                Preflight Deliverability Test
               </h2>
             </div>
-            <p className="text-xs text-slate-400">
-              Verify how your template merges live spreadsheet variables by sending a live test to your own inbox before dispatching to prospects.
+            <p className="text-xs text-secondary">
+              Verify dynamic variable chips and spam radar score by dispatching a live test message to your inbox before contacting prospects.
             </p>
 
             <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
@@ -389,15 +384,15 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
                 value={testEmail}
                 onChange={(e) => setTestEmail(e.target.value)}
                 placeholder="your.email@example.com"
-                className="flex-1 px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                className="flex-1 px-3.5 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary focus:outline-none focus:border-indigo-500"
               />
               <button
                 type="button"
                 onClick={handleSendTestEmail}
                 disabled={isSendingTest || !testEmail}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-subtle hover:bg-surface text-primary border border-subtle rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors spring-press disabled:opacity-50 cursor-pointer"
               >
-                {isSendingTest ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-400" /> : <Mail className="w-3.5 h-3.5" />}
+                {isSendingTest ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-500" /> : <Mail className="w-3.5 h-3.5" />}
                 <span>Send Verification Test</span>
               </button>
             </div>
@@ -405,13 +400,13 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
             {testResult && (
               <div className={`p-3 rounded-lg border text-xs flex items-center gap-2 ${
                 testResult.success 
-                  ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300' 
-                  : 'bg-rose-950/40 border-rose-500/30 text-rose-300'
+                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400' 
+                  : 'bg-rose-500/10 border-rose-500/25 text-rose-600 dark:text-rose-400'
               }`}>
                 {testResult.success ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                 ) : (
-                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
                 )}
                 <span>{testResult.message}</span>
               </div>
@@ -422,24 +417,24 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
         {/* Right 1 Column: Health Checklist & Launch CTA */}
         <div className="space-y-6">
           {/* Preflight Health Checklist */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              Preflight Health Checks
+          <div className="bg-surface border border-subtle rounded-xl p-5 shadow-xs space-y-4">
+            <h3 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              Preflight Safeguards
             </h3>
 
             <div className="space-y-3 text-xs">
               {/* Check 1: Outbound Sending Gateway */}
               {((senderProvider === 'custom_domain') || (senderProvider === 'default' && authStatus?.active_provider === 'custom_domain')) ? (
-                <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-canvas border border-subtle">
                   {authStatus?.custom_domain?.configured ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                   ) : (
-                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                   )}
                   <div className="min-w-0">
-                    <div className="font-semibold text-slate-200">Custom Domain Gateway</div>
-                    <div className="text-[11px] text-slate-400 truncate">
+                    <div className="font-semibold text-primary">Custom Domain Gateway</div>
+                    <div className="text-[11px] text-secondary truncate">
                       {authStatus?.custom_domain?.configured
                         ? `${authStatus.custom_domain.host}:${authStatus.custom_domain.port} (${authStatus.custom_domain.sender_email || authStatus.custom_domain.user})`
                         : 'Unconfigured — Configure in Settings'}
@@ -447,15 +442,15 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-canvas border border-subtle">
                   {authStatus?.account?.email ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                   ) : (
-                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                   )}
                   <div className="min-w-0">
-                    <div className="font-semibold text-slate-200">Gmail Gateway</div>
-                    <div className="text-[11px] text-slate-400 truncate">
+                    <div className="font-semibold text-primary">Gmail Gateway</div>
+                    <div className="text-[11px] text-secondary truncate">
                       {authStatus?.account?.email || 'Not connected — Configure in Settings'}
                     </div>
                   </div>
@@ -463,26 +458,29 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
               )}
 
               {/* Check 2: Daily Quota Headroom */}
-              <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <div className="font-semibold text-slate-200">Daily Quota Headroom</div>
-                  <div className="text-[11px] text-slate-400">
-                    Safe limit (max 500 emails/day)
+              <div className="flex items-start justify-between gap-2 p-2.5 rounded-lg bg-canvas border border-subtle">
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <div className="font-semibold text-primary">Daily Quota Headroom</div>
+                    <div className="text-[11px] text-secondary">
+                      Reputation preservation (max 500/day)
+                    </div>
                   </div>
                 </div>
+                <DeliverabilityBeacon preset="daily_cap" />
               </div>
 
               {/* Check 3: Lead List Readiness */}
-              <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
+              <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-canvas border border-subtle">
                 {pendingLeads > 0 ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                 ) : (
-                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                 )}
                 <div className="min-w-0">
-                  <div className="font-semibold text-slate-200">Audience Queue</div>
-                  <div className="text-[11px] text-slate-400">
+                  <div className="font-semibold text-primary">Prospect Audience Queue</div>
+                  <div className="text-[11px] text-secondary">
                     {pendingLeads} contacts awaiting dispatch
                   </div>
                 </div>
@@ -491,13 +489,13 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
           </div>
 
           {/* Launch Ignition Button Box */}
-          <div className="bg-gradient-to-b from-indigo-950/30 to-slate-900 border border-indigo-500/30 rounded-xl p-5 shadow-lg space-y-4">
+          <div className="bg-surface border border-indigo-500/30 rounded-xl p-5 shadow-lg space-y-4 hover:-translate-y-0.5 transition-all duration-200">
             <div>
-              <div className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
                 Ready to Dispatch
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">
-                Queue state machine will process records atomically with zero duplicate sends.
+              <p className="text-[11px] text-secondary mt-1">
+                Queue state machine will dispatch records atomically with randomized jitter and zero duplicate sends.
               </p>
             </div>
 
@@ -505,12 +503,12 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
               type="button"
               onClick={handleLaunchCampaign}
               disabled={isLaunching || pendingLeads === 0}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all spring-press cursor-pointer"
             >
               {isLaunching ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                  <span>Igniting Engine...</span>
+                  <span>Igniting Dispatch...</span>
                 </>
               ) : (
                 <>
@@ -523,7 +521,7 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
             <button
               type="button"
               onClick={() => navigate(`#/campaigns/${campaignId}`)}
-              className="w-full py-2 text-center text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors"
+              className="w-full py-2 text-center text-xs font-semibold text-muted hover:text-primary transition-colors cursor-pointer"
             >
               Cancel & Return to Cockpit
             </button>
