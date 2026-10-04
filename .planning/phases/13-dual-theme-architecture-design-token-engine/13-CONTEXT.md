@@ -16,7 +16,7 @@ Phase 13 establishes the foundational CSS variable design token system and dual-
 ## Implementation Decisions
 
 ### 1. Palette & Neutral Tone
-- **D-01 (Neutral Zinc Foundation):** The light theme uses a crisp, balanced neutral palette:
+- **D-01:** Neutral Zinc Foundation — The light theme uses a crisp, balanced neutral palette:
   - Light Canvas: `#fafafa`
   - Light Surface / Cards: `#ffffff`
   - Light Elevated Panels: `#f4f4f5`
@@ -26,19 +26,19 @@ Phase 13 establishes the foundational CSS variable design token system and dual-
   — **Reversibility:** costly — Foundation tokens are referenced by every component across the application.
 
 ### 2. Switcher Placement & Form Factor
-- **D-02 (Top-Right Header Bar Toggle):** Position a tactile Sun/Moon toggle button in the top navigation bar, right beside the server/account connection status pill, ensuring instant access from any screen without digging into settings.
+- **D-02:** Top-Right Header Bar Toggle — Position a tactile Sun/Moon toggle button in the top navigation bar, right beside the server/account connection status pill, ensuring instant access from any screen without digging into settings.
   — **Reversibility:** reversible — Component placement in header shell.
 
 ### 3. Transition Dynamics & Fluid Motion
-- **D-03 (Apple Fluid Spring & 150ms Micro-Fade):** Smooth 150ms transition on color/background-color properties with a spring-rotated Sun/Moon icon toggle adhering to `frontend-skill` (no layout stutter, no abrupt jarring flashes).
+- **D-03:** Apple Fluid Spring & 150ms Micro-Fade — Smooth 150ms transition on color/background-color properties with a spring-rotated Sun/Moon icon toggle adhering to `frontend-skill` (no layout stutter, no abrupt jarring flashes).
   — **Reversibility:** reversible — Controlled via CSS transition rules.
 
 ### 4. Brand Accent Anchor
-- **D-04 (Indigo / Violet Anchor):** Retain brand accent indigo/violet (`#6366f1` in dark mode, `#4f46e5` in light mode) for active pills, CTA buttons, focus rings, and metric gauges to guarantee >4.5:1 contrast against both dark and light surfaces.
+- **D-04:** Indigo / Violet Anchor — Retain brand accent indigo/violet (`#6366f1` in dark mode, `#4f46e5` in light mode) for active pills, CTA buttons, focus rings, and metric gauges to guarantee >4.5:1 contrast against both dark and light surfaces.
   — **Reversibility:** reversible — Tokenized as `--accent-primary` and `--accent-primary-hover`.
 
 ### 5. Flash-Free Pre-Render Execution
-- **D-05 (FOUT Prevention Script):** Inject a lightweight synchronous pre-render `<script>` inside `client/index.html` head that reads `localStorage.getItem('strokecrm_theme')` (or `window.matchMedia('(prefers-color-scheme: light)')`) and immediately sets `data-theme` on `document.documentElement` before Vite mounts React.
+- **D-05:** FOUT Prevention Script — Inject a lightweight synchronous pre-render `<script>` inside `client/index.html` head that reads `localStorage.getItem('strokecrm_theme')` (or `window.matchMedia('(prefers-color-scheme: light)')`) and immediately sets `data-theme` on `document.documentElement` before Vite mounts React.
   — **Reversibility:** reversible — Single script injection in `index.html`.
 
 </decisions>

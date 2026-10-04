@@ -49,19 +49,23 @@ See: `.planning/milestones/v2.0-ROADMAP.md`
 ## Phase Details
 
 ### Phase 13: Dual-Theme Architecture & Design Token Engine
+
 **Goal**: Implement persistent Dark and Light modes using centralized CSS variable tokens, FOUT-free loading, and WCAG AA contrast.  
 **Depends on**: Phase 12  
 **Requirements**: [THEME-01, THEME-02, THEME-03, THEME-04]  
 **Success Criteria**:
+
 1. User clicks the Sun/Moon toggle in the header, and the UI transitions instantly between Dark and Light mode without layout shift or page refresh.
 2. Page reload retains selected theme preference with zero unstyled flash (FOUT).
 3. All typography, surface cards, badges, and controls satisfy WCAG AA contrast (>4.5:1 for body copy) across both themes.
 
 ### Phase 14: System-Wide UI Modernization & Professional UX Copywriting
+
 **Goal**: Overhaul all application views, modernize cards and tables, elevate typography and micro-interactions, enforce authoritative B2B SaaS terminology, and provide a curated cold outreach starter presets gallery.  
 **Depends on**: Phase 13  
 **Requirements**: [COPY-01, COPY-02, COPY-03, COPY-04, COPY-05]  
 **Success Criteria**:
+
 1. All navigation items, modals, toasts, and status badges use professional, action-oriented B2B cold outreach terminology.
 2. Contextual tooltips explain deliverability concepts (jitter, RFC threading, daily limits, auto-disarm) on hover.
 3. User can browse the Starter Presets Gallery and preview high-converting cold outreach sequences (Problem Pitch, Case Study Teaser, 3-Day Bump, Breakup Closing).
@@ -69,10 +73,12 @@ See: `.planning/milestones/v2.0-ROADMAP.md`
 5. Dashboard cards, data tables, and preflight controls incorporate elevated spacing, subtle borders, and fluid spring physics compliant with `frontend-skill`.
 
 ### Phase 15: Free AI Inbound Reply Sentiment Engine & Cockpit Intelligence
+
 **Goal**: Build an asynchronous reply sentiment classifier using Google Gemini 1.5 Flash free tier with automatic local regex heuristic fallback, displaying actionable sentiment badges, quick-filters, and manual overrides in the Campaign Cockpit.  
 **Depends on**: Phase 14  
 **Requirements**: [SENT-01, SENT-02, SENT-03, SENT-04, SENT-05, SENT-06, SENT-07]  
 **Success Criteria**:
+
 1. User can configure and verify a free Google Gemini 1.5 Flash API key in Settings with real-time handshake check.
 2. Detected inbound lead replies are asynchronously classified into `Interested`, `Question`, `Follow Up`, `Not Interested`, or `Unsubscribe` with a 1-sentence summary without blocking sequence disarm.
 3. In the absence of an API key or during network downtime, the local rule-based heuristic classifier automatically categorizes replies offline.
