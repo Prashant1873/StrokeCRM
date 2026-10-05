@@ -757,37 +757,37 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
   const pickerAllShown = pickerShown.length > 0 && pickerShown.every(row => rowPicker.selected.has(row.id));
 
   const rowPickerModal = rowPicker && (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[85vh]">
-        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-surface border border-subtle rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[85vh]">
+        <div className="flex items-center justify-between border-b border-subtle px-5 py-4">
           <div>
-            <h3 className="text-sm font-bold text-white">Choose rows — {rowPicker.databaseName}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Checked rows are the ones this campaign will email.</p>
+            <h3 className="text-sm font-bold text-primary">Choose rows — {rowPicker.databaseName}</h3>
+            <p className="text-[11px] text-secondary mt-0.5">Checked rows are the ones this campaign will email.</p>
           </div>
-          <button type="button" onClick={() => setRowPicker(null)} className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800">
+          <button type="button" onClick={() => setRowPicker(null)} className="text-secondary hover:text-primary p-1 rounded-md hover:bg-subtle transition-colors cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="px-5 py-3 border-b border-slate-800 flex items-center gap-2">
+        <div className="px-5 py-3 border-b border-subtle flex items-center gap-2">
           <input
             type="text"
             value={rowPicker.query}
             onChange={(e) => setRowPicker(prev => prev ? { ...prev, query: e.target.value } : prev)}
             placeholder="Search email, name, or company"
-            className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+            className="flex-1 px-3 py-1.5 bg-canvas border border-subtle rounded-lg text-xs text-primary placeholder:text-muted focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
           />
-          <span className="text-[11px] text-slate-400 shrink-0">{rowPicker.selected.size} of {rowPicker.records.length}</span>
+          <span className="text-[11px] text-secondary shrink-0">{rowPicker.selected.size} of {rowPicker.records.length}</span>
         </div>
 
         <div className="overflow-y-auto flex-1">
           {rowPicker.loading ? (
-            <p className="text-xs text-slate-400 text-center py-10">Loading rows...</p>
+            <p className="text-xs text-secondary text-center py-10">Loading rows...</p>
           ) : rowPicker.records.length === 0 ? (
-            <p className="text-xs text-slate-400 text-center py-10">This database has no rows.</p>
+            <p className="text-xs text-secondary text-center py-10">This database has no rows.</p>
           ) : (
             <table className="w-full text-left text-xs">
-              <thead className="sticky top-0 bg-slate-900 text-slate-500">
+              <thead className="sticky top-0 bg-surface border-b border-subtle text-secondary">
                 <tr>
                   <th className="px-4 py-2 w-8">
                     <input
@@ -803,7 +803,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
               </thead>
               <tbody>
                 {pickerShown.map(row => (
-                  <tr key={row.id} className="border-t border-slate-800/80 text-slate-300">
+                  <tr key={row.id} className="border-t border-subtle text-primary hover:bg-subtle/50 transition-colors">
                     <td className="px-4 py-1.5">
                       <input
                         type="checkbox"
@@ -821,15 +821,15 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-slate-800 px-5 py-3">
-          <span className="text-[11px] text-rose-400">{rowPicker.error || (rowPicker.applyNow ? '' : 'Applied when you attach this database.')}</span>
+        <div className="flex items-center justify-between gap-3 border-t border-subtle px-5 py-3">
+          <span className="text-[11px] text-rose-500 dark:text-rose-400">{rowPicker.error || (rowPicker.applyNow ? '' : 'Applied when you attach this database.')}</span>
           <div className="flex items-center gap-2 shrink-0">
-            <button type="button" onClick={() => setRowPicker(null)} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white">Cancel</button>
+            <button type="button" onClick={() => setRowPicker(null)} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-secondary hover:text-primary hover:bg-subtle transition-colors cursor-pointer">Cancel</button>
             <button
               type="button"
               onClick={confirmRowPicker}
               disabled={rowPicker.loading || rowPicker.saving || rowPicker.selected.size === 0}
-              className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold disabled:opacity-50"
+              className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer"
             >
               {rowPicker.saving ? 'Saving...' : `Use ${rowPicker.selected.size} rows`}
             </button>
@@ -987,8 +987,8 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
   // Safe early returns AFTER all hooks are evaluated
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto py-16 text-center text-slate-400">
-        <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-400" />
+      <div className="max-w-7xl mx-auto py-16 text-center text-secondary">
+        <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-500" />
         <p className="text-xs">Loading campaigns...</p>
       </div>
     );
@@ -997,19 +997,19 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
   // ── CAMPAIGNS DIRECTORY (hub page at #/campaigns) ──────────────────────
   if (currentRoute?.name === 'campaigns') {
     const statusColor = (s) => {
-      if (s === 'RUNNING') return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
-      if (s === 'COMPLETED') return 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40';
-      if (s === 'PAUSED') return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
-      return 'bg-slate-800 text-slate-400 border-slate-700';
+      if (s === 'RUNNING') return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
+      if (s === 'COMPLETED') return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/40';
+      if (s === 'PAUSED') return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30';
+      return 'bg-subtle text-secondary border-subtle';
     };
 
     return (
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6 text-left">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-subtle pb-5">
           <div>
             <h1 className="text-2xl font-bold text-primary tracking-tight flex items-center gap-2.5">
-              <Send className="w-6 h-6 text-indigo-400" />
+              <Send className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
               Outreach Campaigns
             </h1>
             <p className="text-xs text-muted mt-1">
@@ -1020,7 +1020,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 hover:-translate-y-0.5 active:translate-y-0"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             New Outreach Campaign
@@ -1030,12 +1030,12 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
         {/* Feedback */}
         {feedback && (
           <div className={`p-4 rounded-xl border flex items-center justify-between text-xs ${
-            feedback.type === 'success' ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
-            : feedback.type === 'info' ? 'bg-indigo-950/40 border-indigo-500/30 text-indigo-300'
-            : 'bg-rose-950/40 border-rose-500/30 text-rose-300'
+            feedback.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300'
+            : feedback.type === 'info' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-300'
+            : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
           }`}>
             <span>{feedback.message}</span>
-            <button type="button" onClick={() => setFeedback(null)} className="text-muted hover:text-primary ml-4">Dismiss</button>
+            <button type="button" onClick={() => setFeedback(null)} className="text-muted hover:text-primary ml-4 cursor-pointer">Dismiss</button>
           </div>
         )}
 
@@ -1090,17 +1090,17 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   {/* Triad Binding */}
                   <div className="space-y-1.5 text-[11px]">
                     <div className="flex items-center gap-1.5">
-                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.database_id ? 'bg-indigo-400' : 'bg-slate-600'}`} />
+                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.database_id ? 'bg-indigo-500' : 'bg-muted'}`} />
                       <span className="text-muted">Audience:</span>
-                      <span className={`truncate font-medium ${c.database_id ? 'text-primary' : 'text-amber-400'}`}>
+                      <span className={`truncate font-medium ${c.database_id ? 'text-primary' : 'text-amber-500'}`}>
                         {c.database_name || 'Not attached'}
                       </span>
-                      {c.database_id && <Lock className="w-2.5 h-2.5 text-indigo-400 ml-auto shrink-0" />}
+                      {c.database_id && <Lock className="w-2.5 h-2.5 text-indigo-500 ml-auto shrink-0" />}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.template_id ? 'bg-violet-400' : 'bg-slate-600'}`} />
-                      <span className="text-slate-500">Template:</span>
-                      <span className={`truncate font-medium ${c.template_id ? 'text-slate-200' : 'text-amber-400'}`}>
+                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.template_id ? 'bg-violet-500' : 'bg-muted'}`} />
+                      <span className="text-muted">Template:</span>
+                      <span className={`truncate font-medium ${c.template_id ? 'text-primary' : 'text-amber-500'}`}>
                         {c.template_name || 'Not attached'}
                       </span>
                     </div>
@@ -1109,20 +1109,20 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   {/* Progress */}
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-[10px]">
-                      <span className="text-slate-500">{sent} sent · {failed} failed · {pending} pending</span>
-                      <span className="text-indigo-400 font-mono font-bold">{progress}%</span>
+                      <span className="text-secondary">{sent} sent · {failed} failed · {pending} pending</span>
+                      <span className="text-indigo-600 dark:text-indigo-400 font-mono font-bold">{progress}%</span>
                     </div>
-                    <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                    <div className="w-full bg-subtle h-1.5 rounded-full overflow-hidden border border-subtle">
                       <div
                         className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full transition-all duration-500"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
-                    <p className="text-[10px] text-slate-600">{total} contacts bound</p>
+                    <p className="text-[10px] text-muted">{total} contacts bound</p>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                  <div className="flex items-center justify-between pt-2 border-t border-subtle">
                     <button
                       type="button"
                       disabled={actionLoading}
@@ -1131,7 +1131,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                           handleDeleteCampaignById(c.id, c.name);
                         }
                       }}
-                      className="text-[11px] text-slate-600 hover:text-rose-400 flex items-center gap-1 transition-colors disabled:opacity-40"
+                      className="text-[11px] text-muted hover:text-rose-500 flex items-center gap-1 transition-colors disabled:opacity-40 cursor-pointer"
                     >
                       <Trash2 className="w-3 h-3" />
                       Delete
@@ -1140,16 +1140,16 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                       <button
                         type="button"
                         onClick={() => openDuplicateModal(c)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-medium transition-all border border-slate-700 cursor-pointer"
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-surface hover:bg-subtle text-secondary hover:text-primary text-[11px] font-medium transition-all border border-subtle cursor-pointer"
                         title="Duplicate campaign for a new database"
                       >
-                        <Copy className="w-3 h-3 text-indigo-400" />
+                        <Copy className="w-3 h-3 text-indigo-500" />
                         Duplicate
                       </button>
                       <button
                         type="button"
                         onClick={() => navigate && navigate(`#/campaigns/${c.id}`)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white text-[11px] font-semibold transition-all border border-indigo-500/20 hover:border-transparent cursor-pointer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-600 text-indigo-600 hover:text-white dark:text-indigo-300 dark:hover:text-white text-[11px] font-semibold transition-all border border-indigo-500/30 hover:border-transparent cursor-pointer"
                       >
                         Open Cockpit
                         <ArrowRight className="w-3 h-3" />
@@ -1165,19 +1165,19 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
         {/* Create Campaign Modal */}
         {showCreateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="bg-surface border border-subtle rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-5">
+              <div className="flex items-center justify-between border-b border-subtle pb-3">
                 <div className="flex items-center gap-2">
-                  <Send className="w-5 h-5 text-indigo-400" />
-                  <h3 className="text-sm font-bold text-white">Create Campaign (1:1 Triad)</h3>
+                  <Send className="w-5 h-5 text-indigo-500" />
+                  <h3 className="text-sm font-bold text-primary">Create Campaign (1:1 Triad)</h3>
                 </div>
-                <button type="button" onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="text-muted hover:text-primary p-1 rounded-md hover:bg-subtle transition-colors">
                   <X className="w-4 h-4" />
                 </button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-medium text-slate-300 block mb-1">1. Campaign Name *</label>
+                  <label className="text-xs font-medium text-primary block mb-1">1. Campaign Name *</label>
                   <input
                     type="text"
                     value={newCampaignName}
@@ -1185,16 +1185,16 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                     onKeyDown={(e) => e.key === 'Enter' && handleCreateCampaign()}
                     placeholder="e.g., Q4 Enterprise Founders"
                     autoFocus
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary placeholder-muted focus:outline-none focus:border-indigo-500 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-300 block mb-1">2. Attach Lead Audience (1:1 Exclusive)</label>
+                  <label className="text-xs font-medium text-primary block mb-1">2. Attach Lead Audience (1:1 Exclusive)</label>
                   <div className="flex items-center gap-2">
                     <select
                       value={newCampaignDbId}
                       onChange={(e) => setNewCampaignDbId(e.target.value)}
-                      className="flex-1 min-w-0 px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                      className="flex-1 min-w-0 px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary focus:outline-none focus:border-indigo-500 transition-colors"
                     >
                       <option value="">-- Attach Later / Pick Available Audience --</option>
                       {databases.map(d => (
@@ -1205,24 +1205,24 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                       type="button"
                       disabled={!newCampaignDbId}
                       onClick={() => openRowPicker(newCampaignDbId, false)}
-                      className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold disabled:opacity-40"
+                      className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-surface hover:bg-subtle text-secondary hover:text-primary border border-subtle text-xs font-semibold disabled:opacity-40 transition-colors"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       Preview
                     </button>
                   </div>
-                  <p className="text-[10px] text-slate-500 mt-1">
+                  <p className="text-[10px] text-muted mt-1">
                     {newCampaignDbId && stagedRows[Number(newCampaignDbId)]
                       ? `${stagedRows[Number(newCampaignDbId)].length} rows selected. A list can be used again.`
                       : 'A list can be used again. This campaign starts from the first row, not from the last send.'}
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-300 block mb-1">3. Attach Template</label>
+                  <label className="text-xs font-medium text-primary block mb-1">3. Attach Template</label>
                   <select
                     value={newCampaignTmplId}
                     onChange={(e) => setNewCampaignTmplId(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary focus:outline-none focus:border-indigo-500 transition-colors"
                   >
                     <option value="">-- Default Introduction Template --</option>
                     {templates.map(t => (
@@ -1231,13 +1231,13 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   </select>
                 </div>
               </div>
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white">Cancel</button>
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-subtle">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-muted hover:text-primary transition-colors">Cancel</button>
                 <button
                   type="button"
                   onClick={handleCreateCampaign}
                   disabled={isCreating || !newCampaignName.trim()}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 disabled:opacity-50 transition-colors"
                 >
                   {isCreating ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Creating...</> : <><CheckCircle2 className="w-3.5 h-3.5" />Create & Open Cockpit</>}
                 </button>
@@ -1277,53 +1277,53 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6 text-left">
       {/* Cockpit Header with back navigation */}
-      <div className="border-b border-slate-800 pb-5 space-y-3">
+      <div className="border-b border-subtle pb-5 space-y-3">
         <button
           type="button"
           onClick={() => navigate && navigate('#/campaigns')}
-          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors group"
+          className="flex items-center gap-1.5 text-xs text-muted hover:text-primary transition-colors group cursor-pointer"
         >
           <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
           All Outreach Campaigns
         </button>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold text-primary tracking-tight flex items-center gap-2.5">
               {selectedCampaign?.name || 'Campaign Cockpit'}
               <span className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full border ${
                 queueStatus?.isRunning
-                  ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30'
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
                   : activeStatus === 'COMPLETED'
-                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
                   : queueStatus?.isPaused || activeStatus === 'PAUSED'
-                  ? 'bg-amber-950/60 text-amber-400 border-amber-500/30'
+                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
                   : queueStatus?.isWaitingSchedule
-                  ? 'bg-amber-950/60 text-amber-300 border-amber-500/30'
-                  : 'bg-slate-800 text-slate-300 border-slate-700'
+                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                  : 'bg-subtle text-secondary border-subtle'
               }`}>
                 {queueStatus?.isRunning ? 'Live' : activeStatus === 'COMPLETED' ? '✓ Complete' : queueStatus?.isWaitingSchedule ? 'Scheduled' : activeStatus}
               </span>
             </h1>
-            <p className="text-xs text-slate-400 mt-1">1:1:1 Triad — 1 Campaign · 1 Lead Audience · 1 Template</p>
+            <p className="text-xs text-muted mt-1">1:1:1 Triad — 1 Campaign · 1 Lead Audience · 1 Template</p>
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <button
               type="button"
               onClick={() => openDuplicateModal(selectedCampaign)}
               disabled={!selectedCampaign}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-secondary hover:text-primary bg-surface hover:bg-subtle border border-subtle transition-colors disabled:opacity-50 cursor-pointer"
               title="Duplicate this campaign for a new database"
             >
-              <Copy className="w-3.5 h-3.5 text-indigo-400" />
+              <Copy className="w-3.5 h-3.5 text-indigo-500" />
               Duplicate Campaign
             </button>
             <button
               type="button"
               onClick={() => setShowTestModal(true)}
               disabled={!selectedCampaign}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-secondary hover:text-primary bg-surface hover:bg-subtle border border-subtle transition-colors disabled:opacity-50 cursor-pointer"
             >
-              <Mail className="w-3.5 h-3.5 text-indigo-400" />
+              <Mail className="w-3.5 h-3.5 text-indigo-500" />
               Send Test Email
             </button>
           </div>
@@ -1334,25 +1334,25 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
       {feedback && (
         <div className={`p-4 rounded-xl border flex items-center justify-between text-xs transition-all ${
           feedback.type === 'success'
-            ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
             : feedback.type === 'info'
-            ? 'bg-indigo-950/40 border-indigo-500/30 text-indigo-300'
-            : 'bg-rose-950/40 border-rose-500/30 text-rose-300'
+            ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-300'
+            : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'
         }`}>
           <div className="flex items-center gap-2.5">
             {feedback.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
             ) : feedback.type === 'info' ? (
-              <Sliders className="w-4 h-4 shrink-0 text-indigo-400" />
+              <Sliders className="w-4 h-4 shrink-0 text-indigo-500" />
             ) : (
-              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
             )}
             <span className="font-medium">{feedback.message}</span>
           </div>
           <button 
             type="button" 
             onClick={() => setFeedback(null)} 
-            className="text-slate-400 hover:text-white text-xs underline ml-4 shrink-0"
+            className="text-muted hover:text-primary text-xs underline ml-4 shrink-0"
           >
             Dismiss
           </button>
@@ -1361,18 +1361,18 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
 
       {/* Empty State if no campaigns */}
       {(!selectedCampaign || campaigns.length === 0) ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center max-w-2xl mx-auto space-y-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto">
+        <div className="bg-surface border border-subtle rounded-2xl p-12 text-center max-w-2xl mx-auto space-y-4">
+          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 flex items-center justify-center mx-auto">
             <Send className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold text-white">No Outreach Campaigns Created Yet</h3>
-          <p className="text-xs text-slate-400 max-w-md mx-auto">
+          <h3 className="text-base font-bold text-primary">No Outreach Campaigns Created Yet</h3>
+          <p className="text-xs text-secondary max-w-md mx-auto">
             StrokeCRM organizes cold outreach through a clean 1:1:1 Triad: 1 Campaign binds exactly 1 isolated Lead Audience and 1 Template.
           </p>
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all hover:-translate-y-0.5"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all hover:-translate-y-0.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Create Your First Campaign
@@ -1383,22 +1383,22 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
           {/* THE 1:1:1 TRIAD ARCHITECTURE COCKPIT */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* PILLAR 1: ATTACHED DATABASE */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden">
+            <div className="bg-surface border border-subtle rounded-xl p-4 flex flex-col justify-between relative overflow-hidden">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500">
                       <Database className="w-3.5 h-3.5" />
                     </div>
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">1. Attached Lead Audience</span>
+                    <span className="text-xs font-bold text-primary uppercase tracking-wider">1. Attached Lead Audience</span>
                   </div>
                   {selectedCampaign.database_id ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
                       <Lock className="w-2.5 h-2.5" />
                       1:1 Dedicated
                     </span>
                   ) : (
-                    <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
                       Unattached
                     </span>
                   )}
@@ -1407,8 +1407,8 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                 {selectedCampaign.database_id ? (
                   <div className="space-y-2">
                     <div>
-                      <h4 className="text-sm font-semibold text-white">{selectedCampaign.database_name}</h4>
-                      <p className="text-[11px] text-slate-400 font-mono truncate">
+                      <h4 className="text-sm font-semibold text-primary">{selectedCampaign.database_name}</h4>
+                      <p className="text-[11px] text-secondary font-mono truncate">
                         {selectedCampaign.database_filename} ({selectedCampaign.total_contacts === selectedCampaign.database_row_count
                           ? `${selectedCampaign.total_contacts} contacts`
                           : `${selectedCampaign.total_contacts} of ${selectedCampaign.database_row_count} rows`})
@@ -1417,12 +1417,12 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
 
                     {/* Header schema pills */}
                     <div>
-                      <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">
+                      <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">
                         Isolated Dynamic Headers:
                       </span>
                       <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
                         {Array.isArray(selectedCampaign.database_headers) && selectedCampaign.database_headers.slice(0, 5).map((h, i) => (
-                          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-slate-950 text-indigo-300 border border-slate-800">
+                          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-canvas text-indigo-600 dark:text-indigo-400 border border-subtle">
                             {`{{${h}}}`}
                           </span>
                         ))}
@@ -1431,7 +1431,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   </div>
                 ) : (
                   <div className="space-y-3 pt-1">
-                    <p className="text-xs text-amber-300/80">
+                    <p className="text-xs text-amber-600 dark:text-amber-300">
                       This campaign requires an isolated lead audience file to dispatch emails.
                     </p>
                     <div className="flex flex-col gap-2">
@@ -1439,7 +1439,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                         <select
                           value={selectedAttachDbId}
                           onChange={(e) => setSelectedAttachDbId(e.target.value)}
-                          className="flex-1 min-w-0 px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                          className="flex-1 min-w-0 px-2.5 py-1.5 bg-canvas border border-subtle rounded-lg text-xs text-primary focus:outline-none focus:border-indigo-500"
                         >
                           <option value="">-- Select Available Lead Audience --</option>
                           {availableDatabases.map(d => (
@@ -1452,14 +1452,14 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                           type="button"
                           disabled={!selectedAttachDbId}
                           onClick={() => openRowPicker(selectedAttachDbId, false)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold disabled:opacity-40"
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-surface hover:bg-subtle text-secondary hover:text-primary border border-subtle text-xs font-semibold disabled:opacity-40 transition-colors"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           Preview
                         </button>
                       </div>
                       {selectedAttachDbId && stagedRows[Number(selectedAttachDbId)] && (
-                        <p className="text-[10px] text-indigo-300">{stagedRows[Number(selectedAttachDbId)].length} rows selected. They apply when you attach.</p>
+                        <p className="text-[10px] text-indigo-600 dark:text-indigo-300">{stagedRows[Number(selectedAttachDbId)].length} rows selected. They apply when you attach.</p>
                       )}
 
                       <div className="flex items-center gap-2">
@@ -1467,14 +1467,14 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                           type="button"
                           onClick={handleAttachDatabase}
                           disabled={!selectedAttachDbId || isAttachingDb}
-                          className="flex-1 py-1 px-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
+                          className="flex-1 py-1 px-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
                         >
                           {isAttachingDb ? 'Attaching...' : 'Attach Lead Audience'}
                         </button>
                         <button
                           type="button"
                           onClick={() => navigate ? navigate('#/databases') : null}
-                          className="py-1 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors"
+                          className="py-1 px-2.5 bg-surface hover:bg-subtle text-secondary hover:text-primary border border-subtle text-xs rounded-lg transition-colors cursor-pointer"
                           title="Upload a new lead audience"
                         >
                           + Upload
@@ -1486,20 +1486,20 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
               </div>
 
               {selectedCampaign.database_id && (
-                <div className="pt-3 border-t border-slate-800/80 mt-3 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-500">Exclusively bound</span>
+                <div className="pt-3 border-t border-subtle mt-3 flex items-center justify-between">
+                  <span className="text-[10px] text-muted">Exclusively bound</span>
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => openRowPicker(selectedCampaign.database_id, true)}
-                      className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                      className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Eye className="w-3 h-3" /> Choose rows
                     </button>
                     <button
                       type="button"
                       onClick={() => navigate ? navigate(`#/databases/${selectedCampaign.database_id}`) : null}
-                      className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                      className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       Inspect Records <ExternalLink className="w-3 h-3" />
                     </button>
@@ -1509,21 +1509,21 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
             </div>
 
             {/* PILLAR 2: ATTACHED TEMPLATE */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+            <div className="bg-surface border border-subtle rounded-xl p-4 flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+                    <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-500">
                       <FileText className="w-3.5 h-3.5" />
                     </div>
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">2. Attached Template</span>
+                    <span className="text-xs font-bold text-primary uppercase tracking-wider">2. Attached Template</span>
                   </div>
                   {selectedCampaign.template_id ? (
-                    <span className="text-[10px] font-semibold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-semibold text-secondary bg-subtle px-2 py-0.5 rounded-full border border-subtle">
                       {selectedCampaign.is_ab_test ? 'A/B Split' : 'Single'}
                     </span>
                   ) : (
-                    <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
                       Unattached
                     </span>
                   )}
@@ -1532,30 +1532,30 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                 {selectedCampaign.template_id ? (
                   <div className="space-y-2">
                     <div>
-                      <h4 className="text-sm font-semibold text-white truncate">
+                      <h4 className="text-sm font-semibold text-primary truncate">
                         {selectedCampaign.template_name || 'Campaign Template'}
                       </h4>
-                      <p className="text-[11px] text-slate-400 font-mono truncate">
+                      <p className="text-[11px] text-secondary font-mono truncate">
                         Subject: "{selectedCampaign.subject_a || '(No subject set)'}"
                       </p>
                     </div>
-                    <div className="bg-slate-950/80 border border-slate-800/80 rounded-lg p-2 max-h-20 overflow-y-auto">
+                    <div className="bg-canvas border border-subtle rounded-lg p-2 max-h-20 overflow-y-auto">
                       <div
-                        className="text-[11px] text-slate-300 whitespace-pre-wrap line-clamp-3 font-sans [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+                        className="text-[11px] text-secondary whitespace-pre-wrap line-clamp-3 font-sans [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
                         dangerouslySetInnerHTML={{ __html: selectedCampaign.body_a || 'No email body text configured yet.' }}
                       />
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-3 pt-1">
-                    <p className="text-xs text-amber-300/80">
+                    <p className="text-xs text-amber-600 dark:text-amber-300">
                       Attach an email template to define the message sent to contacts.
                     </p>
                     <div className="flex flex-col gap-2">
                       <select
                         value={selectedAttachTmplId}
                         onChange={(e) => setSelectedAttachTmplId(e.target.value)}
-                        className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-violet-500"
+                        className="w-full px-2.5 py-1.5 bg-canvas border border-subtle rounded-lg text-xs text-primary focus:outline-none focus:border-violet-500"
                       >
                         <option value="">-- Select Template --</option>
                         {templates.map(t => (
@@ -1567,14 +1567,14 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                           type="button"
                           onClick={handleAttachTemplate}
                           disabled={!selectedAttachTmplId || isAttachingTmpl}
-                          className="flex-1 py-1 px-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
+                          className="flex-1 py-1 px-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
                         >
                           {isAttachingTmpl ? 'Attaching...' : 'Attach Template'}
                         </button>
                         <button
                           type="button"
                           onClick={() => navigate && navigate('#/templates/new')}
-                          className="py-1 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors"
+                          className="py-1 px-2.5 bg-surface hover:bg-subtle text-secondary hover:text-primary border border-subtle text-xs rounded-lg transition-colors cursor-pointer"
                           title="Create a new template"
                         >
                           + New
@@ -1585,8 +1585,8 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                 )}
               </div>
 
-              <div className="pt-3 border-t border-slate-800/80 mt-3 flex items-center justify-between">
-                <span className="text-[10px] text-slate-500">
+              <div className="pt-3 border-t border-subtle mt-3 flex items-center justify-between">
+                <span className="text-[10px] text-muted">
                   {selectedCampaign.template_id ? 'Spam Check Ready' : 'Template required to dispatch'}
                 </span>
                 <button
@@ -1594,7 +1594,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   onClick={() => navigate && navigate(
                     selectedCampaign.template_id ? `#/templates/${selectedCampaign.template_id}` : '#/templates'
                   )}
-                  className="text-[11px] text-violet-400 hover:text-violet-300 flex items-center gap-1"
+                  className="text-[11px] text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   {selectedCampaign.template_id ? 'Edit Template' : 'Browse Templates'}
                   <ArrowRight className="w-3 h-3" />
@@ -1603,20 +1603,20 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
             </div>
 
             {/* PILLAR 3: DISPATCH ENGINE */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+            <div className="bg-surface border border-subtle rounded-xl p-4 flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
                       <Zap className="w-3.5 h-3.5" />
                     </div>
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">3. Dispatch Status</span>
+                    <span className="text-xs font-bold text-primary uppercase tracking-wider">3. Dispatch Status</span>
                   </div>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                    activeStatus === 'RUNNING' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
-                    activeStatus === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
-                    activeStatus === 'PAUSED' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' :
-                    'bg-slate-800 text-slate-400'
+                    activeStatus === 'RUNNING' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' :
+                    activeStatus === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40' :
+                    activeStatus === 'PAUSED' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30' :
+                    'bg-subtle text-secondary border border-subtle'
                   }`}>
                     {activeStatus}
                   </span>
@@ -1624,34 +1624,34 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <span className="text-[10px] text-slate-500 block">Sent / Total</span>
-                    <span className="font-semibold text-white">{sentCount} / {totalContacts}</span>
+                    <span className="text-[10px] text-muted block">Sent / Total</span>
+                    <span className="font-semibold text-primary">{sentCount} / {totalContacts}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-500 block">Next Pacing</span>
-                    <span className="font-semibold text-emerald-400 font-mono">
+                    <span className="text-[10px] text-muted block">Next Pacing</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
                       {queueStatus?.isRunning ? `${queueStatus.secondsRemaining}s` : 'Idle'}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] pt-0.5">
-                  <span className="text-slate-500">Gateway:</span>
-                  <span className="text-slate-300 font-medium">
+                  <span className="text-muted">Gateway:</span>
+                  <span className="text-secondary font-medium">
                     {selectedCampaign.sender_provider === 'custom_domain' ? 'Custom Domain' : selectedCampaign.sender_provider === 'gmail_app_password' ? 'Gmail' : 'Default Account'}
                   </span>
                 </div>
 
-                <p className="text-[11px] text-slate-400 truncate">
-                  Log: <span className="text-slate-300 font-mono">{queueStatus?.lastLog || 'Awaiting launch command'}</span>
+                <p className="text-[11px] text-muted truncate">
+                  Log: <span className="text-secondary font-mono">{queueStatus?.lastLog || 'Awaiting launch command'}</span>
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-slate-800/80 mt-3 flex items-center justify-between">
+              <div className="pt-3 border-t border-subtle mt-3 flex items-center justify-between">
                 <button
                   type="button"
                   onClick={handleDeleteCampaign}
-                  className="text-[11px] text-slate-500 hover:text-red-400 flex items-center gap-1 transition-colors"
+                  className="text-[11px] text-muted hover:text-rose-500 flex items-center gap-1 transition-colors cursor-pointer"
                   title="Delete campaign and release attached database"
                 >
                   <Trash2 className="w-3 h-3" /> Delete Campaign
@@ -1660,7 +1660,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                 <button
                   type="button"
                   onClick={() => navigate ? navigate(`#/campaigns/${selectedCampaign.id}/preflight`) : null}
-                  className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold"
+                  className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
                 >
                   Preflight Gates <Sliders className="w-3 h-3" />
                 </button>
@@ -1669,45 +1669,45 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
           </div>
 
           {/* CC / BCC SETTINGS */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <div className="bg-surface border border-subtle rounded-xl p-4">
             <div className="flex flex-col sm:flex-row sm:items-end gap-4">
               <div className="flex items-center gap-2 shrink-0 w-32">
-                <Mail className="w-3.5 h-3.5 text-slate-500" />
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">CC / BCC</span>
+                <Mail className="w-3.5 h-3.5 text-muted" />
+                <span className="text-xs font-bold text-primary uppercase tracking-wider">CC / BCC</span>
               </div>
               <div className="flex flex-1 flex-col sm:flex-row gap-3">
                 <div className="flex-1 space-y-1">
-                  <label className="text-[10px] text-slate-500 uppercase tracking-wider">CC (comma-separated)</label>
+                  <label className="text-[10px] text-muted uppercase tracking-wider">CC (comma-separated)</label>
                   <input
                     type="text"
                     value={ccAddresses}
                     onChange={(e) => setCcAddresses(e.target.value)}
                     placeholder="cc@example.com, another@example.com"
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 font-mono transition-colors"
+                    className="w-full px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary placeholder-muted focus:outline-none focus:border-indigo-500 font-mono transition-colors"
                   />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <label className="text-[10px] text-slate-500 uppercase tracking-wider">BCC (comma-separated)</label>
+                  <label className="text-[10px] text-muted uppercase tracking-wider">BCC (comma-separated)</label>
                   <input
                     type="text"
                     value={bccAddresses}
                     onChange={(e) => setBccAddresses(e.target.value)}
                     placeholder="bcc@example.com"
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 font-mono transition-colors"
+                    className="w-full px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary placeholder-muted focus:outline-none focus:border-indigo-500 font-mono transition-colors"
                   />
                 </div>
                 <button
                   type="button"
                   disabled={ccBccSaving}
                   onClick={handleSaveCcBcc}
-                  className="self-end flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition-colors disabled:opacity-50 shrink-0"
+                  className="self-end flex items-center gap-1.5 px-4 py-2 rounded-lg bg-surface hover:bg-subtle text-secondary hover:text-primary text-xs font-semibold border border-subtle transition-colors disabled:opacity-50 shrink-0 cursor-pointer"
                 >
                   {ccBccSaving ? <RefreshCw className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
                   Save
                 </button>
               </div>
             </div>
-            <p className="text-[10px] text-slate-600 mt-2.5 ml-0 sm:ml-36">
+            <p className="text-[10px] text-muted mt-2.5 ml-0 sm:ml-36">
               Every email in this campaign will CC/BCC the addresses above. Leave blank to send to recipient only.
             </p>
           </div>
@@ -1734,31 +1734,31 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
           />
 
           {/* MAIN EXECUTION COCKPIT CARD */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm space-y-6">
+          <div className="bg-surface border border-subtle rounded-xl p-6 shadow-sm space-y-6">
             {/* Controls Bar & Progress Summary */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-800">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-subtle">
               <div className="space-y-1">
-                <h2 className="text-lg font-bold text-white">{selectedCampaign.name}</h2>
-                <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-400">
-                  <span>{totalContacts} Contacts Bound</span>
+                <h2 className="text-lg font-bold text-primary">{selectedCampaign.name}</h2>
+                <div className="flex flex-wrap items-center gap-2.5 text-xs text-muted">
+                  <span className="text-secondary">{totalContacts} Contacts Bound</span>
                   <span>•</span>
-                  <span className="text-emerald-400 font-semibold">{sentCount} Sent</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{sentCount} Sent</span>
                   <span>•</span>
-                  <span className="text-rose-400">{failedCount} Failed</span>
+                  <span className="text-rose-600 dark:text-rose-400">{failedCount} Failed</span>
                   <span>•</span>
-                  <span className="text-amber-400">{pendingCount} Pending</span>
+                  <span className="text-amber-600 dark:text-amber-400">{pendingCount} Pending</span>
                   {queueStatus?.stepStats && (queueStatus.stepStats.step2_sent > 0 || queueStatus.stepStats.step2_scheduled > 0) && (
                     <>
                       <span>•</span>
-                      <span className="text-indigo-400 font-mono">Step 1: {queueStatus.stepStats.step1_sent}</span>
+                      <span className="text-indigo-600 dark:text-indigo-400 font-mono">Step 1: {queueStatus.stepStats.step1_sent}</span>
                       <span>•</span>
-                      <span className="text-indigo-400 font-mono">
+                      <span className="text-indigo-600 dark:text-indigo-400 font-mono">
                         Step 2: {queueStatus.stepStats.step2_sent} sent {queueStatus.stepStats.step2_scheduled > 0 ? `(${queueStatus.stepStats.step2_scheduled} scheduled)` : ''}
                       </span>
                       {(queueStatus.stepStats.step3_sent > 0 || queueStatus.stepStats.step3_scheduled > 0) && (
                         <>
                           <span>•</span>
-                          <span className="text-indigo-400 font-mono">
+                          <span className="text-indigo-600 dark:text-indigo-400 font-mono">
                             Step 3: {queueStatus.stepStats.step3_sent} sent {queueStatus.stepStats.step3_scheduled > 0 ? `(${queueStatus.stepStats.step3_scheduled} scheduled)` : ''}
                           </span>
                         </>
@@ -1773,9 +1773,9 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                 <button
                   type="button"
                   onClick={() => navigate ? navigate(`#/campaigns/${selectedCampaign.id}/preflight`) : null}
-                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
+                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-secondary hover:text-primary bg-surface hover:bg-subtle border border-subtle transition-colors cursor-pointer"
                 >
-                  <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                  <Sliders className="w-3.5 h-3.5 text-indigo-500" />
                   <span className="hidden sm:inline">Preflight Controls</span>
                 </button>
 
@@ -1805,7 +1805,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   type="button"
                   onClick={handleStop}
                   disabled={actionLoading}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-900/40 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   <Square className="w-3.5 h-3.5 fill-current" />
                   <span>Stop / Reset</span>
@@ -1816,12 +1816,12 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
             {/* Progress Bar */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-300">Audience Delivery Progress</span>
-                <span className="font-mono text-indigo-400 font-bold">{progressPercent}%</span>
+                <span className="font-semibold text-primary">Audience Delivery Progress</span>
+                <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">{progressPercent}%</span>
               </div>
-              <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800 p-0.5">
+              <div className="w-full bg-canvas h-3 rounded-full overflow-hidden border border-subtle p-0.5">
                 <div
-                  className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full transition-all duration-500"
+                  className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all duration-500"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -1829,35 +1829,35 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
 
             {/* Live Pacing Radar */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+              <div className="bg-subtle/50 border border-subtle rounded-xl p-4 flex flex-col justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`p-3 rounded-xl border shrink-0 ${
                     queueStatus?.isRunning 
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                      : 'bg-slate-800 text-slate-500 border-slate-700'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                      : 'bg-surface text-muted border-subtle'
                   }`}>
                     <Clock className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider block">Next Email Pacing</span>
+                    <span className="text-[11px] font-medium text-muted uppercase tracking-wider block">Next Email Pacing</span>
                     {queueStatus?.isRunning ? (
                       <div className="flex items-baseline gap-1.5 mt-0.5">
-                        <span className="text-xl font-mono font-bold text-white">
+                        <span className="text-xl font-mono font-bold text-primary">
                           {queueStatus.secondsRemaining}s
                         </span>
-                        <span className="text-[11px] text-slate-500">
+                        <span className="text-[11px] text-muted">
                           (Random {queueStatus.delayDurationSec}s jitter)
                         </span>
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-500 mt-1 block">Queue Idle</span>
+                      <span className="text-xs text-muted mt-1 block">Queue Idle</span>
                     )}
                   </div>
                 </div>
 
                 {/* Real-time Pacing Preset Switcher */}
-                <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between gap-1.5">
-                  <span className="text-[10px] text-slate-400 font-medium">Mode:</span>
+                <div className="mt-3 pt-2.5 border-t border-subtle flex items-center justify-between gap-1.5">
+                  <span className="text-[10px] text-muted font-medium">Mode:</span>
                   <div className="flex items-center gap-1">
                     {[
                       { id: 'fast', label: '⚡ Turbo', range: '15-35s' },
@@ -1876,10 +1876,10 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                           type="button"
                           onClick={() => handleUpdatePacing(p.id)}
                           title={`${p.label} (${p.range})`}
-                          className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all ${
+                          className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer ${
                             isActive
                               ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
-                              : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                              : 'bg-surface text-secondary hover:text-primary hover:bg-subtle border border-subtle'
                           }`}
                         >
                           {p.label}
@@ -1890,25 +1890,25 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                 </div>
               </div>
 
-              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <div className="bg-subtle/50 border border-subtle rounded-xl p-4 flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
                   <Zap className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider block">Active Worker Status</span>
-                  <span className="text-xs font-semibold text-slate-200 mt-0.5 block truncate max-w-[200px]">
+                  <span className="text-[11px] font-medium text-muted uppercase tracking-wider block">Active Worker Status</span>
+                  <span className="text-xs font-semibold text-primary mt-0.5 block truncate max-w-[200px]">
                     {queueStatus?.lastLog || 'Ready to dispatch'}
                   </span>
                 </div>
               </div>
 
-              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20">
+              <div className="bg-subtle/50 border border-subtle rounded-xl p-4 flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-violet-500/10 text-violet-500 border border-violet-500/20">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider block">Gmail Sender Safeguard</span>
-                  <span className="text-xs text-emerald-400 font-semibold mt-0.5 block">
+                  <span className="text-[11px] font-medium text-muted uppercase tracking-wider block">Gmail Sender Safeguard</span>
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5 block">
                     Google Throttling Guard Active
                   </span>
                 </div>
@@ -1916,26 +1916,26 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
             </div>
 
             {/* Live Activity Log Stream */}
-            <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/60">
-              <div className="p-3.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-xs">
+            <div className="border border-subtle rounded-xl overflow-hidden bg-surface">
+              <div className="p-3.5 bg-subtle/40 border-b border-subtle flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
                   <span className="relative flex h-2 w-2">
                     {queueStatus?.isRunning && (
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     )}
-                    <span className={`relative inline-flex rounded-full h-2 w-2 ${queueStatus?.isRunning ? 'bg-emerald-500' : 'bg-slate-600'}`}></span>
+                    <span className={`relative inline-flex rounded-full h-2 w-2 ${queueStatus?.isRunning ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-slate-600'}`}></span>
                   </span>
-                  <span className="font-semibold text-slate-200">Real-Time Send Audit Log</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 text-slate-400 border border-slate-800">
+                  <span className="font-semibold text-primary">Real-Time Send Audit Log</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-subtle text-secondary border border-subtle">
                     {queueStatus?.recentLogs ? queueStatus.recentLogs.length : 0} Recorded
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-500 font-mono">Live Stream</span>
+                  <span className="text-[11px] text-muted font-mono">Live Stream</span>
                   <button 
                     type="button"
                     onClick={() => { fetchQueueStatus(); fetchCampaigns(); }}
-                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                    className="p-1 text-muted hover:text-primary rounded hover:bg-subtle transition-colors cursor-pointer"
                     title="Force Refresh Logs"
                   >
                     <RefreshCw className="w-3 h-3" />
@@ -1943,52 +1943,52 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                 </div>
               </div>
 
-              <div className="p-2 divide-y divide-slate-800/40 max-h-72 overflow-y-auto font-mono text-xs">
+              <div className="p-2 divide-y divide-subtle max-h-72 overflow-y-auto font-mono text-xs">
                 {!queueStatus?.recentLogs || queueStatus.recentLogs.length === 0 ? (
-                  <div className="p-6 text-center text-slate-500 text-xs font-sans">
+                  <div className="p-6 text-center text-muted text-xs font-sans">
                     No emails dispatched yet for this campaign. Click "Start Campaign" to begin.
                   </div>
                 ) : (
                   queueStatus.recentLogs.map((log) => {
                     const timeInfo = formatLogTime(log.sent_at);
                     return (
-                      <div key={log.id} className="py-2.5 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-900/50 transition-colors rounded-lg">
+                      <div key={log.id} className="py-2.5 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-subtle/50 transition-colors rounded-lg">
                         <div className="flex items-center gap-3 min-w-0">
                           {log.status === 'SENT' ? (
-                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0" title="Delivered via Gmail SMTP">
+                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0" title="Delivered via Gmail SMTP">
                               <CheckCircle2 className="w-3.5 h-3.5" />
                             </span>
                           ) : (
-                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0" title={log.error_message || 'Dispatch Failed'}>
+                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 shrink-0" title={log.error_message || 'Dispatch Failed'}>
                               <AlertCircle className="w-3.5 h-3.5" />
                             </span>
                           )}
 
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-slate-100 font-semibold truncate text-xs">{log.recipient_email}</span>
+                              <span className="text-primary font-semibold truncate text-xs">{log.recipient_email}</span>
                               <span className={`text-[9px] uppercase px-1.5 py-0.2 rounded font-sans font-bold border ${
                                 log.status === 'SENT' 
-                                  ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30' 
-                                  : 'bg-rose-950/60 text-rose-400 border-rose-500/30'
+                                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' 
+                                  : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
                               }`}>
                                 {log.status}
                               </span>
                             </div>
-                            <span className="text-[11px] text-slate-400 truncate block font-sans">
+                            <span className="text-[11px] text-secondary truncate block font-sans">
                               {log.subject || '(No Subject)'}
                             </span>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2.5 text-[11px] text-slate-400 shrink-0 self-end sm:self-center">
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 text-indigo-300 border border-slate-800">
+                        <div className="flex items-center gap-2.5 text-[11px] text-muted shrink-0 self-end sm:self-center">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-subtle text-indigo-600 dark:text-indigo-400 border border-subtle">
                             Variant {log.variant || 'A'}
                           </span>
                           <div className="text-right flex flex-col items-end" title={timeInfo.full}>
-                            <span className="text-slate-300 font-mono text-[11px]">{timeInfo.formatted}</span>
+                            <span className="text-secondary font-mono text-[11px]">{timeInfo.formatted}</span>
                             {timeInfo.relative && (
-                              <span className="text-[10px] text-slate-500 font-sans">({timeInfo.relative})</span>
+                              <span className="text-[10px] text-muted font-sans">({timeInfo.relative})</span>
                             )}
                           </div>
                         </div>
@@ -2005,16 +2005,16 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
       {/* 3-STEP CAMPAIGN CREATION MODAL */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="bg-surface border border-subtle rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-subtle pb-3">
               <div className="flex items-center gap-2">
-                <Send className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-sm font-bold text-white">Create Campaign (1:1 Triad Setup)</h3>
+                <Send className="w-5 h-5 text-indigo-500" />
+                <h3 className="text-sm font-bold text-primary">Create Campaign (1:1 Triad Setup)</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800"
+                className="text-muted hover:text-primary p-1 rounded-md hover:bg-subtle transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2022,7 +2022,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
 
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1">
+                <label className="text-xs font-medium text-primary block mb-1">
                   1. Campaign Name *
                 </label>
                 <input
@@ -2030,19 +2030,19 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   value={newCampaignName}
                   onChange={(e) => setNewCampaignName(e.target.value)}
                   placeholder="e.g., Q4 Enterprise Founders"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary placeholder-muted focus:outline-none focus:border-indigo-500 transition-colors"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1">
+                <label className="text-xs font-medium text-primary block mb-1">
                   2. Attach Database (1:1 Exclusivity)
                 </label>
                 <div className="flex items-center gap-2">
                   <select
                     value={newCampaignDbId}
                     onChange={(e) => setNewCampaignDbId(e.target.value)}
-                    className="flex-1 min-w-0 px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                    className="flex-1 min-w-0 px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary focus:outline-none focus:border-indigo-500 transition-colors"
                   >
                     <option value="">-- Attach Later / Pick Available Database --</option>
                     {databases.map(d => (
@@ -2055,13 +2055,13 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                     type="button"
                     disabled={!newCampaignDbId}
                     onClick={() => openRowPicker(newCampaignDbId, false)}
-                    className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold disabled:opacity-40"
+                    className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-surface hover:bg-subtle text-secondary hover:text-primary border border-subtle text-xs font-semibold disabled:opacity-40 transition-colors cursor-pointer"
                   >
                     <Eye className="w-3.5 h-3.5" />
                     Preview
                   </button>
                 </div>
-                <p className="text-[10px] text-slate-500 mt-1">
+                <p className="text-[10px] text-muted mt-1">
                   {newCampaignDbId && stagedRows[Number(newCampaignDbId)]
                     ? `${stagedRows[Number(newCampaignDbId)].length} rows selected. A list can be used again.`
                     : 'A list can be used again. This campaign starts from the first row, not from the last send.'}
@@ -2069,13 +2069,13 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1">
+                <label className="text-xs font-medium text-primary block mb-1">
                   3. Attach Template
                 </label>
                 <select
                   value={newCampaignTmplId}
                   onChange={(e) => setNewCampaignTmplId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary focus:outline-none focus:border-indigo-500 transition-colors"
                 >
                   <option value="">-- Default Introduction Template --</option>
                   {templates.map(t => (
@@ -2087,11 +2087,11 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-subtle">
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-muted hover:text-primary transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -2099,7 +2099,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                 type="button"
                 onClick={handleCreateCampaign}
                 disabled={isCreating || !newCampaignName.trim()}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 disabled:opacity-50"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 disabled:opacity-50 transition-colors cursor-pointer"
               >
                 {isCreating ? (
                   <>
@@ -2121,31 +2121,31 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
       {/* Test Send Modal */}
       {showTestModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl text-left">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                <Mail className="w-4 h-4 text-indigo-400" />
+          <div className="bg-surface border border-subtle rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl text-left">
+            <div className="flex items-center justify-between border-b border-subtle pb-3">
+              <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
+                <Mail className="w-4 h-4 text-indigo-500" />
                 Send Instant Test Preview
               </h3>
               <button
                 onClick={() => { setShowTestModal(false); setTestResult(null); }}
-                className="text-slate-400 hover:text-white text-xs"
+                className="text-muted hover:text-primary text-xs cursor-pointer p-1"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-secondary">
               Send 1 personalized preview email directly to your inbox through your connected Gmail account to inspect rendering.
             </p>
             {(selectedCampaign?.cc_addresses?.trim() || selectedCampaign?.bcc_addresses?.trim()) && (
-              <p className="text-[11px] text-amber-300/90">
+              <p className="text-[11px] text-amber-600 dark:text-amber-300">
                 Saved CC/BCC on this campaign is included on this preview.
               </p>
             )}
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">
+              <label className="block text-xs font-medium text-primary mb-1.5">
                 Send Test Email To:
               </label>
               <input
@@ -2153,20 +2153,20 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                 placeholder="your.email@gmail.com"
                 value={testRecipient}
                 onChange={(e) => setTestRecipient(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-sans"
+                className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-xs text-primary placeholder-muted focus:outline-none focus:border-indigo-500 font-sans transition-colors"
               />
             </div>
 
             {testResult && (
               <div className={`p-3 rounded-lg border text-xs flex items-center gap-2 ${
                 testResult.success
-                  ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
-                  : 'bg-rose-950/40 border-rose-500/30 text-rose-300'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'
               }`}>
                 {testResult.success ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                 ) : (
-                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
                 )}
                 <span>{testResult.message}</span>
               </div>
@@ -2176,7 +2176,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
               <button
                 type="button"
                 onClick={() => { setShowTestModal(false); setTestResult(null); }}
-                className="px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white"
+                className="px-3.5 py-2 rounded-lg text-xs font-semibold text-muted hover:text-primary transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -2184,7 +2184,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                 type="button"
                 onClick={handleSendTestEmail}
                 disabled={isSendingTest || !testRecipient}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 transition-colors cursor-pointer"
               >
                 {isSendingTest ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                 <span>{isSendingTest ? 'Sending...' : 'Send Test'}</span>

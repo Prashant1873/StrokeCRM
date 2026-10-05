@@ -8,16 +8,16 @@
   --spring-settle: cubic-bezier(0.16, 1, 0.3, 1);
   --spring-duration: 350ms;
 
-  /* Semantic Design Tokens: Dark Mode (D-01, D-04) */
+  /* Semantic Design Tokens: Dark Mode (WCAG AA Compliant) */
   --bg-canvas: #09090b;
   --bg-surface: #18181b;
   --bg-elevated: #27272a;
   --bg-subtle: #202025;
-  --text-primary: #f4f4f5;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-default: rgba(255, 255, 255, 0.15);
+  --text-primary: #fafafa;
+  --text-secondary: #d4d4d8;
+  --text-muted: #a1a1aa;
+  --border-subtle: rgba(255, 255, 255, 0.10);
+  --border-default: rgba(255, 255, 255, 0.18);
   --accent-primary: #6366f1;
   --accent-primary-hover: #4f46e5;
   --accent-ring: rgba(99, 102, 241, 0.35);
@@ -27,22 +27,22 @@
 }
 
 [data-theme="light"] {
-  /* Semantic Design Tokens: Light Mode (D-01 Neutral Zinc) */
-  --bg-canvas: #fafafa;
+  /* Semantic Design Tokens: Light Mode (WCAG 2.2 AA Contrast >= 4.5:1) */
+  --bg-canvas: #f8fafc;
   --bg-surface: #ffffff;
-  --bg-elevated: #f4f4f5;
-  --bg-subtle: #f0f0f3;
-  --text-primary: #18181b;
-  --text-secondary: #52525b;
-  --text-muted: #a1a1aa;
-  --border-subtle: #e4e4e7;
-  --border-default: #d4d4d8;
+  --bg-elevated: #f1f5f9;
+  --bg-subtle: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --border-subtle: #e2e8f0;
+  --border-default: #cbd5e1;
   --accent-primary: #4f46e5;
   --accent-primary-hover: #4338ca;
   --accent-ring: rgba(79, 70, 229, 0.25);
-  --scrollbar-track: #f4f4f5;
-  --scrollbar-thumb: #d4d4d8;
-  --scrollbar-thumb-hover: #a1a1aa;
+  --scrollbar-track: #f1f5f9;
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
 }
 
 body {
@@ -66,6 +66,12 @@ body {
 .text-muted { color: var(--text-muted); }
 .border-subtle { border-color: var(--border-subtle); }
 .border-default { border-color: var(--border-default); }
+
+/* Form inputs & placeholders */
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.9;
+}
 
 /* Theme-aware smooth scrollbar */
 ::-webkit-scrollbar {

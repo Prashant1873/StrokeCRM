@@ -517,28 +517,28 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 space-y-8 text-left">
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Settings & Dispatch Control</h1>
-        <p className="text-sm text-slate-400 mt-1">
+        <h1 className="text-2xl font-bold text-primary tracking-tight">Settings & Dispatch Control</h1>
+        <p className="text-sm text-secondary mt-1">
           Configure your outbound sender credentials, custom business domains, and throttle safeguards.
         </p>
       </div>
 
       {/* Account Connection Card */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+      <div className="bg-surface border border-subtle rounded-xl p-6 shadow-xs">
+        <div className="flex items-center justify-between border-b border-subtle pb-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
               <Key className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white">Outbound Dispatch Accounts</h2>
-              <p className="text-xs text-slate-400">Connect Gmail or custom domain mailboxes (Zoho, Fastmail, 365, private mail).</p>
+              <h2 className="text-base font-semibold text-primary">Outbound Dispatch Accounts</h2>
+              <p className="text-xs text-secondary">Connect Gmail or custom domain mailboxes (Zoho, Fastmail, 365, private mail).</p>
             </div>
           </div>
           {authStatus?.connected && authType !== 'custom_domain' && (
             <button
               onClick={handleDisconnect}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-900/50 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Disconnect
@@ -547,22 +547,22 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
         </div>
 
         {/* Global Active Provider Radio Group */}
-        <div className="mb-6 p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+        <div className="mb-6 p-4 rounded-xl bg-subtle/60 border border-subtle">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
             <div>
-              <span className="text-xs font-bold text-white uppercase tracking-wider block">
+              <span className="text-xs font-bold text-primary uppercase tracking-wider block">
                 Active Outbound Dispatch Gateway
               </span>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-secondary">
                 Determines which authenticated identity sends campaign emails by default.
               </p>
             </div>
             <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border self-start sm:self-auto ${
               activeProvider === 'custom_domain'
-                ? 'bg-sky-500/10 text-sky-400 border-sky-500/30'
+                ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30'
                 : activeProvider === 'oauth2'
-                ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
-                : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
+                ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30'
+                : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30'
             }`}>
               {activeProvider === 'custom_domain' ? 'Custom Domain Active' : activeProvider === 'oauth2' ? 'OAuth2 Active' : 'Gmail App Password Active'}
             </span>
@@ -572,39 +572,39 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
             <button
               type="button"
               onClick={() => handleSwitchActiveProvider('gmail_app_password')}
-              className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-semibold transition-all ${
+              className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                 activeProvider === 'gmail_app_password'
-                  ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                  ? 'bg-indigo-500/15 border-indigo-500/50 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                  : 'bg-surface border-subtle text-secondary hover:text-primary hover:border-default'
               }`}
             >
-              <Key className="w-3.5 h-3.5 text-indigo-400" />
+              <Key className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
               <span>Gmail App Password</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleSwitchActiveProvider('oauth2')}
-              className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-semibold transition-all ${
+              className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                 activeProvider === 'oauth2'
-                  ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                  ? 'bg-indigo-500/15 border-indigo-500/50 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                  : 'bg-surface border-subtle text-secondary hover:text-primary hover:border-default'
               }`}
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+              <ShieldCheck className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
               <span>Google OAuth2</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleSwitchActiveProvider('custom_domain')}
-              className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-semibold transition-all ${
+              className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                 activeProvider === 'custom_domain'
-                  ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                  ? 'bg-indigo-500/15 border-indigo-500/50 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                  : 'bg-surface border-subtle text-secondary hover:text-primary hover:border-default'
               }`}
             >
-              <Globe className="w-3.5 h-3.5 text-sky-400" />
+              <Globe className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
               <span>Custom Domain (SMTP)</span>
             </button>
           </div>
@@ -615,22 +615,22 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
           <button
             type="button"
             onClick={() => { setAuthType('app_password'); setTestResult(null); }}
-            className={`p-3.5 rounded-lg border text-left transition-all ${
+            className={`p-3.5 rounded-lg border text-left transition-all cursor-pointer ${
               authType === 'app_password'
-                ? 'border-indigo-500 bg-indigo-950/20 text-white'
-                : 'border-slate-800 bg-slate-950/40 text-slate-400 hover:border-slate-700'
+                ? 'border-indigo-500 bg-indigo-500/10 text-primary shadow-xs'
+                : 'border-subtle bg-subtle/40 text-secondary hover:border-default hover:text-primary'
             }`}
           >
             <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-semibold text-slate-200 flex items-center gap-1.5">
-                <Key className="w-4 h-4 text-indigo-400" />
+              <span className="text-sm font-semibold text-primary flex items-center gap-1.5">
+                <Key className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
                 Google App Password
               </span>
-              <span className="text-[10px] font-medium bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30">
+              <span className="text-[10px] font-medium bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30">
                 1-Min
               </span>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-secondary leading-relaxed">
               Connect via Gmail SMTP. Zero Google Cloud Console setup required.
             </p>
           </button>
@@ -638,22 +638,22 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
           <button
             type="button"
             onClick={() => { setAuthType('oauth2'); setTestResult(null); }}
-            className={`p-3.5 rounded-lg border text-left transition-all ${
+            className={`p-3.5 rounded-lg border text-left transition-all cursor-pointer ${
               authType === 'oauth2'
-                ? 'border-indigo-500 bg-indigo-950/20 text-white'
-                : 'border-slate-800 bg-slate-950/40 text-slate-400 hover:border-slate-700'
+                ? 'border-indigo-500 bg-indigo-500/10 text-primary shadow-xs'
+                : 'border-subtle bg-subtle/40 text-secondary hover:border-default hover:text-primary'
             }`}
           >
             <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-semibold text-slate-200 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-purple-400" />
+              <span className="text-sm font-semibold text-primary flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-purple-500 dark:text-purple-400" />
                 Official OAuth2 API
               </span>
-              <span className="text-[10px] font-medium bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">
+              <span className="text-[10px] font-medium bg-subtle text-secondary px-1.5 py-0.5 rounded border border-subtle">
                 Advanced
               </span>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-secondary leading-relaxed">
               Connect via Google Cloud OAuth2 Client ID, Secret, and Refresh Token.
             </p>
           </button>
@@ -661,22 +661,22 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
           <button
             type="button"
             onClick={() => { setAuthType('custom_domain'); setTestResult(null); }}
-            className={`p-3.5 rounded-lg border text-left transition-all ${
+            className={`p-3.5 rounded-lg border text-left transition-all cursor-pointer ${
               authType === 'custom_domain'
-                ? 'border-indigo-500 bg-indigo-950/20 text-white'
-                : 'border-slate-800 bg-slate-950/40 text-slate-400 hover:border-slate-700'
+                ? 'border-indigo-500 bg-indigo-500/10 text-primary shadow-xs'
+                : 'border-subtle bg-subtle/40 text-secondary hover:border-default hover:text-primary'
             }`}
           >
             <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-semibold text-slate-200 flex items-center gap-1.5">
-                <Globe className="w-4 h-4 text-sky-400" />
+              <span className="text-sm font-semibold text-primary flex items-center gap-1.5">
+                <Globe className="w-4 h-4 text-sky-500 dark:text-sky-400" />
                 Custom Domain (SMTP/IMAP)
               </span>
-              <span className="text-[10px] font-medium bg-sky-500/20 text-sky-400 px-1.5 py-0.5 rounded border border-sky-500/30">
+              <span className="text-[10px] font-medium bg-sky-500/20 text-sky-600 dark:text-sky-400 px-1.5 py-0.5 rounded border border-sky-500/30">
                 New v2.0
               </span>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-secondary leading-relaxed">
               Send directly through Zoho, Fastmail, Outlook 365, or your business domain.
             </p>
           </button>
@@ -686,7 +686,7 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
         {authType === 'app_password' && (
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">
+              <label className="block text-xs font-medium text-primary mb-1.5">
                 Your Gmail Address
               </label>
               <input
@@ -694,20 +694,20 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                 placeholder="founder@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary placeholder:text-muted focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-medium text-slate-300">
+                <label className="block text-xs font-medium text-primary">
                   16-Character Google App Password
                 </label>
                 <a
                   href="https://myaccount.google.com/apppasswords"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                  className="text-xs text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1"
                 >
                   Generate App Password <ExternalLink className="w-3 h-3" />
                 </a>
@@ -717,12 +717,12 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                 placeholder={authStatus?.connected && authStatus.account?.has_password ? "•••••••••••••••• (Saved)" : "abcd efgh ijkl mnop"}
                 value={appPassword}
                 onChange={(e) => setAppPassword(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors font-mono"
+                className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary placeholder:text-muted focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors font-mono"
               />
-              <div className="flex items-start gap-2 mt-2 text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80">
-                <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 mt-2 text-xs text-secondary bg-subtle p-2.5 rounded-lg border border-subtle">
+                <Info className="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Tip:</strong> Requires Google 2-Step Verification turned ON. Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="text-indigo-400 underline">myaccount.google.com/apppasswords</a>, name it "StrokeCRM", and paste the generated 16-character code here.
+                  <strong>Tip:</strong> Requires Google 2-Step Verification turned ON. Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="text-indigo-500 dark:text-indigo-400 underline">myaccount.google.com/apppasswords</a>, name it "StrokeCRM", and paste the generated 16-character code here.
                 </span>
               </div>
             </div>
@@ -731,13 +731,13 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
             {testResult && (
               <div className={`p-3.5 rounded-lg border flex items-start gap-2.5 ${
                 testResult.success 
-                  ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300' 
-                  : 'bg-rose-950/30 border-rose-500/30 text-rose-300'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300' 
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
               }`}>
                 {testResult.success ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                 ) : (
-                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                 )}
                 <div className="text-xs leading-relaxed">
                   <span className="font-semibold">{testResult.success ? 'Handshake Successful' : 'Connection Failed'}: </span>
@@ -750,22 +750,22 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
             {saveMessage && (
               <div className={`p-3.5 rounded-lg border text-xs flex items-center gap-2 ${
                 saveMessage.type === 'success'
-                  ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
-                  : 'bg-rose-950/40 border-rose-500/30 text-rose-300'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300'
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
               }`}>
                 <Info className="w-4 h-4 shrink-0" />
                 {saveMessage.text}
               </div>
             )}
 
-            <div className="flex items-center gap-3 pt-4 border-t border-slate-800">
+            <div className="flex items-center gap-3 pt-4 border-t border-subtle">
               <button
                 type="button"
                 onClick={handleTestConnection}
                 disabled={isTesting || !email}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed border border-slate-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold text-primary bg-canvas hover:bg-subtle disabled:opacity-50 disabled:cursor-not-allowed border border-subtle transition-colors cursor-pointer"
               >
-                {isTesting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />}
+                {isTesting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />}
                 {isTesting ? 'Verifying...' : 'Test Handshake'}
               </button>
 
@@ -773,7 +773,7 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                 type="button"
                 onClick={handleSaveAccount}
                 disabled={isSaving || !email}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-600/20 transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
               >
                 {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
                 Save & Activate Gmail
@@ -786,58 +786,58 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
         {authType === 'oauth2' && (
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">Your Gmail Address</label>
+              <label className="block text-xs font-medium text-primary mb-1.5">Your Gmail Address</label>
               <input
                 type="email"
                 placeholder="founder@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary placeholder:text-muted focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">OAuth Client ID</label>
+                <label className="block text-xs font-medium text-primary mb-1.5">OAuth Client ID</label>
                 <input
                   type="text"
                   placeholder="apps.googleusercontent.com"
                   value={clientId}
                   onChange={(e) => setClientId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500 font-mono text-xs"
+                  className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary placeholder:text-muted focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono text-xs transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">OAuth Client Secret</label>
+                <label className="block text-xs font-medium text-primary mb-1.5">OAuth Client Secret</label>
                 <input
                   type="password"
                   placeholder="Client secret"
                   value={clientSecret}
                   onChange={(e) => setClientSecret(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500 font-mono text-xs"
+                  className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary placeholder:text-muted focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono text-xs transition-colors"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">Refresh Token</label>
+              <label className="block text-xs font-medium text-primary mb-1.5">Refresh Token</label>
               <input
                 type="password"
                 placeholder="1//..."
                 value={refreshToken}
                 onChange={(e) => setRefreshToken(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500 font-mono text-xs"
+                className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary placeholder:text-muted focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono text-xs transition-colors"
               />
             </div>
 
             {testResult && (
               <div className={`p-3.5 rounded-lg border flex items-start gap-2.5 ${
                 testResult.success 
-                  ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300' 
-                  : 'bg-rose-950/30 border-rose-500/30 text-rose-300'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300' 
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
               }`}>
                 {testResult.success ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                 ) : (
-                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                 )}
                 <div className="text-xs leading-relaxed">
                   <span className="font-semibold">{testResult.success ? 'Handshake Successful' : 'Connection Failed'}: </span>
@@ -849,22 +849,22 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
             {saveMessage && (
               <div className={`p-3.5 rounded-lg border text-xs flex items-center gap-2 ${
                 saveMessage.type === 'success'
-                  ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
-                  : 'bg-rose-950/40 border-rose-500/30 text-rose-300'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300'
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
               }`}>
                 <Info className="w-4 h-4 shrink-0" />
                 {saveMessage.text}
               </div>
             )}
 
-            <div className="flex items-center gap-3 pt-4 border-t border-slate-800">
+            <div className="flex items-center gap-3 pt-4 border-t border-subtle">
               <button
                 type="button"
                 onClick={handleTestConnection}
                 disabled={isTesting || !email}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed border border-slate-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold text-primary bg-canvas hover:bg-subtle disabled:opacity-50 disabled:cursor-not-allowed border border-subtle transition-colors cursor-pointer"
               >
-                {isTesting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />}
+                {isTesting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />}
                 {isTesting ? 'Verifying...' : 'Test Handshake'}
               </button>
 
@@ -872,7 +872,7 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                 type="button"
                 onClick={handleSaveAccount}
                 disabled={isSaving || !email}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-600/20 transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
               >
                 {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
                 Save & Activate OAuth2
@@ -885,13 +885,13 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
         {authType === 'custom_domain' && (
           <div className="space-y-6">
             {/* Provider Presets Bar */}
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+            <div className="p-4 rounded-xl bg-subtle/60 border border-subtle space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <Server className="w-3.5 h-3.5 text-sky-400" />
+                <label className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-2">
+                  <Server className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
                   1-Click Email Provider Preset
                 </label>
-                <span className="text-[11px] text-slate-500">Auto-fills hosts, ports, & encryption</span>
+                <span className="text-[11px] text-muted">Auto-fills hosts, ports, & encryption</span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 {Object.entries(PROVIDER_PRESETS).map(([key, preset]) => (
@@ -899,10 +899,10 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                     key={key}
                     type="button"
                     onClick={() => handlePresetSelect(key)}
-                    className={`px-3 py-2 rounded-lg border text-xs font-semibold text-center transition-all ${
+                    className={`px-3 py-2 rounded-lg border text-xs font-semibold text-center transition-all cursor-pointer ${
                       customPreset === key
-                        ? 'bg-sky-500/20 border-sky-500 text-sky-200 shadow-sm'
-                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                        ? 'bg-sky-500/20 border-sky-500 text-sky-600 dark:text-sky-300 shadow-xs'
+                        : 'bg-surface border-subtle text-secondary hover:text-primary hover:border-default'
                     }`}
                   >
                     {preset.name}
@@ -913,13 +913,13 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
 
             {/* Sender Identity Section */}
             <div className="space-y-3">
-              <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                <Mail className="w-3.5 h-3.5 text-indigo-400" />
+              <h3 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-2">
+                <Mail className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
                 Sender Outbound Identity
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
+                  <label className="block text-xs font-medium text-secondary mb-1">
                     Display Name
                   </label>
                   <input
@@ -927,11 +927,11 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                     placeholder="e.g. Alex Rivera"
                     value={customSenderName}
                     onChange={(e) => setCustomSenderName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-sky-500"
+                    className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary placeholder:text-muted focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
+                  <label className="block text-xs font-medium text-secondary mb-1">
                     From Email Address
                   </label>
                   <input
@@ -939,35 +939,35 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                     placeholder="alex@company.com"
                     value={customSenderEmail}
                     onChange={(e) => setCustomSenderEmail(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-sky-500"
+                    className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary placeholder:text-muted focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
                   />
                 </div>
               </div>
             </div>
 
             {/* Outbound SMTP Section */}
-            <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <div className="p-4 rounded-xl bg-subtle/50 border border-subtle space-y-4">
+              <div className="flex items-center justify-between border-b border-subtle pb-2.5">
                 <div className="flex items-center gap-2">
-                  <Send className="w-4 h-4 text-sky-400" />
-                  <span className="text-xs font-bold text-white uppercase tracking-wider">Outbound SMTP Dispatch</span>
+                  <Send className="w-4 h-4 text-sky-500 dark:text-sky-400" />
+                  <span className="text-xs font-bold text-primary uppercase tracking-wider">Outbound SMTP Dispatch</span>
                 </div>
-                <span className="text-[10px] text-slate-500 font-mono">Port 465 (SSL) / Port 587 (STARTTLS)</span>
+                <span className="text-[10px] text-muted font-mono">Port 465 (SSL) / Port 587 (STARTTLS)</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-slate-400 mb-1">SMTP Host</label>
+                  <label className="block text-xs font-medium text-secondary mb-1">SMTP Host</label>
                   <input
                     type="text"
                     placeholder="smtp.example.com"
                     value={customSmtpHost}
                     onChange={(e) => setCustomSmtpHost(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-sky-500"
+                    className="w-full px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary font-mono placeholder:text-muted focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Port & Security</label>
+                  <label className="block text-xs font-medium text-secondary mb-1">Port & Security</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -979,14 +979,14 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                         if (p === 465) setCustomSmtpSecure(true);
                         else if (p === 587) setCustomSmtpSecure(false);
                       }}
-                      className="w-20 px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono focus:outline-none focus:border-sky-500"
+                      className="w-20 px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary font-mono focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
                     />
-                    <label className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer select-none">
+                    <label className="flex items-center gap-1.5 text-xs text-primary cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={customSmtpSecure}
                         onChange={(e) => setCustomSmtpSecure(e.target.checked)}
-                        className="rounded border-slate-700 bg-slate-900 text-sky-600 focus:ring-0"
+                        className="rounded border-subtle bg-surface text-sky-600 focus:ring-0"
                       />
                       <span>SSL (Direct)</span>
                     </label>
@@ -996,23 +996,23 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">SMTP Username / Email</label>
+                  <label className="block text-xs font-medium text-secondary mb-1">SMTP Username / Email</label>
                   <input
                     type="text"
                     placeholder="user@example.com"
                     value={customSmtpUser}
                     onChange={(e) => setCustomSmtpUser(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-sky-500"
+                    className="w-full px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary placeholder:text-muted focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">SMTP Password</label>
+                  <label className="block text-xs font-medium text-secondary mb-1">SMTP Password</label>
                   <input
                     type="password"
                     placeholder="••••••••••••"
                     value={customSmtpPass}
                     onChange={(e) => setCustomSmtpPass(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-sky-500"
+                    className="w-full px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary font-mono placeholder:text-muted focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
                   />
                 </div>
               </div>
@@ -1023,9 +1023,9 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                   type="button"
                   onClick={handleTestCustomSmtp}
                   disabled={isTestingSmtp || !customSmtpHost || !customSmtpUser || !customSmtpPass}
-                  className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 border border-slate-700 transition-colors self-start sm:self-auto"
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-primary bg-surface hover:bg-subtle disabled:opacity-50 border border-subtle transition-colors self-start sm:self-auto cursor-pointer"
                 >
-                  {isTestingSmtp ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />}
+                  {isTestingSmtp ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />}
                   <span>{isTestingSmtp ? 'Verifying SMTP...' : 'Test SMTP Handshake'}</span>
                 </button>
               </div>
@@ -1033,13 +1033,13 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
               {smtpTestResult && (
                 <div className={`p-3 rounded-lg border text-xs flex items-start gap-2 ${
                   smtpTestResult.success 
-                    ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300' 
-                    : 'bg-rose-950/30 border-rose-500/30 text-rose-300'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300' 
+                    : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
                 }`}>
                   {smtpTestResult.success ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                   ) : (
-                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                   )}
                   <span className="leading-relaxed">{smtpTestResult.message}</span>
                 </div>
@@ -1047,50 +1047,50 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
             </div>
 
             {/* Inbound IMAP Section */}
-            <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <div className="p-4 rounded-xl bg-subtle/50 border border-subtle space-y-4">
+              <div className="flex items-center justify-between border-b border-subtle pb-2.5">
                 <div className="flex items-center gap-2">
-                  <Server className="w-4 h-4 text-indigo-400" />
-                  <span className="text-xs font-bold text-white uppercase tracking-wider">Inbound IMAP Gateway</span>
+                  <Server className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                  <span className="text-xs font-bold text-primary uppercase tracking-wider">Inbound IMAP Gateway</span>
                 </div>
                 <button
                   type="button"
                   onClick={handleCopySmtpToImap}
-                  className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-md transition-colors"
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-secondary hover:text-primary bg-surface hover:bg-subtle border border-subtle rounded-md transition-colors cursor-pointer"
                   title="Copy credentials from SMTP"
                 >
-                  {copiedSmtpToImap ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                  {copiedSmtpToImap ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3 text-muted" />}
                   <span>{copiedSmtpToImap ? 'Credentials Copied!' : 'Copy from SMTP'}</span>
                 </button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-slate-400 mb-1">IMAP Host</label>
+                  <label className="block text-xs font-medium text-secondary mb-1">IMAP Host</label>
                   <input
                     type="text"
                     placeholder="imap.example.com"
                     value={customImapHost}
                     onChange={(e) => setCustomImapHost(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary font-mono placeholder:text-muted focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Port & Security</label>
+                  <label className="block text-xs font-medium text-secondary mb-1">Port & Security</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
                       placeholder="993"
                       value={customImapPort}
                       onChange={(e) => setCustomImapPort(Number(e.target.value))}
-                      className="w-20 px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono focus:outline-none focus:border-indigo-500"
+                      className="w-20 px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary font-mono focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                     />
-                    <label className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer select-none">
+                    <label className="flex items-center gap-1.5 text-xs text-primary cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={customImapSecure}
                         onChange={(e) => setCustomImapSecure(e.target.checked)}
-                        className="rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-0"
+                        className="rounded border-subtle bg-surface text-indigo-600 focus:ring-0"
                       />
                       <span>SSL (Port 993)</span>
                     </label>
@@ -1100,23 +1100,23 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">IMAP Username</label>
+                  <label className="block text-xs font-medium text-secondary mb-1">IMAP Username</label>
                   <input
                     type="text"
                     placeholder="user@example.com"
                     value={customImapUser}
                     onChange={(e) => setCustomImapUser(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary placeholder:text-muted focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">IMAP Password</label>
+                  <label className="block text-xs font-medium text-secondary mb-1">IMAP Password</label>
                   <input
                     type="password"
                     placeholder="••••••••••••"
                     value={customImapPass}
                     onChange={(e) => setCustomImapPass(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary font-mono placeholder:text-muted focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                   />
                 </div>
               </div>
@@ -1127,9 +1127,9 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                   type="button"
                   onClick={handleTestCustomImap}
                   disabled={isTestingImap || !customImapHost || !customImapUser || !customImapPass}
-                  className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 border border-slate-700 transition-colors self-start sm:self-auto"
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-primary bg-surface hover:bg-subtle disabled:opacity-50 border border-subtle transition-colors self-start sm:self-auto cursor-pointer"
                 >
-                  {isTestingImap ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />}
+                  {isTestingImap ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />}
                   <span>{isTestingImap ? 'Verifying IMAP...' : 'Test IMAP Connection'}</span>
                 </button>
               </div>
@@ -1137,13 +1137,13 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
               {imapTestResult && (
                 <div className={`p-3 rounded-lg border text-xs flex items-start gap-2 ${
                   imapTestResult.success 
-                    ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300' 
-                    : 'bg-rose-950/30 border-rose-500/30 text-rose-300'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300' 
+                    : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
                 }`}>
                   {imapTestResult.success ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                   ) : (
-                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                   )}
                   <span className="leading-relaxed">{imapTestResult.message}</span>
                 </div>
@@ -1151,12 +1151,12 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
             </div>
 
             {/* Live Test-Send Verification Card */}
-            <div className="p-4 rounded-xl bg-gradient-to-r from-sky-950/20 via-slate-950/40 to-indigo-950/20 border border-sky-500/30 space-y-3">
+            <div className="p-4 rounded-xl bg-subtle/80 border border-sky-500/30 space-y-3">
               <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-sky-400" />
-                <span className="text-xs font-bold text-white uppercase tracking-wider">Live Deliverability Test</span>
+                <Mail className="w-4 h-4 text-sky-500 dark:text-sky-400" />
+                <span className="text-xs font-bold text-primary uppercase tracking-wider">Live Deliverability Test</span>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-secondary">
                 Send an actual verification email to your personal inbox right now using these SMTP credentials before launching campaigns.
               </p>
               <div className="flex flex-col sm:flex-row gap-2.5">
@@ -1165,13 +1165,13 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                   placeholder="recipient@yourpersonalmail.com"
                   value={testRecipientEmail}
                   onChange={(e) => setTestRecipientEmail(e.target.value)}
-                  className="flex-1 px-3.5 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-sky-500"
+                  className="flex-1 px-3.5 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary placeholder:text-muted focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={handleSendCustomTestEmail}
                   disabled={isSendingTestEmail || !testRecipientEmail || !customSmtpHost || !customSmtpUser || !customSmtpPass}
-                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-sky-600 hover:bg-sky-500 disabled:opacity-50 transition-colors shrink-0 shadow-sm"
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-sky-600 hover:bg-sky-500 disabled:opacity-50 transition-colors shrink-0 shadow-sm cursor-pointer"
                 >
                   {isSendingTestEmail ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                   <span>{isSendingTestEmail ? 'Sending...' : 'Send Live Test Email'}</span>
@@ -1181,13 +1181,13 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
               {testEmailResult && (
                 <div className={`p-3 rounded-lg border text-xs flex items-start gap-2 ${
                   testEmailResult.success 
-                    ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300' 
-                    : 'bg-rose-950/40 border-rose-500/30 text-rose-300'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300' 
+                    : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
                 }`}>
                   {testEmailResult.success ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                   ) : (
-                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                   )}
                   <span className="leading-relaxed">{testEmailResult.message}</span>
                 </div>
@@ -1198,15 +1198,15 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
             {saveMessage && (
               <div className={`p-3.5 rounded-lg border text-xs flex items-center gap-2 ${
                 saveMessage.type === 'success'
-                  ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
-                  : 'bg-rose-950/40 border-rose-500/30 text-rose-300'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300'
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
               }`}>
                 <Info className="w-4 h-4 shrink-0" />
                 {saveMessage.text}
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-subtle">
               <button
                 type="button"
                 onClick={handleSaveCustomDomain}
@@ -1376,27 +1376,27 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
       </div>
 
       {/* Sending Pacing & Safeguards Card */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-3 border-b border-slate-800 pb-4 mb-6">
-          <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+      <div className="bg-surface border border-subtle rounded-xl p-6 shadow-xs">
+        <div className="flex items-center gap-3 border-b border-subtle pb-4 mb-6">
+          <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
             <Sliders className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-white">Pacing & Throttle Safeguards</h2>
-            <p className="text-xs text-slate-400">Protects your sender domain reputation by ensuring randomized, human-like delivery intervals.</p>
+            <h2 className="text-base font-semibold text-primary">Pacing & Throttle Safeguards</h2>
+            <p className="text-xs text-secondary">Protects your sender domain reputation by ensuring randomized, human-like delivery intervals.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Daily Limit & Quota Type */}
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+            <label className="block text-xs font-medium text-primary mb-1.5">
               Gmail / Domain Account Type
             </label>
             <select
               value={quotaType}
               onChange={(e) => setQuotaType(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
             >
               <option value="personal">Personal Gmail (@gmail.com) — Limit 500/day</option>
               <option value="workspace">Google Workspace / Custom Domain — Limit 2,000/day</option>
@@ -1404,7 +1404,7 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+            <label className="block text-xs font-medium text-primary mb-1.5">
               Daily Safe Send Cap (Per Day)
             </label>
             <div className="flex items-center gap-3">
@@ -1414,16 +1414,16 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                 max={quotaType === 'personal' ? 450 : 1800}
                 value={dailyLimit}
                 onChange={(e) => setDailyLimit(Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white font-mono"
+                className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary font-mono focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
               />
-              <span className="text-xs text-slate-400 whitespace-nowrap">emails/day</span>
+              <span className="text-xs text-secondary whitespace-nowrap">emails/day</span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-1">Recommended for cold outreach: 50-100/day during initial warmup.</p>
+            <p className="text-[11px] text-muted mt-1">Recommended for cold outreach: 50-100/day during initial warmup.</p>
           </div>
 
           {/* Random Jitter Delays */}
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+            <label className="block text-xs font-medium text-primary mb-1.5">
               Minimum Delay Between Emails
             </label>
             <div className="flex items-center gap-3">
@@ -1433,14 +1433,14 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                 max="600"
                 value={minDelay}
                 onChange={(e) => setMinDelay(Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white font-mono"
+                className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary font-mono focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
               />
-              <span className="text-xs text-slate-400 whitespace-nowrap">seconds</span>
+              <span className="text-xs text-secondary whitespace-nowrap">seconds</span>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+            <label className="block text-xs font-medium text-primary mb-1.5">
               Maximum Delay Between Emails
             </label>
             <div className="flex items-center gap-3">
@@ -1450,42 +1450,42 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                 max="1200"
                 value={maxDelay}
                 onChange={(e) => setMaxDelay(Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white font-mono"
+                className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary font-mono focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
               />
-              <span className="text-xs text-slate-400 whitespace-nowrap">seconds</span>
+              <span className="text-xs text-secondary whitespace-nowrap">seconds</span>
             </div>
           </div>
 
           {/* Schedule Window */}
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+            <label className="block text-xs font-medium text-primary mb-1.5">
               Sending Window Start Time
             </label>
             <input
               type="time"
               value={startHour}
               onChange={(e) => setStartHour(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white"
+              className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+            <label className="block text-xs font-medium text-primary mb-1.5">
               Sending Window End Time
             </label>
             <input
               type="time"
               value={endHour}
               onChange={(e) => setEndHour(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white"
+              className="w-full px-3.5 py-2.5 bg-canvas border border-subtle rounded-lg text-sm text-primary focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
             />
           </div>
 
           {/* Working Hours Enforcement Toggle */}
-          <div className="md:col-span-2 pt-4 border-t border-slate-800 flex items-center justify-between">
+          <div className="md:col-span-2 pt-4 border-t border-subtle flex items-center justify-between">
             <div>
-              <div className="text-xs font-semibold text-white">Restrict Dispatch to Sending Window</div>
-              <div className="text-[11px] text-slate-400 mt-0.5">
+              <div className="text-xs font-semibold text-primary">Restrict Dispatch to Sending Window</div>
+              <div className="text-[11px] text-secondary mt-0.5">
                 {enforceSchedule 
                   ? `Active: Campaigns will pause outside ${startHour} - ${endHour}.` 
                   : 'Disabled (Default): Campaigns dispatch immediately 24/7 on demand.'}
@@ -1498,12 +1498,12 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                 onChange={(e) => setEnforceSchedule(e.target.checked)} 
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              <div className="w-11 h-6 bg-slate-300 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
             </label>
           </div>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-slate-800 flex justify-end">
+        <div className="mt-6 pt-4 border-t border-subtle flex justify-end">
           <button
             type="button"
             onClick={handleSaveScheduleSettings}

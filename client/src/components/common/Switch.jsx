@@ -35,19 +35,19 @@ export default function Switch({
           <label 
             htmlFor={switchId} 
             className={`text-sm font-semibold cursor-pointer ${
-              disabled ? 'text-slate-500' : 'text-slate-200 hover:text-white'
+              disabled ? 'text-muted' : 'text-primary'
             }`}
           >
             {label}
           </label>
           {badge && (
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
               {badge}
             </span>
           )}
         </div>
         {description && (
-          <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+          <p className="text-xs text-secondary mt-0.5 leading-relaxed">
             {description}
           </p>
         )}
@@ -62,12 +62,12 @@ export default function Switch({
         disabled={disabled}
         onClick={handleToggle}
         onKeyDown={handleKeyDown}
-        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
           disabled 
-            ? 'opacity-40 cursor-not-allowed bg-slate-800' 
+            ? 'opacity-40 cursor-not-allowed bg-subtle' 
             : checked 
             ? 'bg-emerald-600 hover:bg-emerald-500' 
-            : 'bg-slate-700 hover:bg-slate-600'
+            : 'bg-slate-300 dark:bg-zinc-700 hover:bg-slate-400 dark:hover:bg-zinc-600'
         }`}
       >
         <span className="sr-only">{label}</span>
