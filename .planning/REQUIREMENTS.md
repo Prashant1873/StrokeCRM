@@ -16,9 +16,9 @@
 
 ### Rich Text Follow-Up Formatting Studio (`RICH`)
 
-- [ ] **RICH-01**: `DripSequenceStudio` provides a WYSIWYG formatting toolbar for follow-up steps (Bold, Italic, Underline, Bullet List, Numbered List, Link, Clear Formatting), replacing the plain textarea.
-- [ ] **RICH-02**: Dynamic audience header variable chips (`{{FirstName}}`, `{{Company}}`) insert seamlessly at the active editor selection/cursor without losing focus.
-- [ ] **RICH-03**: Follow-up editor stores clean, sanitized HTML and produces automatic plain-text fallbacks for dual-part RFC 2046 multipart MIME email dispatch.
+- [x] **RICH-01**: `DripSequenceStudio` provides a WYSIWYG formatting toolbar for follow-up steps (Bold, Italic, Underline, Bullet List, Numbered List, Link, Clear Formatting), replacing the plain textarea.
+- [x] **RICH-02**: Dynamic audience header variable chips (`{{FirstName}}`, `{{Company}}`) insert seamlessly at the active editor selection/cursor without losing focus.
+- [x] **RICH-03**: Follow-up editor stores clean, sanitized HTML and produces automatic plain-text fallbacks for dual-part RFC 2046 multipart MIME email dispatch.
 
 ### System-Wide Light Mode WCAG Contrast & Token Hardening (`CONTRAST`)
 

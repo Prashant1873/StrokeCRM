@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Clock, 
   Plus, 
@@ -10,10 +10,33 @@ import {
   Layers, 
   RefreshCw,
   FileText,
-  Sliders
+  Sliders,
+  Bold,
+  Italic,
+  Underline,
+  List,
+  ListOrdered,
+  Link,
+  RemoveFormatting
 } from 'lucide-react';
 import Switch from './common/Switch';
 import DeliverabilityBeacon from './common/DeliverabilityBeacon';
+
+const toHtml = (text = '') => /<[a-z][\s\S]*>/i.test(text)
+  ? text
+  : text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+
+const RICH_TEXT_CLASSES = '[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-indigo-600 dark:[&_a]:text-indigo-400 [&_a]:underline';
+
+const FORMAT_BUTTONS = [
+  { cmd: 'bold', icon: Bold, title: 'Bold (Ctrl+B)' },
+  { cmd: 'italic', icon: Italic, title: 'Italic (Ctrl+I)' },
+  { cmd: 'underline', icon: Underline, title: 'Underline (Ctrl+U)' },
+  { cmd: 'insertUnorderedList', icon: List, title: 'Bullet list' },
+  { cmd: 'insertOrderedList', icon: ListOrdered, title: 'Numbered list' },
+  { cmd: 'createLink', icon: Link, title: 'Insert link' },
+  { cmd: 'removeFormat', icon: RemoveFormatting, title: 'Clear formatting' }
+];
 
 const PRESET_DELAYS = [
   { label: '1 Day', days: 1, hours: 0 },
@@ -31,11 +54,15 @@ export default function DripSequenceStudio({
 }) {
   const [steps, setSteps] = useState([]);
   const [activeStepTab, setActiveStepTab] = useState(1);
+  const [activeInput, setActiveInput] = useState('body'); // 'subject' | 'body'
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testRecipient, setTestRecipient] = useState('');
   const [testSending, setTestSending] = useState(false);
   const [feedback, setFeedback] = useState(null);
+
+  const subjectRef = useRef(null);
+  const bodyRef = useRef(null);
 
   // Fetch configured steps for campaign
   const fetchSteps = async () => {
@@ -71,6 +98,13 @@ export default function DripSequenceStudio({
   }, [campaign?.id]);
 
   const activeStep = steps.find(s => Number(s.step_number) === Number(activeStepTab)) || steps[0] || null;
+
+  // Sync contentEditable innerHTML on tab switch or step load
+  useEffect(() => {
+    if (bodyRef.current && activeStep) {
+      bodyRef.current.innerHTML = toHtml(activeStep.body_a || '');
+    }
+  }, [activeStepTab, activeStep?.step_number]);
 
   // Add Step 2 or Step 3
   const handleAddStep = () => {
@@ -144,6 +178,9 @@ export default function DripSequenceStudio({
       updateActiveStep('subject_a', selected.subject_a || '');
     }
     updateActiveStep('body_a', selected.body_a || '');
+    if (bodyRef.current) {
+      bodyRef.current.innerHTML = toHtml(selected.body_a || '');
+    }
   };
 
   // Save all configured steps
@@ -205,11 +242,60 @@ export default function DripSequenceStudio({
     }
   };
 
-  // Insert variable into active field
+  // Insert variable at cursor position into active field (subject or rich body)
   const handleInsertVariable = (varName) => {
-    const pill = `{{${varName}}}`;
-    const currentBody = activeStep?.body_a || '';
-    updateActiveStep('body_a', currentBody + (currentBody ? ' ' : '') + pill);
+    const token = `{{${varName}}}`;
+    if (activeInput === 'subject') {
+      const el = subjectRef.current;
+      if (el) {
+        const start = el.selectionStart ?? el.value.length;
+        const end = el.selectionEnd ?? el.value.length;
+        const val = el.value || '';
+        const updated = val.slice(0, start) + token + val.slice(end);
+        updateActiveStep('subject_a', updated);
+        setTimeout(() => {
+          el.focus();
+          el.setSelectionRange(start + token.length, start + token.length);
+        }, 10);
+      } else {
+        updateActiveStep('subject_a', (activeStep?.subject_a || '') + ' ' + token);
+      }
+    } else {
+      const el = bodyRef.current;
+      if (!el) return;
+      const sel = window.getSelection();
+      const caret = sel.rangeCount && el.contains(sel.anchorNode) ? sel.getRangeAt(0) : null;
+      el.focus();
+      const range = caret || document.createRange();
+      if (!caret) {
+        range.selectNodeContents(el);
+        range.collapse(false);
+      }
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand('insertText', false, token);
+      updateActiveStep('body_a', el.innerHTML);
+    }
+  };
+
+  // Rich text formatting execution
+  const handleFormat = (cmd) => {
+    let arg;
+    if (cmd === 'createLink') {
+      const sel = window.getSelection();
+      const range = sel.rangeCount ? sel.getRangeAt(0) : null;
+      arg = prompt('Link URL', 'https://');
+      if (!arg || !range) return;
+      if (bodyRef.current) {
+        bodyRef.current.focus();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }
+    document.execCommand(cmd, false, arg);
+    if (bodyRef.current) {
+      updateActiveStep('body_a', bodyRef.current.innerHTML);
+    }
   };
 
   if (loading) {
@@ -508,28 +594,51 @@ export default function DripSequenceStudio({
 
             {/* Subject Input */}
             <div className="space-y-1">
-              <label className="text-[10px] text-muted uppercase tracking-wider block">Subject Line</label>
+              <label className="text-[10px] text-muted uppercase tracking-wider block font-semibold">Subject Line</label>
               <input
+                ref={subjectRef}
                 type="text"
                 value={activeStep.subject_a || ''}
                 onChange={(e) => updateActiveStep('subject_a', e.target.value)}
+                onFocus={() => setActiveInput('subject')}
                 placeholder={activeStep.step_number > 1 ? `Re: ${steps[0]?.subject_a || campaign.subject_a || 'Initial Pitch'}` : 'Enter subject line...'}
                 className="w-full px-3 py-2 bg-canvas border border-subtle rounded-lg text-xs text-primary placeholder-muted focus:outline-none focus:border-indigo-500 transition-colors"
               />
             </div>
 
-            {/* Body Editor */}
-            <div className="space-y-1">
-              <label className="text-[10px] text-muted uppercase tracking-wider block">Email Body Text (Plain text or HTML)</label>
-              <textarea
-                rows={6}
-                value={activeStep.body_a || ''}
-                onChange={(e) => updateActiveStep('body_a', e.target.value)}
-                placeholder={activeStep.step_number > 1 
+            {/* Rich Body Editor */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] text-muted uppercase tracking-wider block font-semibold">
+                  Email Body (Rich HTML)
+                </label>
+                <div className="flex items-center gap-0.5 p-0.5 bg-canvas border border-subtle rounded-lg w-fit">
+                  {FORMAT_BUTTONS.map(({ cmd, icon: Icon, title }) => (
+                    <button
+                      key={cmd}
+                      type="button"
+                      title={title}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleFormat(cmd)}
+                      className="p-1 rounded text-secondary hover:text-primary hover:bg-subtle transition-colors cursor-pointer"
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div
+                ref={bodyRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={(e) => updateActiveStep('body_a', e.currentTarget.innerHTML)}
+                onFocus={() => setActiveInput('body')}
+                data-placeholder={activeStep.step_number > 1 
                   ? "Hi {{FirstName | \"there\"}},\n\nWanted to quickly follow up on my previous note. Did you have a chance to look over the details?\n\nBest,"
                   : "Hi {{FirstName | \"there\"}},\n\nSaw what your team is building at {{Company}}..."
                 }
-                className="w-full p-3 bg-canvas border border-subtle rounded-lg text-xs text-primary placeholder-muted focus:outline-none focus:border-indigo-500 font-mono leading-relaxed transition-colors"
+                className={`w-full min-h-[10rem] p-3 bg-canvas border border-subtle rounded-lg text-xs text-primary focus:outline-none focus:border-indigo-500 font-sans leading-relaxed transition-colors empty:before:content-[attr(data-placeholder)] empty:before:text-muted ${RICH_TEXT_CLASSES}`}
               />
             </div>
           </div>

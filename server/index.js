@@ -1866,11 +1866,11 @@ app.get('/api/campaigns/:id/status', (req, res) => {
 // Send a single test email preview
 app.post('/api/campaigns/:id/test-send', async (req, res) => {
   try {
-    const { testRecipient, sender_provider } = req.body;
+    const { testRecipient, sender_provider, stepNumber } = req.body;
     if (!testRecipient) {
       return res.status(400).json({ success: false, message: 'Test recipient email is required.' });
     }
-    const result = await queueService.sendTestEmail(req.params.id, testRecipient, sender_provider);
+    const result = await queueService.sendTestEmail(req.params.id, testRecipient, sender_provider, Number(stepNumber) || 1);
     res.json(result);
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
