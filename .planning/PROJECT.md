@@ -73,13 +73,13 @@ Shipped **v1.0 Initial MVP** on 2026-10-03 across 9 complete phases and 18 git c
 - ✓ Curated Cold Outreach Starter Presets: High-converting built-in templates with pre-mapped variable tags — v3.0
 - ✓ Free AI Reply Sentiment Analyzer: Zero-cost classification (Interested, Question, Follow Up, Not Interested, Unsubscribe) via free-tier Gemini 1.5 Flash & local heuristics — v3.0
 - ✓ Reply Intelligence Cockpit Integration: Visual sentiment badges, confidence scores, and one-click filtering in Campaign Cockpit and Database Inspector — v3.0
+- ✓ 1-Click Campaign & Triad Duplication (`POST /api/campaigns/:id/duplicate`): Full settings, cadence steps, and isolated database binding — v4.0
+- ✓ Rich Text Follow-Up Formatting Studio: WYSIWYG toolbar (Bold, Italic, Lists, Links) in `DripSequenceStudio` with caret variable chips — v4.0
+- ✓ System-Wide Light Mode WCAG 2.2 AA Contrast & Token Hardening: Design tokens with >= 4.5:1 contrast, purged hardcoded dark classes — v4.0
+- ✓ Direct Template Assignment to Variants in A/B Testing: Template pickers, comparative deliverability radar, dynamic attachment dispatch — v4.0
 
-### Active (v4.0)
-
-- [ ] **DUP-01..03**: 1-Click Campaign & Triad Duplication (`POST /api/campaigns/:id/duplicate`) cloning configs, cadence steps, and binding new isolated databases.
-- [ ] **RICH-01..03**: Rich Text Formatting Studio for custom follow-up cadences in `DripSequenceStudio` with dynamic variable pill insertion.
-- [ ] **CONTRAST-01..04**: System-Wide Light Mode WCAG 2.2 AA Contrast & Token Hardening across all buttons, inputs, modals, and text.
-- [ ] **AB-01..03**: Direct Template Assignment to Variants in A/B Testing Studio with metadata previews and spam risk radar.
+### Active
+*(Milestone v4.0 complete. Ready for v5.0 planning.)*
 
 ### Out of Scope
 
