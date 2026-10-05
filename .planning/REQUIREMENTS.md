@@ -85,6 +85,6 @@
 | CONTRAST-02 | Phase 18 | Complete |
 | CONTRAST-03 | Phase 18 | Complete |
 | CONTRAST-04 | Phase 18 | Complete |
-| AB-01 | Phase 19 | Pending |
-| AB-02 | Phase 19 | Pending |
-| AB-03 | Phase 19 | Pending |
+| AB-01 | Phase 19 | Complete |
+| AB-02 | Phase 19 | Complete |
+| AB-03 | Phase 19 | Complete |

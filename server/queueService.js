@@ -254,7 +254,9 @@ async function dispatchSingleEmail(transportOrAccount, contact, campaign, sender
     renderedSubject = `Re: ${renderedSubject}`;
   }
 
-  const templateIdToUse = stepConfig?.template_id || campaign.template_id;
+  const templateIdToUse = (variant === 'B' && campaign.is_ab_test && campaign.template_id_b)
+    ? campaign.template_id_b
+    : (stepConfig?.template_id || campaign.template_id);
 
   const mailHeaders = {
     'X-Mailer': 'StrokeCRM Outreach Engine',

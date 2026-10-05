@@ -1022,13 +1022,13 @@ app.post('/api/campaigns/:id/duplicate', (req, res) => {
           subject_a, body_a, subject_b, body_b, is_ab_test,
           min_delay, max_delay, daily_limit, total_contacts,
           sent_count, failed_count, reply_count,
-          database_id, template_id, cc_addresses, bcc_addresses, sender_provider
+          database_id, template_id, template_id_b, cc_addresses, bcc_addresses, sender_provider
         ) VALUES (
           ?, 'DRAFT', ?, ?, ?,
           ?, ?, ?, ?, ?,
           ?, ?, ?, 0,
           0, 0, 0,
-          ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?
         )
       `);
 
@@ -1047,6 +1047,7 @@ app.post('/api/campaigns/:id/duplicate', (req, res) => {
         source.daily_limit || 100,
         database_id,
         source.template_id || null,
+        source.template_id_b || null,
         source.cc_addresses || '',
         source.bcc_addresses || '',
         source.sender_provider || 'default'
@@ -1918,11 +1919,29 @@ app.get('/api/campaigns/:id/ab-stats', (req, res) => {
     const rateA = statsA.sent > 0 ? Math.round((statsA.sent / (statsA.sent + statsA.failed)) * 100) : 100;
     const rateB = statsB.sent > 0 ? Math.round((statsB.sent / (statsB.sent + statsB.failed)) * 100) : 100;
 
+    // Attached templates resolution
+    const tmplA = campaign.template_id ? templateService.getTemplateById(campaign.template_id) : null;
+    const tmplB = campaign.template_id_b ? templateService.getTemplateById(campaign.template_id_b) : null;
+
+    // Attached database schema
+    let databaseHeaders = [];
+    if (campaign.database_id) {
+      const dbRow = db.prepare('SELECT headers FROM databases WHERE id = ?').get(campaign.database_id);
+      if (dbRow && dbRow.headers) {
+        try { databaseHeaders = JSON.parse(dbRow.headers); } catch (e) { databaseHeaders = []; }
+      }
+    }
+
     res.json({
       campaignId,
       campaignName: campaign.name,
+      databaseId: campaign.database_id || null,
+      databaseHeaders,
       is_ab_test: !!campaign.is_ab_test,
       variantA: {
+        templateId: campaign.template_id || null,
+        templateName: tmplA ? tmplA.name : null,
+        attachmentsCount: tmplA && tmplA.attachments ? JSON.parse(tmplA.attachments).length : 0,
         subject: campaign.subject_a || '',
         body: campaign.body_a || '',
         total: statsA.total || 0,
@@ -1935,6 +1954,9 @@ app.get('/api/campaigns/:id/ab-stats', (req, res) => {
         wordCount: (campaign.body_a || '').split(/\s+/).filter(Boolean).length
       },
       variantB: {
+        templateId: campaign.template_id_b || null,
+        templateName: tmplB ? tmplB.name : null,
+        attachmentsCount: tmplB && tmplB.attachments ? JSON.parse(tmplB.attachments).length : 0,
         subject: campaign.subject_b || '',
         body: campaign.body_b || '',
         total: statsB.total || 0,
@@ -1991,15 +2013,15 @@ app.post('/api/campaigns/:id/ab-split', (req, res) => {
   }
 });
 
-// Save A/B testing copy and settings
+// Save A/B testing copy, templates, and settings
 app.post('/api/campaigns/:id/ab-save', (req, res) => {
   try {
     const campaignId = Number(req.params.id);
-    const { subject_a, body_a, subject_b, body_b, is_ab_test } = req.body;
+    const { subject_a, body_a, subject_b, body_b, is_ab_test, template_id_a, template_id_b } = req.body;
 
     db.prepare(`
       UPDATE campaigns 
-      SET subject_a = ?, body_a = ?, subject_b = ?, body_b = ?, is_ab_test = ?, updated_at = ?
+      SET subject_a = ?, body_a = ?, subject_b = ?, body_b = ?, is_ab_test = ?, template_id = ?, template_id_b = ?, updated_at = ?
       WHERE id = ?
     `).run(
       subject_a || '',
@@ -2007,6 +2029,8 @@ app.post('/api/campaigns/:id/ab-save', (req, res) => {
       subject_b || '',
       body_b || '',
       is_ab_test ? 1 : 0,
+      template_id_a ? Number(template_id_a) : null,
+      template_id_b ? Number(template_id_b) : null,
       new Date().toISOString(),
       campaignId
     );

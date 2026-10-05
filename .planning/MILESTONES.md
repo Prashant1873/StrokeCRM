@@ -1,5 +1,17 @@
 # Milestones
 
+## v4.0 Campaign Duplication, Rich Cadences & Contrast Hardening (Shipped: 2026-10-06)
+
+**Phases completed:** 4 phases (Phases 16–19)
+
+**Key accomplishments:**
+- **Campaign Duplication Engine & Triad Cloning (Phase 16)**: Transactional cloning (`POST /api/campaigns/:id/duplicate`) replicating campaign settings, sender credentials, throttle caps, CC/BCC, and multi-step drip cadences, while strictly enforcing 1:1 Triad isolation with dedicated or freshly uploaded audience databases.
+- **Rich Text Formatting Studio in Follow-Up Cadences (Phase 17)**: Integrated a full WYSIWYG text formatting toolbar (Bold, Italic, Underline, Bullet/Numbered Lists, Links, Clear Formatting) into custom follow-up steps in `DripSequenceStudio` with caret-aware variable chip injection (`{{FirstName}}`) and RFC 2046 multipart MIME dual-part dispatch.
+- **System-Wide Light Mode WCAG Contrast & Token Hardening (Phase 18)**: Upgraded design tokens in `index.css` (`--text-muted`, `--text-secondary`) to exceed WCAG 2.2 AA contrast standards (>= 4.5:1); eliminated all hardcoded `slate-` colors across all view components, modals, and buttons.
+- **Template Assignment & Multi-Variant Bindings in A/B Testing (Phase 19)**: Interactive template pickers for Variant A (Control) and Variant B (Challenger) in `ABTestingView` with live comparative deliverability radar, real-time spam scoring, word count metrics, and dynamic attachment dispatch via `queueService.js`.
+
+---
+
 ## v3.0 UI Overhaul, Light Mode & Free AI Reply Intelligence (Shipped: 2026-10-05)
 
 **Phases completed:** 3 phases (Phases 13–15)

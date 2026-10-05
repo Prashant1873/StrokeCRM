@@ -185,6 +185,9 @@ try {
   if (!campaignColumns.includes('template_id')) {
     db.exec("ALTER TABLE campaigns ADD COLUMN template_id INTEGER REFERENCES templates(id) ON DELETE SET NULL");
   }
+  if (!campaignColumns.includes('template_id_b')) {
+    db.exec("ALTER TABLE campaigns ADD COLUMN template_id_b INTEGER REFERENCES templates(id) ON DELETE SET NULL");
+  }
   if (!campaignColumns.includes('cc_addresses')) {
     db.exec("ALTER TABLE campaigns ADD COLUMN cc_addresses TEXT DEFAULT ''");
   }
