@@ -168,6 +168,33 @@ flowchart TD
 - **Template Selector**: Enables direct binding or loading of saved templates into Variant A and Variant B.
 - **Dynamic Resolution**: Supports per-variant template references (`template_id_a`, `template_id_b`) alongside custom inline overrides in `queueService.js`.
 - **Dual Spam & Deliverability Preflight**: Displays side-by-side spam scores, word count, and token variables for both variants.
+### 13. Delivery Failure & NDR Bounce Intelligence Subsystem (v5.0)
+- **NDR Detection & Parsing**:
+  - `replyScannerService.js` identifies bounce emails from `mailer-daemon@googlemail.com`, `postmaster@*`, and subjects matching delivery status notifications (`Delivery Status Notification (Failure)`, `Undelivered Mail Returned to Sender`).
+  - RFC 3464 DSN & Google body heuristics extract failed recipient address (`Final-Recipient: rfc822; ...`, `** Address not found **`) and diagnostic status codes (e.g., `550 5.1.1`, `Host not found`).
+- **Synchronous vs Asynchronous Handling**:
+  - Synchronous: `queueService.js` detects immediate SMTP permanent errors (codes 550, 553, invalid recipient) and marks failure type.
+  - Asynchronous: Mailer-Daemon IMAP processor matches recipient to `database_records` / `contacts`.
+- **Atomic Disarm & State Updates**:
+  - Sets `status = 'BOUNCED'`, stores `bounce_reason`, `bounce_code`, and `bounced_at`.
+  - Atomically nullifies `next_step_scheduled_at` to halt all future scheduled drip steps.
+- **Cockpit Observability & Scrubbing**:
+  - Real-time "Delivery Failures" badge in Campaign Cockpit and Database Inspector.
+  - 1-click "Export Inaccurate Leads (CSV)" for list cleaning.
 
-
+### 14. Native Gmail Label Hierarchy & Synchronization Subsystem (v5.0)
+- **Label Hierarchy**:
+  - Programmatically provisions nested labels via IMAP (`X-GM-LABELS`):
+    - `StrokeCRM`
+    - `StrokeCRM/Interested`
+    - `StrokeCRM/Replied`
+    - `StrokeCRM/Bounced`
+    - `StrokeCRM/Campaign: [Campaign Name]`
+- **Event-Driven Labeling Lifecycle**:
+  - Outbound Send: Adds `StrokeCRM` and `StrokeCRM/Campaign: [Campaign Name]`.
+  - Inbound Reply: Adds `StrokeCRM/Replied`; if sentiment is `Interested`, adds `StrokeCRM/Interested`.
+  - Bounce / NDR: Adds `StrokeCRM/Bounced`.
+- **IMAP Protocol Compatibility**:
+  - Uses ImapFlow's native support for Gmail extension `X-GM-LABELS` (`labelsAdd`, `labelsSet`).
+  - Gracefully falls back to no-op for non-Gmail custom domain IMAP servers without throwing errors.
 

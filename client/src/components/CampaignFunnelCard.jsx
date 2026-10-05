@@ -6,6 +6,7 @@ import {
   MessageSquare, 
   CheckCircle2, 
   AlertCircle, 
+  AlertTriangle,
   ChevronDown, 
   ChevronUp,
   Inbox,
@@ -49,11 +50,14 @@ const SENTIMENT_CONFIG = {
 export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) {
   const [funnelData, setFunnelData] = useState(null);
   const [replies, setReplies] = useState([]);
+  const [bounces, setBounces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [scanNotice, setScanNotice] = useState(null);
   const [showRepliesList, setShowRepliesList] = useState(false);
+  const [showBouncesList, setShowBouncesList] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingBounces, setIsExportingBounces] = useState(false);
   const [sentimentFilter, setSentimentFilter] = useState('ALL');
   const [updatingReplyId, setUpdatingReplyId] = useState(null);
 
@@ -100,9 +104,10 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
     if (!campaign?.id) return;
     try {
       setLoading(true);
-      const [funnelRes, repliesRes] = await Promise.all([
+      const [funnelRes, repliesRes, bouncesRes] = await Promise.all([
         fetch(`/api/campaigns/${campaign.id}/funnel-stats`),
-        fetch(`/api/campaigns/${campaign.id}/replies`)
+        fetch(`/api/campaigns/${campaign.id}/replies`),
+        fetch(`/api/campaigns/${campaign.id}/bounces`)
       ]);
 
       if (funnelRes.ok) {
@@ -113,8 +118,12 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
         const rJson = await repliesRes.json();
         setReplies(Array.isArray(rJson) ? rJson : []);
       }
+      if (bouncesRes.ok) {
+        const bJson = await bouncesRes.json();
+        setBounces(Array.isArray(bJson.records) ? bJson.records : []);
+      }
     } catch (err) {
-      console.warn('Failed to load funnel stats or replies:', err.message);
+      console.warn('Failed to load funnel stats, replies or bounces:', err.message);
     } finally {
       setLoading(false);
     }
@@ -138,9 +147,11 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
 
       const data = await res.json();
       if (data.success) {
+        const bCount = data.matchedBounces || 0;
+        const bounceMsg = bCount > 0 ? `, ${bCount} delivery failures identified` : '';
         setScanNotice({
           type: 'success',
-          text: `Scan complete: ${data.scanned || 0} messages checked. ${data.matchedReplies || 0} replies matched & disarmed, ${data.autoRepliesIgnored || 0} auto-replies filtered.`
+          text: `Scan complete: ${data.scanned || 0} messages checked. ${data.matchedReplies || 0} replies matched & disarmed${bounceMsg}, ${data.autoRepliesIgnored || 0} auto-replies filtered.`
         });
         await fetchFunnelAndReplies();
         if (onUpdate) onUpdate();
@@ -180,6 +191,29 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
       alert('CSV export error: ' + err.message);
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleExportBounces = async () => {
+    if (!campaign?.id || isExportingBounces) return;
+    setIsExportingBounces(true);
+    try {
+      const response = await fetch(`/api/campaigns/${campaign.id}/export-bounces`);
+      if (!response.ok) throw new Error('Export bounces failed.');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `campaign-${campaign.id}-inaccurate-emails-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      alert('CSV export error: ' + err.message);
+    } finally {
+      setIsExportingBounces(false);
     }
   };
 
@@ -231,6 +265,19 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
 
         {/* Action Controls */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          {bounces.length > 0 && (
+            <button
+              type="button"
+              onClick={handleExportBounces}
+              disabled={isExportingBounces}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold border border-rose-500/30 transition-all spring-press cursor-pointer"
+              title="Export inaccurate and delivery-failed emails as CSV"
+            >
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+              <span>Export Inaccurate ({bounces.length})</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={handleScanReplies}
@@ -387,18 +434,116 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
                 <strong className="text-amber-500 font-mono">{autoReplies.length}</strong>
               </div>
             )}
+            {bounces.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                <span className="text-secondary">Delivery Failures:</span>
+                <strong className="text-rose-600 dark:text-rose-400 font-mono">{bounces.length}</strong>
+              </div>
+            )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowRepliesList(!showRepliesList)}
-            className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium transition-colors cursor-pointer"
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span>{showRepliesList ? 'Hide Detected Replies' : `View Detected Replies (${humanReplies.length})`}</span>
-            {showRepliesList ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
+          <div className="flex items-center gap-3">
+            {bounces.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowBouncesList(!showBouncesList)}
+                className="flex items-center gap-1.5 text-xs text-rose-600 dark:text-rose-400 hover:underline font-medium transition-colors cursor-pointer"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>{showBouncesList ? 'Hide Inaccurate Emails' : `Delivery Failures (${bounces.length})`}</span>
+                {showBouncesList ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowRepliesList(!showRepliesList)}
+              className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium transition-colors cursor-pointer"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>{showRepliesList ? 'Hide Detected Replies' : `View Detected Replies (${humanReplies.length})`}</span>
+              {showRepliesList ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          </div>
         </div>
+
+        {/* Collapsible Delivery Failures / Inaccurate Emails Feed */}
+        {showBouncesList && (
+          <div className="border border-rose-500/30 rounded-xl overflow-hidden bg-surface divide-y divide-subtle animate-in fade-in duration-150">
+            <div className="p-3 bg-rose-500/5 border-b border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                <span className="font-semibold text-primary">Inaccurate & Delivery-Failed Leads</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-mono font-medium">
+                  {bounces.length} Bounced • Cadences Halted
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleExportBounces}
+                disabled={isExportingBounces}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-semibold transition-all spring-press cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                <Download className="w-3 h-3" />
+                <span>{isExportingBounces ? 'Exporting...' : 'Export Inaccurate (CSV)'}</span>
+              </button>
+            </div>
+
+            <div className="max-h-72 overflow-y-auto divide-y divide-subtle">
+              {bounces.length === 0 ? (
+                <div className="p-8 text-center text-muted text-xs font-sans">
+                  No delivery failures recorded. All emails were accepted by remote mail exchangers.
+                </div>
+              ) : (
+                bounces.map((b) => {
+                  const bDate = b.bounced_at ? new Date(b.bounced_at) : null;
+                  const dateFormatted = bDate
+                    ? `${bDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${bDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    : 'Recent';
+
+                  return (
+                    <div key={b.id} className="p-3.5 hover:bg-subtle transition-colors flex flex-col gap-2 text-xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <span className="w-6 h-6 rounded-md bg-rose-500/10 text-rose-500 border border-rose-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <XCircle className="w-3.5 h-3.5" />
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-primary truncate font-mono">{b.email}</span>
+                              {b.first_name && (
+                                <span className="text-secondary text-[11px]">({b.first_name} {b.company ? `@ ${b.company}` : ''})</span>
+                              )}
+                              <span className="text-[9px] uppercase px-1.5 py-0.2 rounded font-sans font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                                {b.bounce_type || 'HARD'} BOUNCE
+                              </span>
+                              {b.bounce_code && (
+                                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-subtle text-secondary border border-subtle">
+                                  Code: {b.bounce_code}
+                                </span>
+                              )}
+                            </div>
+                            {b.bounce_reason && (
+                              <p className="text-[11px] text-rose-600 dark:text-rose-400 font-mono truncate mt-0.5" title={b.bounce_reason}>
+                                {b.bounce_reason}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0 font-mono text-[11px] text-muted">
+                          {dateFormatted}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Collapsible Detected Inbound Replies Feed */}
         {showRepliesList && (

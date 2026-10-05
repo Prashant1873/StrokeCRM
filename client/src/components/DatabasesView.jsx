@@ -5,6 +5,7 @@ import {
   FileSpreadsheet, 
   CheckCircle2, 
   AlertCircle, 
+  AlertTriangle,
   Trash2, 
   Download, 
   Search, 
@@ -75,10 +76,12 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
   const [inspectDb, setInspectDb] = useState(null);
   const [inspectRecords, setInspectRecords] = useState([]);
   const [inspectTotal, setInspectTotal] = useState(0);
+  const [inspectBouncedTotal, setInspectBouncedTotal] = useState(0);
   const [inspectLoading, setInspectLoading] = useState(false);
   const [inspectSearch, setInspectSearch] = useState('');
   const [inspectPage, setInspectPage] = useState(0);
   const [inspectSentiment, setInspectSentiment] = useState('ALL');
+  const [inspectStatus, setInspectStatus] = useState('ALL');
   const [updatingRecordId, setUpdatingRecordId] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -229,19 +232,23 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
   };
 
   // Open inspector modal and load paginated records
-  const loadInspectRecords = async (dbId, sentiment = 'ALL') => {
+  const loadInspectRecords = async (dbId, sentiment = 'ALL', status = 'ALL') => {
     setInspectLoading(true);
     try {
       let url = `/api/databases/${dbId}?limit=50&offset=0`;
       if (sentiment && sentiment !== 'ALL') {
         url += `&sentiment=${encodeURIComponent(sentiment)}`;
       }
+      if (status && status !== 'ALL') {
+        url += `&status=${encodeURIComponent(status)}`;
+      }
       const res = await fetch(url);
       const data = await res.json();
       if (data.database) {
         setInspectDb(data.database);
         setInspectRecords(data.records || []);
-        setInspectTotal(data.total || 0);
+        setInspectTotal(data.totalCount ?? data.total ?? 0);
+        setInspectBouncedTotal(data.bouncedCount ?? 0);
       }
     } catch (err) {
       console.error('Failed to load audience details:', err);
@@ -253,15 +260,60 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
   const handleOpenInspector = async (dbItem) => {
     setInspectDb(dbItem);
     setInspectSentiment('ALL');
+    setInspectStatus('ALL');
     setInspectPage(0);
     setInspectSearch('');
-    await loadInspectRecords(dbItem.id, 'ALL');
+    await loadInspectRecords(dbItem.id, 'ALL', 'ALL');
   };
 
   const handleSentimentFilterChange = async (sentiment) => {
     setInspectSentiment(sentiment);
     if (inspectDb) {
-      await loadInspectRecords(inspectDb.id, sentiment);
+      await loadInspectRecords(inspectDb.id, sentiment, inspectStatus);
+    }
+  };
+
+  const handleStatusFilterChange = async (status) => {
+    setInspectStatus(status);
+    if (inspectDb) {
+      await loadInspectRecords(inspectDb.id, inspectSentiment, status);
+    }
+  };
+
+  // Manual 1-click Delivery Failure / Bounce override (mark as inaccurate)
+  const handleMarkBounced = async (recordId) => {
+    if (!inspectDb) return;
+    if (!confirm('Mark this prospect email as inaccurate/bounced? Future scheduled follow-up steps will be halted.')) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/databases/${inspectDb.id}/records/${recordId}/mark-bounced`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'Manually flagged as inaccurate email address by operator.' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInspectRecords(prev => prev.map(r => {
+          if (r.id === recordId) {
+            return {
+              ...r,
+              status: 'BOUNCED',
+              bounce_type: 'HARD',
+              bounce_code: '550',
+              bounce_reason: 'Manually flagged as inaccurate email address by operator.',
+              bounced_at: new Date().toISOString(),
+              next_step_scheduled_at: null
+            };
+          }
+          return r;
+        }));
+        setInspectBouncedTotal(prev => prev + 1);
+      } else {
+        alert(data.message || 'Failed to mark lead as bounced.');
+      }
+    } catch (err) {
+      alert('Error marking bounced: ' + err.message);
     }
   };
 
@@ -494,14 +546,20 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                 )}
 
                 {/* Stats Metrics */}
-                <div className="grid grid-cols-2 gap-2 py-2 mb-3 border-y border-subtle text-xs">
+                <div className="grid grid-cols-3 gap-2 py-2 mb-3 border-y border-subtle text-xs">
                   <div>
-                    <span className="text-[10px] text-muted block">Total Prospects</span>
+                    <span className="text-[10px] text-muted block">Total</span>
                     <span className="font-semibold text-primary">{dbItem.row_count || 0}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-muted block">Valid Deliverables</span>
+                    <span className="text-[10px] text-muted block">Valid</span>
                     <span className="font-semibold text-emerald-600 dark:text-emerald-400">{dbItem.valid_email_count || 0}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted block">Bounced</span>
+                    <span className={`font-semibold ${dbItem.bounced_count > 0 ? 'text-rose-500 font-bold' : 'text-muted'}`}>
+                      {dbItem.bounced_count || 0}
+                    </span>
                   </div>
                 </div>
 
@@ -765,13 +823,25 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setInspectDb(null)}
-                className="text-muted hover:text-primary p-1 rounded-md hover:bg-subtle cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.open(`/api/databases/${inspectDb.id}/export-bounces`, '_blank')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-all spring-press cursor-pointer"
+                  title="Download CSV of inaccurate / delivery-failed email addresses"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export Inaccurate ({inspectBouncedTotal})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setInspectDb(null)}
+                  className="text-muted hover:text-primary p-1 rounded-md hover:bg-subtle cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Headers row */}
@@ -786,41 +856,72 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
               </div>
             </div>
 
-            {/* Quick Sentiment Filter Tabs (SENT-06) */}
-            <div className="flex flex-wrap items-center gap-1.5 mb-3 pb-2 border-b border-subtle">
-              <span className="text-[10px] font-semibold text-secondary uppercase tracking-wider mr-1">
-                Filter Sentiment:
-              </span>
-              <button
-                type="button"
-                onClick={() => handleSentimentFilterChange('ALL')}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
-                  inspectSentiment === 'ALL'
-                    ? 'bg-indigo-600 text-white font-semibold shadow-xs'
-                    : 'bg-subtle text-secondary hover:text-primary hover:bg-subtle/80'
-                }`}
-              >
-                All Records
-              </button>
-              {Object.entries(SENTIMENT_CONFIG).map(([key, cfg]) => {
-                const IconComponent = cfg.icon;
-                const isSelected = inspectSentiment === key;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => handleSentimentFilterChange(key)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
-                      isSelected
-                        ? `${cfg.badgeClass} font-semibold ring-1 ring-offset-1 ring-current`
-                        : 'bg-surface text-secondary border-subtle hover:text-primary hover:bg-subtle'
-                    }`}
-                  >
-                    <IconComponent className="w-3 h-3" />
-                    <span>{cfg.label}</span>
-                  </button>
-                );
-              })}
+            {/* Quick Status & Sentiment Filter Tabs */}
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-subtle">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-semibold text-secondary uppercase tracking-wider mr-1">
+                  Status:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleStatusFilterChange('ALL')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                    inspectStatus === 'ALL'
+                      ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                      : 'bg-subtle text-secondary hover:text-primary hover:bg-subtle/80'
+                  }`}
+                >
+                  All Statuses
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStatusFilterChange('BOUNCED')}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
+                    inspectStatus === 'BOUNCED'
+                      ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/40 font-semibold ring-1 ring-offset-1 ring-rose-500'
+                      : 'bg-surface text-secondary border-subtle hover:text-rose-500 hover:bg-rose-500/10'
+                  }`}
+                >
+                  <AlertTriangle className="w-3 h-3 text-rose-500" />
+                  <span>Delivery Failures ({inspectBouncedTotal})</span>
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-semibold text-secondary uppercase tracking-wider mr-1">
+                  Sentiment:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleSentimentFilterChange('ALL')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                    inspectSentiment === 'ALL'
+                      ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                      : 'bg-subtle text-secondary hover:text-primary hover:bg-subtle/80'
+                  }`}
+                >
+                  All
+                </button>
+                {Object.entries(SENTIMENT_CONFIG).map(([key, cfg]) => {
+                  const IconComponent = cfg.icon;
+                  const isSelected = inspectSentiment === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => handleSentimentFilterChange(key)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
+                        isSelected
+                          ? `${cfg.badgeClass} font-semibold ring-1 ring-offset-1 ring-current`
+                          : 'bg-surface text-secondary border-subtle hover:text-primary hover:bg-subtle'
+                      }`}
+                    >
+                      <IconComponent className="w-3 h-3" />
+                      <span>{cfg.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Table Records with Sticky Blurred Header */}
@@ -861,7 +962,18 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                           <td className="px-3 py-2 text-secondary">{r.first_name || '-'}</td>
                           <td className="px-3 py-2 text-secondary">{r.company || '-'}</td>
                           <td className="px-3 py-2">
-                            {isReplied ? (
+                            {r.status === 'BOUNCED' ? (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-sans font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                                  <AlertTriangle className="w-2.5 h-2.5" /> BOUNCED ({r.bounce_type || 'HARD'})
+                                </span>
+                                {r.bounce_reason && (
+                                  <span className="text-[9px] text-rose-500 dark:text-rose-400 font-sans line-clamp-1 max-w-[200px]" title={r.bounce_reason}>
+                                    {r.bounce_code ? `[${r.bounce_code}] ` : ''}{r.bounce_reason}
+                                  </span>
+                                )}
+                              </div>
+                            ) : isReplied ? (
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-sans font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                                 <MessageSquare className="w-2.5 h-2.5" /> REPLIED (DISARMED)
                               </span>
@@ -966,25 +1078,41 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                           </td>
                           <td className="px-3 py-2 text-right">
                             <div className="flex items-center justify-end gap-1.5 font-sans">
-                              {!isReplied && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleMarkReplied(r.id)}
-                                  title="Log lead reply and permanently disarm remaining follow-ups"
-                                  className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold transition-colors spring-press cursor-pointer"
-                                >
-                                  Log Reply & Disarm
-                                </button>
-                              )}
-                              {!isReplied && !isCancelled && (r.status === 'PENDING' || r.next_step_scheduled_at) && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleCancelFollowup(r.id)}
-                                  title="Cancel pending follow-up steps for this lead"
-                                  className="px-2 py-0.5 rounded bg-subtle hover:bg-rose-500/15 text-secondary hover:text-rose-500 border border-subtle hover:border-rose-500/30 text-[10px] font-medium transition-colors spring-press cursor-pointer"
-                                >
-                                  Cancel Scheduled Follow-up
-                                </button>
+                              {r.status === 'BOUNCED' ? (
+                                <span className="text-[10px] text-rose-500/80 font-mono italic">
+                                  Inaccurate / Halted
+                                </span>
+                              ) : (
+                                <>
+                                  {!isReplied && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMarkReplied(r.id)}
+                                      title="Log lead reply and permanently disarm remaining follow-ups"
+                                      className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold transition-colors spring-press cursor-pointer"
+                                    >
+                                      Log Reply & Disarm
+                                    </button>
+                                  )}
+                                  {!isReplied && !isCancelled && (r.status === 'PENDING' || r.next_step_scheduled_at) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCancelFollowup(r.id)}
+                                      title="Cancel pending follow-up steps for this lead"
+                                      className="px-2 py-0.5 rounded bg-subtle hover:bg-rose-500/15 text-secondary hover:text-rose-500 border border-subtle hover:border-rose-500/30 text-[10px] font-medium transition-colors spring-press cursor-pointer"
+                                    >
+                                      Cancel Follow-up
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMarkBounced(r.id)}
+                                    title="Flag email as inaccurate / bounced and disarm future steps"
+                                    className="px-2 py-0.5 rounded bg-subtle hover:bg-rose-500/15 text-secondary hover:text-rose-500 border border-subtle hover:border-rose-500/30 text-[10px] font-medium transition-colors spring-press cursor-pointer"
+                                  >
+                                    Mark Inaccurate
+                                  </button>
+                                </>
                               )}
                             </div>
                           </td>

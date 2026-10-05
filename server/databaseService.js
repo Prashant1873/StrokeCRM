@@ -213,6 +213,8 @@ function getIncludedStats(databaseId) {
       COUNT(*) as total,
       SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) as sent,
       SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed,
+      SUM(CASE WHEN status = 'BOUNCED' THEN 1 ELSE 0 END) as bounced,
+      SUM(CASE WHEN status = 'REPLIED' THEN 1 ELSE 0 END) as replied,
       SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pending
     FROM database_records
     WHERE database_id = ? AND included = 1
@@ -277,7 +279,8 @@ function getDatabases() {
     SELECT 
       d.*,
       c.name as campaign_name,
-      c.status as campaign_status
+      c.status as campaign_status,
+      (SELECT COUNT(*) FROM database_records dr WHERE dr.database_id = d.id AND dr.status = 'BOUNCED') as bounced_count
     FROM databases d
     LEFT JOIN campaigns c ON d.campaign_id = c.id
     ORDER BY d.id DESC
@@ -292,7 +295,7 @@ function getDatabases() {
 /**
  * Gets a single database with its headers and paginated records
  */
-function getDatabaseById(id, { limit = 100, offset = 0, search = '', sentiment = '' } = {}) {
+function getDatabaseById(id, { limit = 100, offset = 0, search = '', sentiment = '', status = '' } = {}) {
   const database = db.prepare(`
     SELECT 
       d.*,
@@ -328,16 +331,26 @@ function getDatabaseById(id, { limit = 100, offset = 0, search = '', sentiment =
     countParams.push(s);
   }
 
+  if (status && status.trim() && status.trim().toUpperCase() !== 'ALL') {
+    const st = status.trim().toUpperCase();
+    query += ' AND status = ?';
+    countQuery += ' AND status = ?';
+    params.push(st);
+    countParams.push(st);
+  }
+
   query += ' ORDER BY id ASC LIMIT ? OFFSET ?';
   params.push(limit, offset);
 
   const records = db.prepare(query).all(...params);
   const totalCount = db.prepare(countQuery).get(...countParams).count;
+  const bouncedCount = db.prepare("SELECT COUNT(*) as count FROM database_records WHERE database_id = ? AND status = 'BOUNCED'").get(id).count;
 
   return {
     database,
     records,
-    totalCount
+    totalCount,
+    bouncedCount
   };
 }
 

@@ -168,6 +168,21 @@ db.exec(`
     created_at TEXT NOT NULL,
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS bounce_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id INTEGER,
+    database_record_id INTEGER,
+    contact_id INTEGER,
+    recipient_email TEXT NOT NULL,
+    bounce_type TEXT DEFAULT 'HARD', -- 'HARD', 'SOFT'
+    bounce_code TEXT DEFAULT '', -- e.g. '5.1.1', '550'
+    diagnostic_code TEXT DEFAULT '',
+    raw_reason TEXT DEFAULT '',
+    source TEXT DEFAULT 'mailer_daemon', -- 'mailer_daemon', 'smtp_reject'
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+  );
 `);
 
 // Create physical storage directory for database files
@@ -283,6 +298,45 @@ try {
   }
   if (!replyColumns.includes('sentiment_provider')) {
     db.exec("ALTER TABLE reply_logs ADD COLUMN sentiment_provider TEXT");
+  }
+  if (!replyColumns.includes('uid')) {
+    db.exec("ALTER TABLE reply_logs ADD COLUMN uid INTEGER");
+  }
+
+  const bounceLogColumns = db.prepare("PRAGMA table_info(bounce_logs)").all().map(c => c.name);
+  if (!bounceLogColumns.includes('uid')) {
+    db.exec("ALTER TABLE bounce_logs ADD COLUMN uid INTEGER");
+  }
+
+  // Phase 20: Delivery Failure & NDR Bounce Tracking Columns
+  if (!recordColumns.includes('bounce_reason')) {
+    db.exec("ALTER TABLE database_records ADD COLUMN bounce_reason TEXT");
+  }
+  if (!recordColumns.includes('bounce_code')) {
+    db.exec("ALTER TABLE database_records ADD COLUMN bounce_code TEXT");
+  }
+  if (!recordColumns.includes('bounce_type')) {
+    db.exec("ALTER TABLE database_records ADD COLUMN bounce_type TEXT");
+  }
+  if (!recordColumns.includes('bounced_at')) {
+    db.exec("ALTER TABLE database_records ADD COLUMN bounced_at TEXT");
+  }
+
+  if (!contactColumns.includes('bounce_reason')) {
+    db.exec("ALTER TABLE contacts ADD COLUMN bounce_reason TEXT");
+  }
+  if (!contactColumns.includes('bounce_code')) {
+    db.exec("ALTER TABLE contacts ADD COLUMN bounce_code TEXT");
+  }
+  if (!contactColumns.includes('bounce_type')) {
+    db.exec("ALTER TABLE contacts ADD COLUMN bounce_type TEXT");
+  }
+  if (!contactColumns.includes('bounced_at')) {
+    db.exec("ALTER TABLE contacts ADD COLUMN bounced_at TEXT");
+  }
+
+  if (!campaignColumns.includes('bounced_count')) {
+    db.exec("ALTER TABLE campaigns ADD COLUMN bounced_count INTEGER DEFAULT 0");
   }
 } catch (e) {
   console.warn('Column migration notice:', e.message);
@@ -409,7 +463,8 @@ const defaultSettings = [
   ['custom_imap_secure', '1'],
   ['custom_imap_user', ''],
   ['custom_imap_pass', ''],
-  ['gemini_api_key', '']
+  ['gemini_api_key', ''],
+  ['gmail_auto_labeling', '1']
 ];
 
 const insertSettingStmt = db.prepare(`

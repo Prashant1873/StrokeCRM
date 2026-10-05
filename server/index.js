@@ -522,12 +522,13 @@ app.get('/api/databases', (req, res) => {
 // Get a single database with its custom headers & paginated records
 app.get('/api/databases/:id', (req, res) => {
   try {
-    const { limit = 50, offset = 0, search = '', sentiment = '' } = req.query;
+    const { limit = 50, offset = 0, search = '', sentiment = '', status = '' } = req.query;
     const data = databaseService.getDatabaseById(req.params.id, {
       limit: Number(limit),
       offset: Number(offset),
       search: String(search || ''),
-      sentiment: String(sentiment || '')
+      sentiment: String(sentiment || ''),
+      status: String(status || '')
     });
     if (!data) {
       return res.status(404).json({ error: 'Database not found' });
@@ -750,6 +751,7 @@ app.get('/api/campaigns', (req, res) => {
       let totalContacts = c.total_contacts || 0;
       let sentCount = c.sent_count || 0;
       let failedCount = c.failed_count || 0;
+      let bouncedCount = c.bounced_count || 0;
 
       if (c.database_id) {
         databaseService.reopenUnusedDatabase(c.database_id, c.id);
@@ -759,6 +761,7 @@ app.get('/api/campaigns', (req, res) => {
           totalContacts = stats.total || 0;
           sentCount = stats.sent || 0;
           failedCount = stats.failed || 0;
+          bouncedCount = stats.bounced || 0;
         }
       }
 
@@ -767,6 +770,7 @@ app.get('/api/campaigns', (req, res) => {
         total_contacts: totalContacts,
         sent_count: sentCount,
         failed_count: failedCount,
+        bounced_count: bouncedCount,
         database_headers: c.database_headers ? JSON.parse(c.database_headers) : []
       };
     });
@@ -1520,6 +1524,7 @@ app.get('/api/campaigns/:id/funnel-stats', (req, res) => {
     let repliedCount = 0;
     let cancelledCount = 0;
     let failedCount = 0;
+    let bouncedCount = 0;
     let step2Scheduled = 0;
     let step3Scheduled = 0;
 
@@ -1530,6 +1535,7 @@ app.get('/api/campaigns/:id/funnel-stats', (req, res) => {
           SUM(CASE WHEN status = 'REPLIED' THEN 1 ELSE 0 END) as replied,
           SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) as cancelled,
           SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed,
+          SUM(CASE WHEN status = 'BOUNCED' THEN 1 ELSE 0 END) as bounced,
           SUM(CASE WHEN status = 'PENDING' AND current_step = 2 AND next_step_scheduled_at IS NOT NULL THEN 1 ELSE 0 END) as s2_sched,
           SUM(CASE WHEN status = 'PENDING' AND current_step = 3 AND next_step_scheduled_at IS NOT NULL THEN 1 ELSE 0 END) as s3_sched
         FROM database_records 
@@ -1540,6 +1546,7 @@ app.get('/api/campaigns/:id/funnel-stats', (req, res) => {
       repliedCount = stats?.replied || 0;
       cancelledCount = stats?.cancelled || 0;
       failedCount = stats?.failed || 0;
+      bouncedCount = stats?.bounced || 0;
       step2Scheduled = stats?.s2_sched || 0;
       step3Scheduled = stats?.s3_sched || 0;
     } else {
@@ -1549,6 +1556,7 @@ app.get('/api/campaigns/:id/funnel-stats', (req, res) => {
           SUM(CASE WHEN status = 'REPLIED' THEN 1 ELSE 0 END) as replied,
           SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) as cancelled,
           SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed,
+          SUM(CASE WHEN status = 'BOUNCED' THEN 1 ELSE 0 END) as bounced,
           SUM(CASE WHEN status = 'PENDING' AND current_step = 2 AND next_step_scheduled_at IS NOT NULL THEN 1 ELSE 0 END) as s2_sched,
           SUM(CASE WHEN status = 'PENDING' AND current_step = 3 AND next_step_scheduled_at IS NOT NULL THEN 1 ELSE 0 END) as s3_sched
         FROM contacts 
@@ -1559,6 +1567,7 @@ app.get('/api/campaigns/:id/funnel-stats', (req, res) => {
       repliedCount = stats?.replied || 0;
       cancelledCount = stats?.cancelled || 0;
       failedCount = stats?.failed || 0;
+      bouncedCount = stats?.bounced || 0;
       step2Scheduled = stats?.s2_sched || 0;
       step3Scheduled = stats?.s3_sched || 0;
     }
@@ -1602,6 +1611,7 @@ app.get('/api/campaigns/:id/funnel-stats', (req, res) => {
       repliedCount,
       cancelledCount,
       failedCount,
+      bouncedCount,
       rates: {
         step1: step1Rate,
         step2: step2Rate,
@@ -1731,6 +1741,224 @@ app.get('/api/campaigns/:id/export-audit', (req, res) => {
     res.status(200).send(csvContent);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Fetch recorded delivery failures / bounces for a specific campaign
+app.get('/api/campaigns/:id/bounces', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(campaignId);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    let records = [];
+    if (campaign.database_id) {
+      records = db.prepare(`
+        SELECT id, email, first_name, company, status, current_step,
+               bounce_type, bounce_code, bounce_reason, bounced_at, sent_at
+        FROM database_records
+        WHERE database_id = ? AND status = 'BOUNCED' AND included = 1
+        ORDER BY bounced_at DESC, id DESC
+      `).all(campaign.database_id);
+    } else {
+      records = db.prepare(`
+        SELECT id, email, first_name, company, status, current_step,
+               bounce_type, bounce_code, bounce_reason, bounced_at, sent_at
+        FROM contacts
+        WHERE campaign_id = ? AND status = 'BOUNCED'
+        ORDER BY bounced_at DESC, id DESC
+      `).all(campaignId);
+    }
+
+    const bounceLogs = replyScannerService.getCampaignBounces(campaignId);
+
+    res.json({
+      success: true,
+      campaignId,
+      bouncedCount: records.length,
+      records,
+      bounceLogs
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Manual 1-click override: Mark lead as BOUNCED (inaccurate email) and halt follow-ups
+app.post('/api/campaigns/:id/records/:recordId/mark-bounced', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const recordId = Number(req.params.recordId);
+    const isContact = req.query.isContact === 'true';
+    const reason = req.body?.reason || 'Manually flagged as inaccurate email address by operator';
+    const updated = replyScannerService.markLeadBouncedManually(recordId, campaignId, reason, isContact);
+    res.json({ success: true, message: 'Lead marked as BOUNCED and subsequent cadence steps halted.', record: updated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Downloadable RFC 4180 CSV export of inaccurate/delivery-failed emails for campaign scrubbing
+app.get('/api/campaigns/:id/export-bounces', (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(campaignId);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    let records = [];
+    if (campaign.database_id) {
+      records = db.prepare(`
+        SELECT id, email, first_name, company, status, current_step,
+               bounce_type, bounce_code, bounce_reason, bounced_at
+        FROM database_records
+        WHERE database_id = ? AND status = 'BOUNCED' AND included = 1
+        ORDER BY id ASC
+      `).all(campaign.database_id);
+    } else {
+      records = db.prepare(`
+        SELECT id, email, first_name, company, status, current_step,
+               bounce_type, bounce_code, bounce_reason, bounced_at
+        FROM contacts
+        WHERE campaign_id = ? AND status = 'BOUNCED'
+        ORDER BY id ASC
+      `).all(campaignId);
+    }
+
+    const escapeCsv = (val) => `"${String(val == null ? '' : val).replace(/"/g, '""')}"`;
+
+    let csvContent = [
+      'Email',
+      'FirstName',
+      'Company',
+      'Status',
+      'BounceType',
+      'BounceCode',
+      'DiagnosticReason',
+      'CurrentStep',
+      'BouncedAt'
+    ].map(escapeCsv).join(',') + '\r\n';
+
+    records.forEach(rec => {
+      const row = [
+        rec.email || '',
+        rec.first_name || '',
+        rec.company || '',
+        rec.status || 'BOUNCED',
+        rec.bounce_type || 'HARD',
+        rec.bounce_code || '550',
+        rec.bounce_reason || 'Delivery failed',
+        rec.current_step || 1,
+        rec.bounced_at || ''
+      ];
+      csvContent += row.map(escapeCsv).join(',') + '\r\n';
+    });
+
+    const filename = `campaign-${campaign.id}-inaccurate-emails-${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.status(200).send(csvContent);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Database-level: Fetch inaccurate / delivery-failed leads
+app.get('/api/databases/:id/bounces', (req, res) => {
+  try {
+    const databaseId = Number(req.params.id);
+    const dbRow = db.prepare('SELECT * FROM databases WHERE id = ?').get(databaseId);
+    if (!dbRow) {
+      return res.status(404).json({ error: 'Database not found' });
+    }
+
+    const records = db.prepare(`
+      SELECT id, email, first_name, company, status, current_step,
+             bounce_type, bounce_code, bounce_reason, bounced_at, sent_at
+      FROM database_records
+      WHERE database_id = ? AND status = 'BOUNCED'
+      ORDER BY bounced_at DESC, id DESC
+    `).all(databaseId);
+
+    res.json({
+      success: true,
+      databaseId,
+      bouncedCount: records.length,
+      records
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Database-level: Downloadable RFC 4180 CSV export of inaccurate leads
+app.get('/api/databases/:id/export-bounces', (req, res) => {
+  try {
+    const databaseId = Number(req.params.id);
+    const dbRow = db.prepare('SELECT * FROM databases WHERE id = ?').get(databaseId);
+    if (!dbRow) {
+      return res.status(404).json({ error: 'Database not found' });
+    }
+
+    const records = db.prepare(`
+      SELECT id, email, first_name, company, status, current_step,
+             bounce_type, bounce_code, bounce_reason, bounced_at
+      FROM database_records
+      WHERE database_id = ? AND status = 'BOUNCED'
+      ORDER BY id ASC
+    `).all(databaseId);
+
+    const escapeCsv = (val) => `"${String(val == null ? '' : val).replace(/"/g, '""')}"`;
+
+    let csvContent = [
+      'Email',
+      'FirstName',
+      'Company',
+      'Status',
+      'BounceType',
+      'BounceCode',
+      'DiagnosticReason',
+      'BouncedAt'
+    ].map(escapeCsv).join(',') + '\r\n';
+
+    records.forEach(rec => {
+      const row = [
+        rec.email || '',
+        rec.first_name || '',
+        rec.company || '',
+        rec.status || 'BOUNCED',
+        rec.bounce_type || 'HARD',
+        rec.bounce_code || '550',
+        rec.bounce_reason || 'Delivery failed',
+        rec.bounced_at || ''
+      ];
+      csvContent += row.map(escapeCsv).join(',') + '\r\n';
+    });
+
+    const filename = `database-${databaseId}-inaccurate-emails-${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.status(200).send(csvContent);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Database-level manual override: Mark record as BOUNCED (inaccurate email) and halt follow-ups
+app.post('/api/databases/:id/records/:recordId/mark-bounced', (req, res) => {
+  try {
+    const databaseId = Number(req.params.id);
+    const recordId = Number(req.params.recordId);
+    const reason = req.body?.reason || 'Manually flagged as inaccurate email address by operator';
+    const dbRow = db.prepare('SELECT campaign_id FROM databases WHERE id = ?').get(databaseId);
+    const campaignId = dbRow?.campaign_id || 0;
+    const updated = replyScannerService.markLeadBouncedManually(recordId, campaignId, reason, false);
+    res.json({ success: true, message: 'Record marked as BOUNCED and subsequent cadence steps halted.', record: updated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

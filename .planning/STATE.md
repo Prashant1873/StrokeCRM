@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.0
-milestone_name: Campaign Duplication, Rich Cadences & Contrast Hardening
+milestone: v5.0
+milestone_name: Delivery Failure Tracking & Advanced Gmail Integration
 status: completed
-last_updated: "2026-10-06T03:07:00.000Z"
+last_updated: "2026-10-06T05:10:00.000Z"
 last_activity: 2026-10-06
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 4
-  completed_plans: 4
+  total_phases: 2
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
   percent: 100
 ---
 
@@ -20,13 +20,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-10-06)
 
 **Core value:** Reliable, throttle-safe, and personalized bulk cold email dispatch directly from the user's Gmail or custom domain mail account with dynamic Excel/CSV variable mapping, multi-step drip cadence, and automatic reply disarming.  
-**Current focus:** Milestone v4.0: Campaign Duplication, Rich Cadences & Contrast Hardening (Completed).
+**Current focus:** Milestone v5.0: Delivery Failure Tracking & Advanced Gmail Integration (Shipped).
 
 ## Current Phase
 
-- **Active Phase**: Milestone v4.0 Complete
-- **Status**: Completed
-- **Completed**:
+- **Active Phase**: Milestone v5.0 Complete
+- **Status**: Completed / Ready for Next User Directive
+- **Completed in v5.0**:
+  - Phase 20: Delivery Failure & Inaccurate Email Tracking Subsystem (completed 2026-10-06)
+  - Phase 21: Native Gmail Auto-Labeling & Thread Organization Subsystem (completed 2026-10-06)
+- **Completed in v4.0**:
   - Phase 16: Campaign Duplication Engine & Triad Cloning (completed 2026-10-06)
   - Phase 17: Rich Text Formatting Studio for Follow-Up Cadences (completed 2026-10-06)
   - Phase 18: System-Wide Light Mode WCAG Contrast & Token Hardening (completed 2026-10-06)
@@ -35,21 +38,18 @@ See: `.planning/PROJECT.md` (updated 2026-10-06)
 
 ## Phase Progress
 
-- [x] Phase 16: Campaign Duplication Engine & Triad Cloning (completed 2026-10-06)
-- [x] Phase 17: Rich Text Formatting Studio for Follow-Up Cadences (completed 2026-10-06)
-- [x] Phase 18: System-Wide Light Mode WCAG Contrast & Token Hardening (completed 2026-10-06)
-- [x] Phase 19: Template Assignment & Multi-Variant Bindings in A/B Testing (completed 2026-10-06)
+- [x] Phase 20: Delivery Failure & Inaccurate Email Tracking Subsystem
+- [x] Phase 21: Native Gmail Auto-Labeling & Thread Organization Subsystem
 
 ## Recent Decisions
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-10-06 | Asynchronous NDR Bounce Parsing | Inbound scanner checks for Mailer-Daemon messages (`mailer-daemon@googlemail.com`, `postmaster@*`) and extracts original failed recipient to mark `BOUNCED` accurately. |
+| 2026-10-06 | Atomic Cadence Disarm on Bounce | Immediate wipe of `next_step_scheduled_at` to halt follow-ups on dead/inaccurate mailboxes, saving quota and protecting sender reputation. |
+| 2026-10-06 | Native Gmail X-GM-LABELS Integration | Use IMAP X-GM-LABELS to auto-categorize threads into `StrokeCRM/Interested`, `StrokeCRM/Replied`, `StrokeCRM/Bounced` without interfering with user's non-CRM emails. |
 | 2026-10-06 | Strict 1:1 Triad in Duplication | Enforces selecting an unattached database or uploading a new spreadsheet so that the cloned campaign maintains complete data isolation without collisions. |
-| 2026-10-06 | Drip Steps Transactional Duplication | Clones all `campaign_drip_steps` rows within an atomic SQLite transaction alongside campaign settings. |
-| 2026-10-06 | Reusable Rich Editor in Drips | Extends the WYSIWYG formatting toolbar to `DripSequenceStudio` while preserving dynamic `{{variable}}` pills and multipart MIME delivery. |
-| 2026-10-06 | WCAG AA Contrast Hardening | Elevates `--text-muted` and `--text-secondary` in Light Mode and removes all remaining hardcoded `slate-` colors across all view components. |
-| 2026-10-06 | Dynamic Variant Template Resolution | Supports binding saved templates to Variant A and Variant B in A/B Testing Studio, dynamically resolving template content and attachments at send time. |
 
 ## Current Position
 
-Milestone v4.0 is fully complete and verified. Ready for user feedback and next milestone cycle.
+Milestone v5.0 (Delivery Failure Tracking & Native Gmail Auto-Labeling) completely implemented, verified, and shipped. Ready for operator testing or next milestone definition.

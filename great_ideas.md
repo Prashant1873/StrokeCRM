@@ -124,6 +124,25 @@ This document records high-value user inputs, design ideas, and creative directi
     - Purges hardcoded `slate-` colors across all view components, modals, and tables in favor of semantic tokens (`bg-surface`, `bg-subtle`, `text-primary`, `border-subtle`).
   - **Direct Template Assignment to Variants in A/B Testing**:
     - Equips A/B Testing Studio with a 1-click template picker for both Variant A and Variant B, enabling users to select saved templates directly or customize inline.
+---
 
-
+## 8. Delivery Failure Tracking & Advanced Gmail Ecosystem Integration (Logged: 2026-10-06)
+- **Problem Solved**:
+  - Cold outreach campaigns frequently encounter inaccurate, invalid, or obsolete email addresses.
+  - Currently, when emails bounce asynchronously, Google's `mailer-daemon@googlemail.com` returns "Delivery Status Notification (Failure)" emails to the user's inbox, but StrokeCRM ignores them. Contacts remain marked as `SENT`, future cadence steps continue firing against dead mailboxes, and the user cannot easily identify or export bad leads to scrub their list.
+  - Furthermore, StrokeCRM does not leverage native Gmail capabilities (Labels, Starred flags, Drafts, Threading, Quota Sentinel), keeping outreach siloed from the native Gmail mobile and web client.
+- **The v5.0 Vision**:
+  - **Asynchronous Mailer-Daemon / NDR Bounce Parser**:
+    - Listen for and parse delivery status notifications from `mailer-daemon@googlemail.com` and `postmaster@*`.
+    - Extract failed recipient addresses, error diagnostics (e.g. `550 5.1.1 User unknown`, `DNS host not found`), and categorize as Hard Bounce vs Soft Bounce.
+    - Atomically mark contact status as `BOUNCED` / `FAILED_INVALID` and permanently disarm all pending drip cadence steps for that recipient.
+  - **Inaccurate Lead Tracker & Suppression Exporter**:
+    - Dedicated visual tracker in Campaign Cockpit and Database Inspector showing inaccurate emails and bounce reasons.
+    - 1-click "Export Inaccurate Leads (CSV)" for scrubbing.
+    - Global Suppression List to automatically prevent emailing known bounced contacts in future campaigns.
+  - **Native Gmail Integration Suite**:
+    - **Gmail Labels Sync (`X-GM-LABELS`)**: Auto-tag emails with `StrokeCRM/Interested`, `StrokeCRM/Replied`, `StrokeCRM/Bounced` directly in the user's Gmail sidebar.
+    - **Starred Flags (`\Flagged`)**: Automatically star high-intent replies in Gmail when AI classifies them as `Interested` or `Question`.
+    - **Gmail Drafts Generation**: Option to compile personalized campaigns directly into Gmail Drafts for manual pre-send review.
+    - **Gmail Quota Sentinel**: Live visual gauge tracking Gmail's daily rolling quota (500 for personal, 2,000 for Workspace) to prevent Google account rate limits.
 

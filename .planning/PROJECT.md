@@ -78,8 +78,10 @@ Shipped **v1.0 Initial MVP** on 2026-10-03 across 9 complete phases and 18 git c
 - ✓ System-Wide Light Mode WCAG 2.2 AA Contrast & Token Hardening: Design tokens with >= 4.5:1 contrast, purged hardcoded dark classes — v4.0
 - ✓ Direct Template Assignment to Variants in A/B Testing: Template pickers, comparative deliverability radar, dynamic attachment dispatch — v4.0
 
-### Active
-*(Milestone v4.0 complete. Ready for v5.0 planning.)*
+### Active (v5.0)
+
+- [ ] **BOUNCE-01..04**: Delivery Failure & Inaccurate Email Tracking Subsystem: Parse Mailer-Daemon & NDR messages from `mailer-daemon@googlemail.com`, classify SMTP rejections, mark contacts as `BOUNCED` with diagnostic codes, disarm future drip steps, and provide 1-click Inaccurate Leads CSV export.
+- [ ] **GMAIL-01..03**: Native Gmail Auto-Labeling & Thread Organization Subsystem: Automatically generate and maintain Gmail label hierarchy (`StrokeCRM`, `StrokeCRM/Interested`, `StrokeCRM/Replied`, `StrokeCRM/Bounced`), tagging threads directly in Gmail via IMAP `X-GM-LABELS`.
 
 ### Out of Scope
 

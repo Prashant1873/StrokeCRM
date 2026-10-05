@@ -1064,6 +1064,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
               const sent = c.sent_count || 0;
               const total = c.total_contacts || 0;
               const failed = c.failed_count || 0;
+              const bounced = c.bounced_count || 0;
               const pending = Math.max(0, total - sent - failed);
               const progress = total > 0 ? Math.min(100, Math.round((sent / total) * 100)) : 0;
               const status = c.status || 'DRAFT';
@@ -1109,7 +1110,9 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   {/* Progress */}
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-[10px]">
-                      <span className="text-secondary">{sent} sent · {failed} failed · {pending} pending</span>
+                      <span className="text-secondary">
+                        {sent} sent · {failed} failed {bounced > 0 ? <span className="text-rose-500 font-medium">({bounced} bounced) </span> : null}· {pending} pending
+                      </span>
                       <span className="text-indigo-600 dark:text-indigo-400 font-mono font-bold">{progress}%</span>
                     </div>
                     <div className="w-full bg-subtle h-1.5 rounded-full overflow-hidden border border-subtle">

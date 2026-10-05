@@ -19,8 +19,10 @@ import {
   Check,
   Sparkles,
   Eye,
-  EyeOff
+  EyeOff,
+  Tag
 } from 'lucide-react';
+import Switch from './common/Switch';
 
 const PROVIDER_PRESETS = {
   zoho: {
@@ -132,6 +134,9 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
   const [isSavingGemini, setIsSavingGemini] = useState(false);
   const [geminiSaveMessage, setGeminiSaveMessage] = useState(null);
 
+  // Phase 21: Native Gmail Auto-Labeling state (GMAIL-03)
+  const [gmailAutoLabeling, setGmailAutoLabeling] = useState(true);
+
   useEffect(() => {
     // Populate existing account info if available
     if (authStatus?.connected && authStatus.account) {
@@ -189,9 +194,26 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
         }
         if (data.gmail_quota_type) setQuotaType(data.gmail_quota_type);
         if (data.gemini_api_key) setGeminiApiKey(data.gemini_api_key);
+        if (data.gmail_auto_labeling !== undefined) {
+          setGmailAutoLabeling(data.gmail_auto_labeling === '1' || data.gmail_auto_labeling === 'true' || data.gmail_auto_labeling === true);
+        }
       })
       .catch(err => console.error('Failed to load settings:', err));
   }, [authStatus]);
+
+  // Phase 21: Toggle Gmail Native Auto-Labeling
+  const handleToggleAutoLabeling = async (enabled) => {
+    setGmailAutoLabeling(enabled);
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gmail_auto_labeling: enabled ? '1' : '0' })
+      });
+    } catch (err) {
+      console.error('Failed to save auto-labeling setting:', err);
+    }
+  };
 
   // Preset selection handler
   const handlePresetSelect = (presetKey) => {
@@ -1371,6 +1393,91 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
                 </>
               )}
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Native Gmail Thread Organization & Auto-Labeling Card (GMAIL-01, GMAIL-02, GMAIL-03) */}
+      <div className="bg-surface border border-subtle rounded-xl p-6 shadow-xs">
+        <div className="flex items-center justify-between border-b border-subtle pb-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+              <Tag className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-primary">Native Gmail Thread Organization</h2>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                  X-GM-LABELS
+                </span>
+              </div>
+              <p className="text-xs text-secondary mt-0.5">
+                Automatically organizes campaign replies, bounces, and sentiment categories into nested Gmail labels.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={gmailAutoLabeling}
+              onChange={handleToggleAutoLabeling}
+              ariaLabel="Enable Gmail Auto-Labeling"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <p className="text-xs text-secondary leading-relaxed">
+            When enabled, StrokeCRM synchronizes your inbox via native IMAP extensions without interfering with personal or work emails. Incoming prospect responses and bounce reports automatically receive color-coded labels in your Gmail sidebar.
+          </p>
+
+          {/* Visual Label Hierarchy Tree */}
+          <div className="p-4 rounded-xl bg-subtle/50 border border-subtle">
+            <span className="text-[11px] font-semibold text-primary uppercase tracking-wider block mb-2.5">
+              Gmail Sidebar Label Hierarchy:
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+              <div className="p-2 rounded-lg bg-surface border border-subtle flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />
+                <span className="font-mono text-[11px] text-primary truncate">StrokeCRM</span>
+                <span className="text-[9px] text-muted ml-auto">Root</span>
+              </div>
+              <div className="p-2 rounded-lg bg-surface border border-subtle flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
+                <span className="font-mono text-[11px] text-primary truncate">StrokeCRM/Replied</span>
+                <span className="text-[9px] text-blue-500 ml-auto">All Replies</span>
+              </div>
+              <div className="p-2 rounded-lg bg-surface border border-subtle flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                <span className="font-mono text-[11px] text-primary truncate">StrokeCRM/Interested</span>
+                <span className="text-[9px] text-emerald-500 ml-auto">High Intent</span>
+              </div>
+              <div className="p-2 rounded-lg bg-surface border border-subtle flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0" />
+                <span className="font-mono text-[11px] text-primary truncate">StrokeCRM/Questions</span>
+                <span className="text-[9px] text-sky-500 ml-auto">Inquiries</span>
+              </div>
+              <div className="p-2 rounded-lg bg-surface border border-subtle flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+                <span className="font-mono text-[11px] text-primary truncate">StrokeCRM/Follow-Up</span>
+                <span className="text-[9px] text-amber-500 ml-auto">Cadence</span>
+              </div>
+              <div className="p-2 rounded-lg bg-surface border border-subtle flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
+                <span className="font-mono text-[11px] text-primary truncate">StrokeCRM/Bounced</span>
+                <span className="text-[9px] text-rose-500 ml-auto">NDR Failures</span>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted mt-2.5">
+              + Dynamic campaign folders are created automatically (e.g. <code className="text-secondary font-mono">StrokeCRM/Campaign: Q4 Founders</code>) to isolate prospect threads per outreach initiative.
+            </p>
+          </div>
+
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/20 text-xs text-secondary">
+            <Info className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+            <p className="text-[11px] leading-relaxed">
+              <strong>Non-Gmail Fallback:</strong> If using a custom domain or IMAP server without Gmail extension support, folder categorization operates in safe compatibility mode without causing scan interruptions.
+            </p>
           </div>
         </div>
       </div>

@@ -22,16 +22,33 @@
 
 ### System-Wide Light Mode WCAG Contrast & Token Hardening (`CONTRAST`)
 
-- [ ] **CONTRAST-01**: Update CSS design tokens in `index.css` for Light Mode so that `--text-muted` and `--text-secondary` strictly satisfy WCAG 2.2 AA contrast (>= 4.5:1 for body copy and >= 3:1 for large text/icons against `#ffffff` and `#fafafa`).
-- [ ] **CONTRAST-02**: Purge hardcoded dark utility classes (`bg-slate-900`, `bg-slate-800`, `text-slate-400`, `text-slate-300`, `border-slate-800`) across all views (`CampaignsView`, `ABTestingView`, `SettingsView`, `DripSequenceStudio`, `DatabasesView`), migrating to semantic tokens (`bg-surface`, `bg-subtle`, `text-primary`, `text-secondary`, `border-subtle`).
-- [ ] **CONTRAST-03**: Standardize primary, secondary, and destructive button styles to ensure distinct visible borders, accessible hover states, and clear focus-visible rings in both light and dark modes.
-- [ ] **CONTRAST-04**: Fix contrast in modals, row pickers, and table headers so that light mode modal backdrops, dialog surfaces, search inputs, and table headers never render as dark slate patches or unreadable low-contrast text.
+- [x] **CONTRAST-01**: Update CSS design tokens in `index.css` for Light Mode so that `--text-muted` and `--text-secondary` strictly satisfy WCAG 2.2 AA contrast (>= 4.5:1 for body copy and >= 3:1 for large text/icons against `#ffffff` and `#fafafa`).
+- [x] **CONTRAST-02**: Purge hardcoded dark utility classes (`bg-slate-900`, `bg-slate-800`, `text-slate-400`, `text-slate-300`, `border-slate-800`) across all views (`CampaignsView`, `ABTestingView`, `SettingsView`, `DripSequenceStudio`, `DatabasesView`), migrating to semantic tokens (`bg-surface`, `bg-subtle`, `text-primary`, `text-secondary`, `border-subtle`).
+- [x] **CONTRAST-03**: Standardize primary, secondary, and destructive button styles to ensure distinct visible borders, accessible hover states, and clear focus-visible rings in both light and dark modes.
+- [x] **CONTRAST-04**: Fix contrast in modals, row pickers, and table headers so that light mode modal backdrops, dialog surfaces, search inputs, and table headers never render as dark slate patches or unreadable low-contrast text.
 
 ### Template Assignment to Variants in A/B Testing (`AB`)
 
-- [ ] **AB-01**: `ABTestingView` provides an interactive "Assign Saved Template" dropdown selector for Variant A and Variant B, enabling users to populate or link templates directly.
-- [ ] **AB-02**: Selecting a template populates the subject and body while displaying side-by-side comparative metadata (detected variable tokens, word counts, and spam risk radar).
-- [ ] **AB-03**: Outbound dispatch engine (`queueService.js`) dynamically resolves per-variant template attachments and configuration during split outreach execution.
+- [x] **AB-01**: `ABTestingView` provides an interactive "Assign Saved Template" dropdown selector for Variant A and Variant B, enabling users to populate or link templates directly.
+- [x] **AB-02**: Selecting a template populates the subject and body while displaying side-by-side comparative metadata (detected variable tokens, word counts, and spam risk radar).
+- [x] **AB-03**: Outbound dispatch engine (`queueService.js`) dynamically resolves per-variant template attachments and configuration during split outreach execution.
+
+---
+
+## v5.0 Requirements (Active)
+
+### Delivery Failure & Inaccurate Email Tracking (`BOUNCE`)
+
+- [ ] **BOUNCE-01**: Inbound Mailer-Daemon & NDR parser in `replyScannerService.js` detecting bounce messages from `mailer-daemon@googlemail.com`, `postmaster@*`, and RFC 3464 delivery status notifications, extracting the recipient email and diagnostic code.
+- [ ] **BOUNCE-02**: Outbound SMTP delivery error classifier in `queueService.js` identifying permanent recipient errors (`550`, `553`, `Invalid recipient`, `No recipients defined`) vs transient connection timeouts.
+- [ ] **BOUNCE-03**: Atomic state transition marking contacts as `BOUNCED` with `bounce_reason` and `bounced_at`, immediately disarming and wiping all scheduled future drip cadence steps.
+- [ ] **BOUNCE-04**: Delivery Failure & Inaccurate Leads Tracker in Campaign Cockpit and Database Inspector with filter tab, diagnostic error chips, and 1-click "Export Inaccurate Leads (CSV)".
+
+### Native Gmail Auto-Labeling & Thread Organization (`GMAIL`)
+
+- [ ] **GMAIL-01**: Gmail IMAP `X-GM-LABELS` hierarchy management creating and synchronizing labels: `StrokeCRM`, `StrokeCRM/Interested`, `StrokeCRM/Replied`, `StrokeCRM/Bounced`, and `StrokeCRM/Campaign: [Name]`.
+- [ ] **GMAIL-02**: Real-time label assignment tagging sent campaign threads, incoming replies by sentiment, and bounced threads directly in Gmail.
+- [ ] **GMAIL-03**: Settings toggle for Gmail Auto-Labeling with fallback handling for non-Gmail IMAP accounts and UI sync indicators.
 
 ---
 
@@ -61,13 +78,13 @@
 
 ---
 
-## Future Requirements (v5.0+)
+## Future Requirements (v6.0+)
 
 - **ROT-01**: Multi-account mailbox pool rotation with round-robin dispatch.
 - **ROT-02**: Per-mailbox warmup ramp schedule.
 - **PIPE-01**: Interactive drag-and-drop Kanban deal pipeline for replied leads.
-- **TRACK-01**: Self-hosted 1x1 tracking pixel for open rate detection.
-- **TRACK-02**: Click redirect tracking proxy with RFC 8058 one-click unsubscribe handling.
+- **DRAFT-01**: "Review in Gmail" mode generating campaign batches directly to Gmail Drafts.
+- **SUPPR-01**: Global cross-campaign suppression blacklist preventing re-import of known bounced emails.
 
 ---
 
@@ -88,3 +105,11 @@
 | AB-01 | Phase 19 | Complete |
 | AB-02 | Phase 19 | Complete |
 | AB-03 | Phase 19 | Complete |
+| BOUNCE-01 | Phase 20 | Complete |
+| BOUNCE-02 | Phase 20 | Complete |
+| BOUNCE-03 | Phase 20 | Complete |
+| BOUNCE-04 | Phase 20 | Complete |
+| GMAIL-01 | Phase 21 | Complete |
+| GMAIL-02 | Phase 21 | Complete |
+| GMAIL-03 | Phase 21 | Complete |
+

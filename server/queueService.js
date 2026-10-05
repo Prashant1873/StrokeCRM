@@ -100,6 +100,23 @@ function isWithinWorkingHours(startHourStr = '09:00', endHourStr = '18:00') {
 }
 
 /**
+ * Determines if an SMTP send error is a permanent recipient bounce (e.g. invalid mailbox)
+ */
+function isPermanentSmtpRejection(err) {
+  if (!err) return false;
+  const msg = (err.message || '').toLowerCase();
+  const resp = (err.response || '').toLowerCase();
+  const code = String(err.responseCode || err.code || '');
+
+  // 5xx recipient rejection codes
+  if (code.startsWith('55') || code === '501' || code === '503') return true;
+  if (/no recipients defined|invalid recipient|mailbox not found|user unknown|recipient address rejected|recipient rejected|does not exist|mailbox unavailable|bad destination mailbox/i.test(msg)) return true;
+  if (/550|551|553|554/i.test(resp)) return true;
+
+  return false;
+}
+
+/**
  * Interruptible sleep helper checking if campaign paused, cancelled, or pacing updated
  */
 async function interruptibleSleep(ms, jobId) {
@@ -513,25 +530,64 @@ async function runCampaignWorker(campaignId) {
 
       job.lastLog = `✓ Sent Step ${currentStepNum} to ${contact.email}`;
     } catch (err) {
-      // Record failure
-      db.prepare(`
-        UPDATE ${targetTable} 
-        SET status = 'FAILED', sent_at = ?, error_message = ? 
-        WHERE id = ?
-      `).run(nowIso, err.message, contact.id);
+      const isPermanentReject = isPermanentSmtpRejection(err);
+      const statusToSet = isPermanentReject ? 'BOUNCED' : 'FAILED';
+      const bounceCode = String(err.responseCode || err.code || '550');
+
+      if (isPermanentReject) {
+        db.prepare(`
+          UPDATE ${targetTable} 
+          SET status = 'BOUNCED',
+              bounce_reason = ?,
+              bounce_code = ?,
+              bounce_type = 'HARD',
+              bounced_at = ?,
+              next_step_scheduled_at = NULL,
+              error_message = ? 
+          WHERE id = ?
+        `).run(err.message, bounceCode, nowIso, err.message, contact.id);
+
+        try {
+          db.prepare(`
+            INSERT INTO bounce_logs (
+              campaign_id, database_record_id, contact_id, recipient_email,
+              bounce_type, bounce_code, diagnostic_code, raw_reason, source, created_at
+            ) VALUES (?, ?, ?, ?, 'HARD', ?, ?, ?, 'smtp_reject', ?)
+          `).run(
+            jobId,
+            isIsolated ? contact.id : null,
+            isIsolated ? null : contact.id,
+            contact.email,
+            bounceCode,
+            err.message,
+            err.message,
+            nowIso
+          );
+        } catch (bLogErr) {
+          console.error('[StrokeCRM Bounce Log Failure]:', bLogErr.message);
+        }
+      } else {
+        // Record regular failure (transient)
+        db.prepare(`
+          UPDATE ${targetTable} 
+          SET status = 'FAILED', sent_at = ?, error_message = ? 
+          WHERE id = ?
+        `).run(nowIso, err.message, contact.id);
+      }
 
       try {
         db.prepare(`
           INSERT INTO email_logs (
             campaign_id, contact_id, database_record_id, recipient_email, variant,
             status, error_message, sent_at, sent_date, step_number
-          ) VALUES (?, ?, ?, ?, ?, 'FAILED', ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           jobId,
           isIsolated ? null : contact.id,
           isIsolated ? contact.id : null,
           contact.email,
           contact.assigned_variant || 'A',
+          statusToSet,
           err.message,
           nowIso,
           todayStr,
@@ -546,18 +602,22 @@ async function runCampaignWorker(campaignId) {
 
         db.prepare(`
           UPDATE campaigns 
-          SET sent_count = ?, failed_count = ?, total_contacts = ?, updated_at = ?
+          SET sent_count = ?, failed_count = ?, bounced_count = ?, total_contacts = ?, updated_at = ?
           WHERE id = ?
-        `).run(stats.sent || 0, stats.failed || 0, stats.total || 0, nowIso, jobId);
+        `).run(stats.sent || 0, stats.failed || 0, stats.bounced || 0, stats.total || 0, nowIso, jobId);
       } else {
         db.prepare(`
           UPDATE campaigns 
-          SET failed_count = failed_count + 1, updated_at = ?
+          SET failed_count = failed_count + 1,
+              bounced_count = bounced_count + (CASE WHEN ? = 'BOUNCED' THEN 1 ELSE 0 END),
+              updated_at = ?
           WHERE id = ?
-        `).run(nowIso, jobId);
+        `).run(statusToSet, nowIso, jobId);
       }
 
-      job.lastLog = `✗ Failed sending Step ${currentStepNum} to ${contact.email}: ${err.message}`;
+      job.lastLog = isPermanentReject
+        ? `✗ Bounced (Invalid Recipient) Step ${currentStepNum} to ${contact.email}: ${err.message}`
+        : `✗ Failed sending Step ${currentStepNum} to ${contact.email}: ${err.message}`;
     }
 
     // 7. Humanized Pacing Jitter Delay
@@ -978,5 +1038,6 @@ module.exports = {
   getCampaignQueueStatus,
   sendTestEmail,
   normalizeAddressList,
-  ccBccForRecipient
+  ccBccForRecipient,
+  isPermanentSmtpRejection
 };

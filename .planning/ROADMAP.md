@@ -5,7 +5,8 @@
 - ✅ **v1.0 Initial MVP** — Phases 1-9 (shipped 2026-10-03)
 - ✅ **v2.0 Custom Domains & Automated Drips** — Phases 10-12 (shipped 2026-10-03)
 - ✅ **v3.0 UI Overhaul, Light Mode & Free AI Reply Intelligence** — Phases 13-15 (shipped 2026-10-05)
-- 🔲 **v4.0 Campaign Duplication, Rich Cadences & Contrast Hardening** — Phases 16-19 (active)
+- ✅ **v4.0 Campaign Duplication, Rich Cadences & Contrast Hardening** — Phases 16-19 (shipped 2026-10-06)
+- ✅ **v5.0 Delivery Failure Tracking & Advanced Gmail Integration** — Phases 20-21 (shipped 2026-10-06)
 
 ---
 
@@ -48,13 +49,21 @@ See: `.planning/milestones/v2.0-ROADMAP.md`
 
 </details>
 
-<details open>
-<summary>🔲 v4.0 Campaign Duplication, Rich Cadences & Contrast Hardening (Phases 16-19) — ACTIVE</summary>
+<details>
+<summary>✅ v4.0 Campaign Duplication, Rich Cadences & Contrast Hardening (Phases 16-19) — SHIPPED 2026-10-06</summary>
 
 - [x] **Phase 16: Campaign Duplication Engine & Triad Cloning** (completed 2026-10-06)
-- [ ] **Phase 17: Rich Text Formatting Studio for Follow-Up Cadences**
-- [ ] **Phase 18: System-Wide Light Mode WCAG Contrast & Token Hardening**
-- [ ] **Phase 19: Template Assignment & Multi-Variant Bindings in A/B Testing**
+- [x] **Phase 17: Rich Text Formatting Studio for Follow-Up Cadences** (completed 2026-10-06)
+- [x] **Phase 18: System-Wide Light Mode WCAG Contrast & Token Hardening** (completed 2026-10-06)
+- [x] **Phase 19: Template Assignment & Multi-Variant Bindings in A/B Testing** (completed 2026-10-06)
+
+</details>
+
+<details open>
+<summary>✅ v5.0 Delivery Failure Tracking & Advanced Gmail Integration (Phases 20-21) — SHIPPED 2026-10-06</summary>
+
+- [x] **Phase 20: Delivery Failure & Inaccurate Email Tracking Subsystem** (completed 2026-10-06)
+- [x] **Phase 21: Native Gmail Auto-Labeling & Thread Organization Subsystem** (completed 2026-10-06)
 
 </details>
 
@@ -104,5 +113,26 @@ See: `.planning/milestones/v2.0-ROADMAP.md`
 2. Selecting a template populates the variant content and displays side-by-side comparative metadata (word count, detected tokens, spam risk score).
 3. The outbound dispatch engine (`queueService.js`) dynamically resolves attachments and template content per variant during split outreach runs.
 
+### Phase 20: Delivery Failure & Inaccurate Email Tracking Subsystem
+
+**Goal**: Automatically detect, classify, and track delivery-failed and bounced emails from Google Mailer-Daemon and SMTP dispatch errors, disarming future cadence steps and enabling export of inaccurate leads.  
+**Depends on**: Phase 19  
+**Requirements**: [BOUNCE-01, BOUNCE-02, BOUNCE-03, BOUNCE-04]  
+**Success Criteria**:
+1. `replyScannerService.js` actively parses incoming asynchronous bounce notifications from `mailer-daemon@googlemail.com`, `postmaster@*`, and delivery status headers, accurately extracting the failed recipient address and diagnostic error code.
+2. `queueService.js` identifies synchronous permanent recipient rejections at SMTP time, recording error details immediately.
+3. Bounced contacts transition atomically to `BOUNCED` / `FAILED_INVALID` status with timestamps and error codes, permanently disarming any future scheduled cadence steps.
+4. Campaign Cockpit and Database Inspector feature a dedicated "Delivery Failures" / "Bounced" filter tab with diagnostic chips and 1-click "Export Inaccurate Leads (CSV)" for list hygiene.
+
+### Phase 21: Native Gmail Auto-Labeling & Thread Organization Subsystem
+
+**Goal**: Leverage native Gmail IMAP extensions (`X-GM-LABELS`) to automatically categorize and synchronize campaign threads, replies, and bounces into an organized folder hierarchy in the user's Gmail inbox.  
+**Depends on**: Phase 20  
+**Requirements**: [GMAIL-01, GMAIL-02, GMAIL-03]  
+**Success Criteria**:
+1. System creates and manages Gmail label hierarchy (`StrokeCRM`, `StrokeCRM/Interested`, `StrokeCRM/Replied`, `StrokeCRM/Bounced`, and `StrokeCRM/Campaign: [Name]`) without affecting non-CRM email.
+2. Sent messages are auto-labeled with campaign identifiers, incoming replies receive sentiment-specific labels, and bounced threads are tagged for immediate inbox visibility.
+3. SettingsView includes a toggle to enable/disable Gmail Auto-Labeling with safe fallback for standard non-Gmail IMAP accounts.
+
 ---
-*Roadmap updated: 2026-10-06 for Milestone v4.0*
+*Roadmap updated: 2026-10-06 for Milestone v5.0*
