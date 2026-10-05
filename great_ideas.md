@@ -104,4 +104,26 @@ This document records high-value user inputs, design ideas, and creative directi
     - **Atomic Disarm Invariant**: Sequence follow-ups are halted atomically in SQLite before triggering async sentiment evaluation.
     - **Operator Precedence Guarantee**: When an operator manually overrides sentiment, the tag `sentiment_provider = 'manual'` guarantees automated scans will never overwrite human judgment.
 
+---
+
+## 7. Campaign Duplication, Rich Follow-ups & Studio Expansion (Logged: 2026-10-06)
+- **Problem Solved**:
+  - Setting up a new campaign for a different audience list currently requires manually rebuilding the entire campaign from scratch, re-selecting templates, re-configuring throttle rates, re-entering CC/BCC, and re-writing multi-step drip cadences step-by-step.
+  - Custom follow-up drip bodies in `DripSequenceStudio` are restricted to a basic plain-text `<textarea>`, lacking bold, italics, links, and bullet points.
+  - Light mode retains lingering hardcoded dark utility classes (`bg-slate-900`, `text-slate-400`, low-contrast muted tokens) creating illegible buttons and poor contrast.
+  - A/B Testing Studio requires manually typing copy into variants instead of easily binding saved templates directly to Variant A and Variant B.
+- **The v4.0 Architecture**:
+  - **1-Click Triad Campaign Duplication (`POST /api/campaigns/:id/duplicate`)**:
+    - Clones all campaign properties (template bindings, subject/body A & B, sender credentials, delay pacing, jitter, daily limits, CC/BCC) and all associated multi-step drip cadence rows (`campaign_drip_steps`).
+    - Prompts for a new campaign name and binds an isolated new database while maintaining strict 1:1 Triad isolation, initializing the clone cleanly in `DRAFT` status with zeroed counters.
+  - **Rich Text Formatting Studio in Follow-Up Cadences**:
+    - Integrates the full WYSIWYG text formatting toolbar (Bold, Italic, Underline, Bulleted/Numbered Lists, Links, Clear Formatting) into custom follow-up steps.
+    - Preserves cursor-sensitive variable pill insertion (`{{FirstName}}`, `{{Company}}`) and dual-copy HTML/plaintext delivery.
+  - **System-Wide Light Mode WCAG 2.2 AA Contrast & Token Hardening**:
+    - Fixes `--text-muted` and `--text-secondary` tokens in `index.css` to achieve >= 4.5:1 contrast against `#ffffff` and `#fafafa`.
+    - Purges hardcoded `slate-` colors across all view components, modals, and tables in favor of semantic tokens (`bg-surface`, `bg-subtle`, `text-primary`, `border-subtle`).
+  - **Direct Template Assignment to Variants in A/B Testing**:
+    - Equips A/B Testing Studio with a 1-click template picker for both Variant A and Variant B, enabling users to select saved templates directly or customize inline.
+
+
 

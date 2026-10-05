@@ -5,6 +5,7 @@
 - ✅ **v1.0 Initial MVP** — Phases 1-9 (shipped 2026-10-03)
 - ✅ **v2.0 Custom Domains & Automated Drips** — Phases 10-12 (shipped 2026-10-03)
 - ✅ **v3.0 UI Overhaul, Light Mode & Free AI Reply Intelligence** — Phases 13-15 (shipped 2026-10-05)
+- 🔲 **v4.0 Campaign Duplication, Rich Cadences & Contrast Hardening** — Phases 16-19 (active)
 
 ---
 
@@ -38,7 +39,7 @@ See: `.planning/milestones/v2.0-ROADMAP.md`
 
 </details>
 
-<details open>
+<details>
 <summary>✅ v3.0 UI Overhaul, Light Mode & Free AI Reply Intelligence (Phases 13-15) — SHIPPED 2026-10-05</summary>
 
 - [x] **Phase 13: Dual-Theme Architecture & Design Token Engine** (completed 2026-10-05)
@@ -47,47 +48,61 @@ See: `.planning/milestones/v2.0-ROADMAP.md`
 
 </details>
 
+<details open>
+<summary>🔲 v4.0 Campaign Duplication, Rich Cadences & Contrast Hardening (Phases 16-19) — ACTIVE</summary>
+
+- [ ] **Phase 16: Campaign Duplication Engine & Triad Cloning**
+- [ ] **Phase 17: Rich Text Formatting Studio for Follow-Up Cadences**
+- [ ] **Phase 18: System-Wide Light Mode WCAG Contrast & Token Hardening**
+- [ ] **Phase 19: Template Assignment & Multi-Variant Bindings in A/B Testing**
+
+</details>
+
 ---
 
 ## Phase Details
 
-### Phase 13: Dual-Theme Architecture & Design Token Engine
+### Phase 16: Campaign Duplication Engine & Triad Cloning
 
-**Goal**: Implement persistent Dark and Light modes using centralized CSS variable tokens, FOUT-free loading, and WCAG AA contrast.  
-**Depends on**: Phase 12  
-**Requirements**: [THEME-01, THEME-02, THEME-03, THEME-04]  
+**Goal**: Enable 1-click campaign duplication allowing users to clone an entire campaign with a new name and bind it to a new database while retaining all configurations and drip steps.  
+**Depends on**: Phase 15  
+**Requirements**: [DUP-01, DUP-02, DUP-03]  
 **Success Criteria**:
+1. User can click "Duplicate" on any campaign card in the Campaigns Directory or in the Campaign Cockpit header to open the Duplicate modal.
+2. Modal validates that a non-empty new name is supplied and that a valid unattached database is chosen or a new spreadsheet uploaded.
+3. Cloned campaign transactionally replicates all campaign attributes (`subject_a`, `body_a`, `subject_b`, `body_b`, `is_ab_test`, `min_delay`, `max_delay`, `daily_limit`, `template_id`, `sender_account_id`, `sender_provider`, `cc_addresses`, `bcc_addresses`) and all multi-step cadence rows from `campaign_drip_steps`.
+4. Cloned campaign starts in `DRAFT` status with `sent_count = 0`, `failed_count = 0`, `reply_count = 0`, and contacts properly attached from the target database.
 
-1. User clicks the Sun/Moon toggle in the header, and the UI transitions instantly between Dark and Light mode without layout shift or page refresh.
-2. Page reload retains selected theme preference with zero unstyled flash (FOUT).
-3. All typography, surface cards, badges, and controls satisfy WCAG AA contrast (>4.5:1 for body copy) across both themes.
+### Phase 17: Rich Text Formatting Studio for Follow-Up Cadences
 
-### Phase 14: System-Wide UI Modernization & Professional UX Copywriting
-
-**Goal**: Overhaul all application views, modernize cards and tables, elevate typography and micro-interactions, enforce authoritative B2B SaaS terminology, and provide a curated cold outreach starter presets gallery.  
-**Depends on**: Phase 13  
-**Requirements**: [COPY-01, COPY-02, COPY-03, COPY-04, COPY-05]  
+**Goal**: Equip `DripSequenceStudio` with a rich text formatting toolbar for follow-up steps, providing bold, italics, links, lists, and dynamic token pill insertions with dual-part HTML/plaintext deliverability.  
+**Depends on**: Phase 16  
+**Requirements**: [RICH-01, RICH-02, RICH-03]  
 **Success Criteria**:
+1. Users writing custom follow-ups (Step 2 and Step 3) in `DripSequenceStudio` have access to a rich formatting toolbar (Bold, Italic, Underline, Bullet List, Numbered List, Link, Clear Format).
+2. Clicking dynamic header variable chips (`{{FirstName}}`, `{{Company}}`) inserts variables at the current cursor position within the rich editor.
+3. Content is stored as clean HTML, previewed accurately in test sends, and dispatched as RFC 2046 multipart MIME with plaintext fallback.
 
-1. All navigation items, modals, toasts, and status badges use professional, action-oriented B2B cold outreach terminology.
-2. Contextual tooltips explain deliverability concepts (jitter, RFC threading, daily limits, auto-disarm) on hover.
-3. User can browse the Starter Presets Gallery and preview high-converting cold outreach sequences (Problem Pitch, Case Study Teaser, 3-Day Bump, Breakup Closing).
-4. User can clone any starter preset into their active templates collection with one click, preserving dynamic `{{variable}}` pills.
-5. Dashboard cards, data tables, and preflight controls incorporate elevated spacing, subtle borders, and fluid spring physics compliant with `frontend-skill`.
+### Phase 18: System-Wide Light Mode WCAG Contrast & Token Hardening
 
-### Phase 15: Free AI Inbound Reply Sentiment Engine & Cockpit Intelligence
-
-**Goal**: Build an asynchronous reply sentiment classifier using Google Gemini 1.5 Flash free tier with automatic local regex heuristic fallback, displaying actionable sentiment badges, quick-filters, and manual overrides in the Campaign Cockpit.  
-**Depends on**: Phase 14  
-**Requirements**: [SENT-01, SENT-02, SENT-03, SENT-04, SENT-05, SENT-06, SENT-07]  
+**Goal**: Ensure strict WCAG 2.2 AA contrast compliance (>4.5:1) throughout light mode by refining semantic tokens in `index.css` and purging all lingering hardcoded dark utility classes (`slate-900`, `slate-800`, `text-slate-400`).  
+**Depends on**: Phase 17  
+**Requirements**: [CONTRAST-01, CONTRAST-02, CONTRAST-03, CONTRAST-04]  
 **Success Criteria**:
+1. Light mode text tokens in `index.css` (`--text-muted`, `--text-secondary`) guarantee >= 4.5:1 contrast against white surfaces, eliminating washed-out labels.
+2. All hardcoded `slate-` colors across `CampaignsView`, `ABTestingView`, `SettingsView`, `DripSequenceStudio`, and `DatabasesView` are replaced with semantic theme tokens (`bg-surface`, `bg-subtle`, `text-primary`, `border-subtle`).
+3. Primary, secondary, outline, and destructive buttons have distinct borders, accessible hover states, and clear focus-visible rings in both light and dark modes.
+4. Modals, dropdown selectors, row pickers, and table headers render cleanly on light surfaces with high readability.
 
-1. User can configure and verify a free Google Gemini 1.5 Flash API key in Settings with real-time handshake check.
-2. Detected inbound lead replies are asynchronously classified into `Interested`, `Question`, `Follow Up`, `Not Interested`, or `Unsubscribe` with a 1-sentence summary without blocking sequence disarm.
-3. In the absence of an API key or during network downtime, the local rule-based heuristic classifier automatically categorizes replies offline.
-4. Campaign Cockpit and Database Inspector display color-coded sentiment badges and confidence ratings for all replied leads.
-5. User can filter campaign leads by sentiment category (`Interested`, `Questions`, `Follow Up`, `Not Interested`) with 1-click tabs.
-6. Operator can click any lead's sentiment badge to manually override or correct its classification.
+### Phase 19: Template Assignment & Multi-Variant Bindings in A/B Testing
+
+**Goal**: Allow users to assign saved templates directly to Variant A and Variant B in the A/B Testing Studio, displaying comparative deliverability metrics and resolving templates dynamically at dispatch.  
+**Depends on**: Phase 18  
+**Requirements**: [AB-01, AB-02, AB-03]  
+**Success Criteria**:
+1. `ABTestingView` features an interactive template picker for Variant A and Variant B, enabling users to bind or import any saved template.
+2. Selecting a template populates the variant content and displays side-by-side comparative metadata (word count, detected tokens, spam risk score).
+3. The outbound dispatch engine (`queueService.js`) dynamically resolves attachments and template content per variant during split outreach runs.
 
 ---
-*Roadmap updated: 2026-10-05 for Milestone v3.0*
+*Roadmap updated: 2026-10-06 for Milestone v4.0*

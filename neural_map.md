@@ -155,4 +155,19 @@ flowchart TD
 - **Taxonomy**: Classifies responses into `Interested`, `Question`, `Follow Up`, `Not Interested`, and `Unsubscribe` with 1-sentence summaries.
 - **Cockpit Observability**: Color-coded badges, confidence scores, 1-click filter tabs, and operator manual override controls in the Campaign Cockpit and Database Inspector.
 
+### 11. Campaign Duplication & Triad Cloning Subsystem (v4.0)
+- **Transactional Cloning**: `POST /api/campaigns/:id/duplicate` executes within an ACID transaction (`db.transaction`).
+- **Entity Replication**:
+  - Clones `campaigns` row: inherits `subject_a`, `body_a`, `subject_b`, `body_b`, `is_ab_test`, `min_delay`, `max_delay`, `daily_limit`, `template_id`, `sender_account_id`, `sender_provider`, `cc_addresses`, `bcc_addresses`.
+  - Re-keys new campaign `name` and binds targeted `database_id`.
+  - Sets `status = 'DRAFT'`, `sent_count = 0`, `failed_count = 0`, `reply_count = 0`.
+- **Drip Cadence Preservation**: Queries all rows from `campaign_drip_steps WHERE campaign_id = sourceId`, duplicates them with `campaign_id = newId`, retaining cadence delays and step content.
+- **Database Triad Rebinding**: Marks the target database `is_attached = 1`, `campaign_id = newId`, binds records, and updates `total_contacts` to the database's valid row count.
+
+### 12. A/B Testing Studio & Variant Template Assignment (v4.0)
+- **Template Selector**: Enables direct binding or loading of saved templates into Variant A and Variant B.
+- **Dynamic Resolution**: Supports per-variant template references (`template_id_a`, `template_id_b`) alongside custom inline overrides in `queueService.js`.
+- **Dual Spam & Deliverability Preflight**: Displays side-by-side spam scores, word count, and token variables for both variants.
+
+
 

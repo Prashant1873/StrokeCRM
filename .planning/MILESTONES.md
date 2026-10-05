@@ -1,5 +1,18 @@
 # Milestones
 
+## v3.0 UI Overhaul, Light Mode & Free AI Reply Intelligence (Shipped: 2026-10-05)
+
+**Phases completed:** 3 phases (Phases 13–15)
+
+**Key accomplishments:**
+- **Dual-Theme Token Engine & Switcher**: Centralized CSS semantic tokens (`--bg-canvas`, `--bg-surface`, `--text-primary`, etc.) for seamless Light / Dark theme toggling with FOUT prevention and localStorage persistence.
+- **System-Wide UI Modernization & SaaS Copywriting**: Upgraded typography, cards, and tables adhering to `frontend-skill`; refined professional outreach copy across all screens, modals, and tooltips.
+- **Curated Starter Presets Gallery**: High-converting starter sequences (Problem Pitch, Social Proof, 3-Day Bump, Breakup) clonable into templates with one click.
+- **Free AI Inbound Reply Sentiment Engine**: Asynchronous Google Gemini 1.5 Flash REST client (1,500 free calls/day) paired with local zero-dependency regex heuristic fallback for offline resilience.
+- **Campaign Cockpit Sentiment Intelligence**: Reply sentiment badges (`Interested`, `Question`, `Follow Up`, `Not Interested`, `Unsubscribe`), confidence scores, 1-click filter tabs, and operator manual overrides.
+
+---
+
 ## v2.0 Custom Domains & Automated Drips (Shipped: 2026-10-03)
 
 **Phases completed:** 3 phases (Phases 10–12), 12 commits (git range `b319899` → `24003dd`)

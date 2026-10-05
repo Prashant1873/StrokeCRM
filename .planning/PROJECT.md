@@ -14,18 +14,26 @@ Reliable, throttle-safe, and personalized bulk cold email dispatch directly from
 - **Revenue model**: 100% Free, open-source / local self-hosted tool (no paywalls, no monthly subscription fees).
 - **Success metric**: 100% accurate variable interpolation, zero spam penalty flags due to automated pacing/jitter, and seamless campaign management.
 
-## Current Milestone: v3.0 UI Overhaul, Light Mode & Free AI Reply Intelligence
+## Current Milestone: v4.0 Campaign Duplication, Rich Cadences & Contrast Hardening
 
-**Goal:** Elevate StrokeCRM into an aesthetically stunning, dual-theme (dark/light) cold outreach workspace with professional SaaS copy and automated free AI inbound reply sentiment classification.
+**Goal:** Expand campaign productivity and UX polish with 1-click campaign and cadence duplication for new databases, full rich-text formatting for custom follow-ups, WCAG-hardened light mode contrast across all buttons and text, and direct template assignment in A/B testing.
 
 **Target features:**
-- Dual-Theme Architecture & UI Overhaul: Seamless Dark / Light mode toggle, refined design tokens, polished typography, and responsive layouts adhering to `frontend-skill`.
-- Professional UX Copywriting & Starter Presets: High-standard B2B SaaS tone across all views, modals, toasts, error messages, and curated cold outreach starter presets.
-- Free AI Inbound Reply Sentiment Analyzer: Categorize detected email responses (Interested / Call Requested, Question / Information, Follow Up Later, Not Interested, Unsubscribe) using free-tier AI (e.g. Gemini 1.5 Flash free tier) with sentiment badges and cockpit filters.
+- **Campaign & Triad Duplication (`POST /api/campaigns/:id/duplicate`)**: Clone all settings (pacing, delays, CC/BCC, accounts, templates) and all multi-step drip cadence rows (`campaign_drip_steps`) into a new draft campaign bound to an unattached or newly uploaded database.
+- **Rich Text Follow-Up Formatting Studio**: Full WYSIWYG formatting toolbar (Bold, Italic, Underline, Bulleted/Numbered Lists, Links, Clear Formatting) for follow-up steps in `DripSequenceStudio` with dynamic variable pill insertion.
+- **System-Wide Light Mode WCAG Contrast & Token Hardening**: High-contrast text tokens in `index.css` (eliminating low-contrast `#a1a1aa` for muted text), purging hardcoded `slate-` dark classes across all views and buttons to guarantee crisp >= 4.5:1 contrast.
+- **Direct Template Assignment to Variants in A/B Testing**: Assign saved templates directly to Variant A and Variant B in `ABTestingView` with live metadata previews, spam radar, and fallback inline overrides.
 
 ## Current State
 
-Shipped **v2.0 Custom Domains & Automated Drips** on 2026-10-03 across 3 phases (10–12) and 12 git commits. Delivered universal custom domain SMTP/IMAP gateway with 1-click presets (Zoho, Fastmail, Office 365, Namecheap PrivateEmail), multi-step drip sequence engine with delay scheduling and RFC 2822 organic threading, inbound IMAP reply scanner with automated sequence disarming, auto-responder filtering, 5-tier visual conversion funnel, and RFC 4180 audit CSV export.
+Shipped **v3.0 UI Overhaul, Light Mode & Free AI Reply Intelligence** on 2026-10-05 across 3 phases (13–15). Delivered centralized dual-theme token engine, professional B2B outreach copywriting, curated starter presets, and asynchronous Gemini 1.5 Flash sentiment analysis with local heuristic fallback.
+
+<details>
+<summary>v3.0 UI Overhaul, Light Mode & Free AI Reply Intelligence (Shipped 2026-10-05)</summary>
+
+Delivered persistent Dark/Light mode switcher with centralized CSS tokens and FOUT prevention, comprehensive UI modernization and B2B SaaS copywriting across all views, curated starter sequence presets, asynchronous Google Gemini 1.5 Flash reply sentiment engine (1,500 free calls/day), offline rule-based heuristic fallback, and Campaign Cockpit reply intelligence badges with 1-click filtering.
+
+</details>
 
 <details>
 <summary>v2.0 Custom Domains & Automated Drips (Shipped 2026-10-03)</summary>
@@ -59,15 +67,19 @@ Shipped **v1.0 Initial MVP** on 2026-10-03 across 9 complete phases and 18 git c
 - ✓ Multi-step follow-up sequences: Drip cadence builder (Step 1, Step 2, Step 3) with delay scheduling & RFC 2822 threading — v2.0
 - ✓ Inbound IMAP reply detection & disarm: Automated polling, auto-responder filter, and atomic sequence halting — v2.0
 - ✓ Drip funnel analytics & CSV export: Visual 5-tier conversion drop-off funnel and downloadable RFC 4180 audit report — v2.0
+- ✓ Dual-Theme Architecture & Design Tokens: Persistent Dark / Light theme switch, CSS variables design system, WCAG AA compliant contrast — v3.0
+- ✓ UI Overhaul & Component Modernization: Elevated dashboard cards, sleek tables, fluid spring toggles, and responsive views following `frontend-skill` — v3.0
+- ✓ Professional UX Copywriting: Clear, authoritative B2B outreach terminology across all navigation items, modals, tooltips, and status badges — v3.0
+- ✓ Curated Cold Outreach Starter Presets: High-converting built-in templates with pre-mapped variable tags — v3.0
+- ✓ Free AI Reply Sentiment Analyzer: Zero-cost classification (Interested, Question, Follow Up, Not Interested, Unsubscribe) via free-tier Gemini 1.5 Flash & local heuristics — v3.0
+- ✓ Reply Intelligence Cockpit Integration: Visual sentiment badges, confidence scores, and one-click filtering in Campaign Cockpit and Database Inspector — v3.0
 
-### Active
+### Active (v4.0)
 
-- [ ] Dual-Theme Architecture & Design Tokens: Persistent Dark / Light theme switch, CSS variables design system, WCAG AA compliant contrast.
-- [ ] UI Overhaul & Component Modernization: Elevated dashboard cards, sleek tables, fluid spring toggles, and responsive views following `frontend-skill`.
-- [ ] Professional UX Copywriting: Clear, authoritative B2B outreach terminology across all navigation items, modals, tooltips, and status badges.
-- [ ] Curated Cold Outreach Starter Presets: High-converting built-in templates (Initial Pitch, Follow-Up, Re-engagement, Partnership) with pre-mapped variable tags.
-- [ ] Free AI Reply Sentiment Analyzer: Zero-cost classification (Interested, Question, Follow Up, Not Interested, Unsubscribe) via free-tier AI (e.g. Gemini 1.5 Flash).
-- [ ] Reply Intelligence Cockpit Integration: Visual sentiment badges, confidence scores, and one-click filtering in Campaign Cockpit and Database Inspector.
+- [ ] **DUP-01..03**: 1-Click Campaign & Triad Duplication (`POST /api/campaigns/:id/duplicate`) cloning configs, cadence steps, and binding new isolated databases.
+- [ ] **RICH-01..03**: Rich Text Formatting Studio for custom follow-up cadences in `DripSequenceStudio` with dynamic variable pill insertion.
+- [ ] **CONTRAST-01..04**: System-Wide Light Mode WCAG 2.2 AA Contrast & Token Hardening across all buttons, inputs, modals, and text.
+- [ ] **AB-01..03**: Direct Template Assignment to Variants in A/B Testing Studio with metadata previews and spam risk radar.
 
 ### Out of Scope
 
