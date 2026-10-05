@@ -10,9 +10,9 @@
 
 ### Campaign & Triad Duplication (`DUP`)
 
-- [ ] **DUP-01**: User can trigger "Duplicate" from any Campaign card in the Campaigns Directory (`#/campaigns`) or the Campaign Cockpit (`#/campaigns/:id`) action bar, launching the Duplicate Campaign modal.
-- [ ] **DUP-02**: Modal prompts user for a new campaign name (prefilled as `[Name] (Copy)`) and enforces selecting an unattached database or uploading a fresh spreadsheet to preserve the strict 1:1 Triad model.
-- [ ] **DUP-03**: Backend endpoint (`POST /api/campaigns/:id/duplicate`) transactionally clones all campaign configurations (subject/body A & B, sender accounts, pacing delays, jitter, daily limits, CC/BCC, template references) and all associated cadence rows (`campaign_drip_steps`), initializing the clone in `DRAFT` status with reset send counters.
+- [x] **DUP-01**: User can trigger "Duplicate" from any Campaign card in the Campaigns Directory (`#/campaigns`) or the Campaign Cockpit (`#/campaigns/:id`) action bar, launching the Duplicate Campaign modal.
+- [x] **DUP-02**: Modal prompts user for a new campaign name (prefilled as `[Name] (Copy)`) and enforces selecting an unattached database or uploading a fresh spreadsheet to preserve the strict 1:1 Triad model.
+- [x] **DUP-03**: Backend endpoint (`POST /api/campaigns/:id/duplicate`) transactionally clones all campaign configurations (subject/body A & B, sender accounts, pacing delays, jitter, daily limits, CC/BCC, template references) and all associated cadence rows (`campaign_drip_steps`), initializing the clone in `DRAFT` status with reset send counters.
 
 ### Rich Text Follow-Up Formatting Studio (`RICH`)
 
@@ -75,9 +75,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DUP-01 | Phase 16 | Pending |
-| DUP-02 | Phase 16 | Pending |
-| DUP-03 | Phase 16 | Pending |
+| DUP-01 | Phase 16 | Complete |
+| DUP-02 | Phase 16 | Complete |
+| DUP-03 | Phase 16 | Complete |
 | RICH-01 | Phase 17 | Pending |
 | RICH-02 | Phase 17 | Pending |
 | RICH-03 | Phase 17 | Pending |

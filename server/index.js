@@ -979,6 +979,171 @@ app.post('/api/campaigns/:id/template', (req, res) => {
   }
 });
 
+// Duplicate an entire campaign with new name and bind to a new database (Phase 16)
+app.post('/api/campaigns/:id/duplicate', (req, res) => {
+  try {
+    const sourceId = Number(req.params.id);
+    const { name, database_id } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'New campaign name is required.' });
+    }
+    if (!database_id) {
+      return res.status(400).json({ success: false, message: 'Please select an audience database to bind to the cloned campaign.' });
+    }
+
+    const source = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(sourceId);
+    if (!source) {
+      return res.status(404).json({ success: false, message: 'Source campaign not found.' });
+    }
+
+    const targetDb = db.prepare('SELECT * FROM databases WHERE id = ?').get(database_id);
+    if (!targetDb) {
+      return res.status(404).json({ success: false, message: 'Target database not found.' });
+    }
+
+    if (targetDb.campaign_id) {
+      const activeCamp = db.prepare('SELECT id, name, status FROM campaigns WHERE id = ?').get(targetDb.campaign_id);
+      if (activeCamp && activeCamp.status === 'RUNNING') {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot bind database "${targetDb.name}" because campaign "${activeCamp.name}" is currently RUNNING. Pause or stop it first.`
+        });
+      }
+    }
+
+    const now = new Date().toISOString();
+
+    const duplicateTx = db.transaction(() => {
+      // 1. Create the new campaign inheriting all configurations from source
+      const insertCampaign = db.prepare(`
+        INSERT INTO campaigns (
+          name, status, created_at, updated_at, sender_account_id,
+          subject_a, body_a, subject_b, body_b, is_ab_test,
+          min_delay, max_delay, daily_limit, total_contacts,
+          sent_count, failed_count, reply_count,
+          database_id, template_id, cc_addresses, bcc_addresses, sender_provider
+        ) VALUES (
+          ?, 'DRAFT', ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, 0,
+          0, 0, 0,
+          ?, ?, ?, ?, ?
+        )
+      `);
+
+      const result = insertCampaign.run(
+        name.trim(),
+        now,
+        now,
+        source.sender_account_id || null,
+        source.subject_a || '',
+        source.body_a || '',
+        source.subject_b || '',
+        source.body_b || '',
+        source.is_ab_test || 0,
+        source.min_delay || 45,
+        source.max_delay || 90,
+        source.daily_limit || 100,
+        database_id,
+        source.template_id || null,
+        source.cc_addresses || '',
+        source.bcc_addresses || '',
+        source.sender_provider || 'default'
+      );
+
+      const newCampaignId = Number(result.lastInsertRowid);
+
+      // 2. Duplicate all multi-step drip cadence rows
+      const sourceSteps = db.prepare(`
+        SELECT * FROM campaign_drip_steps WHERE campaign_id = ? ORDER BY step_number ASC
+      `).all(sourceId);
+
+      const insertStep = db.prepare(`
+        INSERT INTO campaign_drip_steps (
+          campaign_id, step_number, delay_days, delay_hours, template_id,
+          subject_a, body_a, subject_b, body_b, thread_reply, is_active,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      for (const s of sourceSteps) {
+        insertStep.run(
+          newCampaignId,
+          s.step_number,
+          s.delay_days,
+          s.delay_hours,
+          s.template_id,
+          s.subject_a,
+          s.body_a,
+          s.subject_b,
+          s.body_b,
+          s.thread_reply,
+          s.is_active,
+          now,
+          now
+        );
+      }
+
+      // 3. Bind target database to the new campaign & reset records
+      if (targetDb.campaign_id && Number(targetDb.campaign_id) !== newCampaignId) {
+        db.prepare('UPDATE campaigns SET database_id = NULL, total_contacts = 0, updated_at = ? WHERE id = ?').run(now, targetDb.campaign_id);
+      }
+
+      db.prepare(`
+        UPDATE databases 
+        SET campaign_id = ?, is_attached = 1 
+        WHERE id = ?
+      `).run(newCampaignId, database_id);
+
+      db.prepare(`
+        UPDATE database_records 
+        SET campaign_id = ?,
+            included = 1,
+            status = 'PENDING',
+            sent_at = NULL,
+            message_id = NULL,
+            error_message = NULL,
+            current_step = 1,
+            initial_message_id = NULL,
+            next_step_scheduled_at = NULL,
+            replied_at = NULL,
+            sentiment = NULL,
+            sentiment_confidence = NULL,
+            sentiment_summary = NULL,
+            sentiment_provider = NULL
+        WHERE database_id = ?
+      `).run(newCampaignId, database_id);
+
+      const stats = databaseService.getIncludedStats(database_id);
+
+      db.prepare(`
+        UPDATE campaigns 
+        SET total_contacts = ?, sent_count = 0, failed_count = 0, reply_count = 0, updated_at = ?
+        WHERE id = ?
+      `).run(stats?.total || targetDb.row_count || 0, now, newCampaignId);
+
+      return {
+        newCampaignId,
+        totalContacts: stats?.total || targetDb.row_count || 0,
+        stepsDuplicated: sourceSteps.length
+      };
+    });
+
+    const output = duplicateTx();
+
+    res.json({
+      success: true,
+      campaignId: output.newCampaignId,
+      totalContacts: output.totalContacts,
+      stepsDuplicated: output.stepsDuplicated,
+      message: `Campaign duplicated successfully as "${name.trim()}".`
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ==========================================
 // Multi-Step Drip Sequence Endpoints (Phase 11)
 // ==========================================

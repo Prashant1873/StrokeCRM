@@ -51,7 +51,7 @@ See: `.planning/milestones/v2.0-ROADMAP.md`
 <details open>
 <summary>🔲 v4.0 Campaign Duplication, Rich Cadences & Contrast Hardening (Phases 16-19) — ACTIVE</summary>
 
-- [ ] **Phase 16: Campaign Duplication Engine & Triad Cloning**
+- [x] **Phase 16: Campaign Duplication Engine & Triad Cloning** (completed 2026-10-06)
 - [ ] **Phase 17: Rich Text Formatting Studio for Follow-Up Cadences**
 - [ ] **Phase 18: System-Wide Light Mode WCAG Contrast & Token Hardening**
 - [ ] **Phase 19: Template Assignment & Multi-Variant Bindings in A/B Testing**
