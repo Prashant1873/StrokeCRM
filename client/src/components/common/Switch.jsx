@@ -41,7 +41,7 @@ export default function Switch({
             {label}
           </label>
           {badge && (
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-subtle text-teal-600 dark:text-teal-400 border border-teal-500/30 font-mono">
               {badge}
             </span>
           )}

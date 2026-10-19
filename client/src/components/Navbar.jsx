@@ -27,13 +27,14 @@ export default function Navbar({ activeTab, setActiveTab, authStatus }) {
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo & Name */}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-teal-500/20">
               <Mail className="w-5 h-5 text-white" />
             </div>
             <div>
               <span className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
                 StrokeCRM
-                <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-md bg-slate-900 text-white border border-slate-700/60 font-mono">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400"></span>
                   Local Bot
                 </span>
               </span>
@@ -49,13 +50,13 @@ export default function Navbar({ activeTab, setActiveTab, authStatus }) {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 active:scale-95 ${
                     isActive
                       ? 'bg-slate-800 text-white shadow-inner shadow-slate-700/50'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-400' : 'text-slate-400'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-teal-400' : 'text-slate-400'}`} />
                   {item.label}
                 </button>
               );
@@ -67,7 +68,7 @@ export default function Navbar({ activeTab, setActiveTab, authStatus }) {
             {authStatus?.connected ? (
               <div 
                 onClick={() => setActiveTab('settings')}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 text-xs font-medium cursor-pointer hover:bg-emerald-900/40 transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-emerald-500/40 text-white text-xs font-medium cursor-pointer hover:bg-slate-800 transition-all active:scale-95 shadow-sm"
                 title="Click to manage Gmail settings"
               >
                 <span className="relative flex h-2 w-2">
@@ -75,14 +76,14 @@ export default function Navbar({ activeTab, setActiveTab, authStatus }) {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
                 <span className="truncate max-w-[140px] sm:max-w-[180px]">{authStatus.account?.email}</span>
-                <span className="text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded text-emerald-200 uppercase">
+                <span className="text-[10px] bg-emerald-950/80 border border-emerald-500/40 px-1.5 py-0.5 rounded text-emerald-200 uppercase font-mono">
                   {authStatus.account?.type === 'app_password' ? 'SMTP' : 'OAuth'}
                 </span>
               </div>
             ) : (
               <button
                 onClick={() => setActiveTab('settings')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-950/50 border border-amber-500/30 text-amber-300 text-xs font-medium hover:bg-amber-900/40 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-amber-500/40 text-amber-300 text-xs font-medium hover:bg-slate-800 transition-all active:scale-95 shadow-sm"
               >
                 <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
                 <span>Connect Gmail</span>

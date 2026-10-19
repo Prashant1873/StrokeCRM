@@ -845,7 +845,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
         {/* Header */}
         <div className="flex items-center justify-between border-b border-subtle pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 flex items-center justify-center">
               <Copy className="w-4 h-4" />
             </div>
             <div>
@@ -1009,7 +1009,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-subtle pb-5">
           <div>
             <h1 className="text-2xl font-bold text-primary tracking-tight flex items-center gap-2.5">
-              <Send className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
+              <Send className="w-6 h-6 text-teal-600 dark:text-teal-400" />
               Outreach Campaigns
             </h1>
             <p className="text-xs text-muted mt-1">
@@ -1020,7 +1020,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-500 active:scale-95 text-white text-xs font-semibold shadow-md shadow-teal-600/20 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             New Outreach Campaign
@@ -1031,7 +1031,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
         {feedback && (
           <div className={`p-4 rounded-xl border flex items-center justify-between text-xs ${
             feedback.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300'
-            : feedback.type === 'info' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-300'
+            : feedback.type === 'info' ? 'bg-teal-500/10 border-teal-500/30 text-teal-600 dark:text-teal-300'
             : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
           }`}>
             <span>{feedback.message}</span>
@@ -1042,7 +1042,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
         {/* Campaign Grid / Empty State */}
         {campaigns.length === 0 ? (
           <div className="bg-surface border border-subtle rounded-2xl p-12 text-center max-w-2xl mx-auto space-y-4">
-            <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 flex items-center justify-center mx-auto">
               <Send className="w-6 h-6" />
             </div>
             <h3 className="text-base font-bold text-primary">No Outreach Campaigns Yet</h3>
@@ -1052,7 +1052,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-500 active:scale-95 text-white text-xs font-semibold shadow-md shadow-teal-600/20 transition-all hover:-translate-y-0.5"
             >
               <Plus className="w-4 h-4" />
               Create Your First Campaign
@@ -1171,7 +1171,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
             <div className="bg-surface border border-subtle rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-5">
               <div className="flex items-center justify-between border-b border-subtle pb-3">
                 <div className="flex items-center gap-2">
-                  <Send className="w-5 h-5 text-indigo-500" />
+                  <Send className="w-5 h-5 text-teal-500" />
                   <h3 className="text-sm font-bold text-primary">Create Campaign (1:1 Triad)</h3>
                 </div>
                 <button type="button" onClick={() => setShowCreateModal(false)} className="text-muted hover:text-primary p-1 rounded-md hover:bg-subtle transition-colors">
@@ -1365,7 +1365,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
       {/* Empty State if no campaigns */}
       {(!selectedCampaign || campaigns.length === 0) ? (
         <div className="bg-surface border border-subtle rounded-2xl p-12 text-center max-w-2xl mx-auto space-y-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 flex items-center justify-center mx-auto">
+          <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 flex items-center justify-center mx-auto">
             <Send className="w-6 h-6" />
           </div>
           <h3 className="text-base font-bold text-primary">No Outreach Campaigns Created Yet</h3>
@@ -1375,7 +1375,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all hover:-translate-y-0.5 cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-500 active:scale-95 text-white text-xs font-semibold shadow-md shadow-teal-600/20 transition-all hover:-translate-y-0.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Create Your First Campaign
@@ -1390,18 +1390,18 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500">
+                    <div className="w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-500">
                       <Database className="w-3.5 h-3.5" />
                     </div>
                     <span className="text-xs font-bold text-primary uppercase tracking-wider">1. Attached Lead Audience</span>
                   </div>
                   {selectedCampaign.database_id ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold font-mono text-teal-600 dark:text-teal-400 bg-subtle px-2 py-0.5 rounded-md border border-subtle">
                       <Lock className="w-2.5 h-2.5" />
                       1:1 Dedicated
                     </span>
                   ) : (
-                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                    <span className="text-[10px] font-semibold font-mono text-amber-600 dark:text-amber-400 bg-subtle px-2 py-0.5 rounded-md border border-subtle">
                       Unattached
                     </span>
                   )}
@@ -1522,11 +1522,11 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                     <span className="text-xs font-bold text-primary uppercase tracking-wider">2. Attached Template</span>
                   </div>
                   {selectedCampaign.template_id ? (
-                    <span className="text-[10px] font-semibold text-secondary bg-subtle px-2 py-0.5 rounded-full border border-subtle">
+                    <span className="text-[10px] font-semibold font-mono text-secondary bg-subtle px-2 py-0.5 rounded-md border border-subtle">
                       {selectedCampaign.is_ab_test ? 'A/B Split' : 'Single'}
                     </span>
                   ) : (
-                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                    <span className="text-[10px] font-semibold font-mono text-amber-600 dark:text-amber-400 bg-subtle px-2 py-0.5 rounded-md border border-subtle">
                       Unattached
                     </span>
                   )}
@@ -1808,7 +1808,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
                   type="button"
                   onClick={handleStop}
                   disabled={actionLoading}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 transition-colors disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-600 hover:bg-rose-500/10 active:scale-95 border border-rose-500/30 transition-all disabled:opacity-50 cursor-pointer"
                 >
                   <Square className="w-3.5 h-3.5 fill-current" />
                   <span>Stop / Reset</span>
@@ -1820,7 +1820,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-primary">Audience Delivery Progress</span>
-                <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">{progressPercent}%</span>
+                <span className="font-mono text-teal-600 dark:text-teal-400 font-bold">{progressPercent}%</span>
               </div>
               <div className="w-full bg-canvas h-3 rounded-full overflow-hidden border border-subtle p-0.5">
                 <div
@@ -2011,7 +2011,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
           <div className="bg-surface border border-subtle rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-subtle pb-3">
               <div className="flex items-center gap-2">
-                <Send className="w-5 h-5 text-indigo-500" />
+                <Send className="w-5 h-5 text-teal-500" />
                 <h3 className="text-sm font-bold text-primary">Create Campaign (1:1 Triad Setup)</h3>
               </div>
               <button
@@ -2127,7 +2127,7 @@ export default function CampaignsView({ setActiveTab, navigate, currentRoute, on
           <div className="bg-surface border border-subtle rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl text-left">
             <div className="flex items-center justify-between border-b border-subtle pb-3">
               <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
-                <Mail className="w-4 h-4 text-indigo-500" />
+                <Mail className="w-4 h-4 text-teal-500" />
                 Send Instant Test Preview
               </h3>
               <button

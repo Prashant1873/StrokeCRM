@@ -225,10 +225,10 @@ export default function LeadsView({ setActiveTab, navigate, currentRoute }) {
               setActiveSubTab('wizard');
               if (navigate) navigate(steps[currentStep - 1].path);
             }}
-            className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all active:scale-95 ${
               activeSubTab === 'wizard'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-teal-600 text-white shadow-sm'
+                : 'text-white/60 hover:text-white'
             }`}
           >
             Ingestion Wizard
@@ -238,10 +238,10 @@ export default function LeadsView({ setActiveTab, navigate, currentRoute }) {
               setActiveSubTab('contacts');
               if (navigate) navigate('#/leads');
             }}
-            className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all active:scale-95 ${
               activeSubTab === 'contacts'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-teal-600 text-white shadow-sm'
+                : 'text-white/60 hover:text-white'
             }`}
           >
             Database ({totalContacts})
@@ -268,20 +268,20 @@ export default function LeadsView({ setActiveTab, navigate, currentRoute }) {
                       setCurrentStep(s.num);
                       if (navigate) navigate(s.path);
                     }}
-                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
+                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all active:scale-95 ${
                       isCurrent
-                        ? 'bg-indigo-600/15 border-indigo-500/50 text-white'
+                        ? 'bg-teal-500/10 border-teal-500/50 text-white'
                         : isComplete
                         ? 'bg-slate-950/60 border-slate-800/80 text-emerald-400 hover:border-slate-700'
-                        : 'bg-slate-950/30 border-slate-800/40 text-slate-500 cursor-not-allowed'
+                        : 'bg-slate-950/30 border-slate-800/40 text-white/40 cursor-not-allowed'
                     }`}
                   >
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                    <div className={`w-7 h-7 rounded-md font-mono flex items-center justify-center font-bold text-xs shrink-0 ${
                       isComplete 
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
                         : isCurrent 
-                        ? 'bg-indigo-600 text-white shadow-sm' 
-                        : 'bg-slate-800 text-slate-500'
+                        ? 'bg-teal-600 text-white shadow-sm' 
+                        : 'bg-slate-800 text-white/40'
                     }`}>
                       {isComplete ? <Check className="w-3.5 h-3.5" /> : s.num}
                     </div>
@@ -333,11 +333,11 @@ export default function LeadsView({ setActiveTab, navigate, currentRoute }) {
                   onChange={(e) => handleFileChange(e.target.files?.[0])}
                   className="hidden"
                 />
-                <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform">
+                <div className="w-14 h-14 rounded-xl bg-teal-500/10 text-teal-400 border border-teal-500/20 flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform">
                   {isParsing ? (
-                    <RefreshCw className="w-7 h-7 animate-spin text-indigo-400" />
+                    <RefreshCw className="w-7 h-7 animate-spin text-teal-400" />
                   ) : (
-                    <UploadCloud className="w-7 h-7 text-indigo-400" />
+                    <UploadCloud className="w-7 h-7 text-teal-400" />
                   )}
                 </div>
                 <h3 className="text-sm font-semibold text-white">
@@ -366,7 +366,7 @@ export default function LeadsView({ setActiveTab, navigate, currentRoute }) {
                       setCurrentStep(2);
                       if (navigate) navigate('#/leads/map');
                     }}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-md transition-all"
+                    className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 active:scale-95 text-white rounded-lg text-xs font-semibold shadow-md transition-all"
                   >
                     <span>Proceed to Step 2 (Map Variables)</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -393,7 +393,7 @@ export default function LeadsView({ setActiveTab, navigate, currentRoute }) {
 
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
                   <span className="text-xs font-medium text-slate-400 uppercase">Variable Headers</span>
-                  <div className="text-2xl font-bold text-indigo-400 mt-1">{parsedData.headers.length}</div>
+                  <div className="text-2xl font-bold text-teal-400 mt-1">{parsedData.headers.length}</div>
                 </div>
               </div>
 
@@ -401,7 +401,7 @@ export default function LeadsView({ setActiveTab, navigate, currentRoute }) {
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                   <div className="flex items-center gap-2">
-                    <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
+                    <SlidersHorizontal className="w-4 h-4 text-teal-400" />
                     <h3 className="text-sm font-semibold text-white">Step 2: Column Header Mapping</h3>
                   </div>
                   <span className="text-xs text-slate-400 font-mono">
@@ -555,7 +555,7 @@ export default function LeadsView({ setActiveTab, navigate, currentRoute }) {
                     <tbody className="divide-y divide-slate-800/60 font-mono">
                       {parsedData.sampleRows.map((row) => (
                         <tr key={row._rowId} className="hover:bg-slate-800/40 transition-colors">
-                          <td className="py-2.5 px-4 text-slate-500">{row._rowId}</td>
+                          <td className="py-2.5 px-4 text-white/40">{row._rowId}</td>
                           <td className="py-2.5 px-4">
                             {row._validEmail ? (
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-sans font-medium bg-emerald-950/60 text-emerald-400 border border-emerald-500/20">

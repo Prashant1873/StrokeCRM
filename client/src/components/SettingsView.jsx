@@ -549,7 +549,7 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
       <div className="bg-surface border border-subtle rounded-xl p-6 shadow-xs">
         <div className="flex items-center justify-between border-b border-subtle pb-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+            <div className="p-2.5 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">
               <Key className="w-5 h-5" />
             </div>
             <div>
@@ -936,7 +936,7 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
             {/* Sender Identity Section */}
             <div className="space-y-3">
               <h3 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-2">
-                <Mail className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+                <Mail className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
                 Sender Outbound Identity
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1253,7 +1253,7 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-semibold text-primary">Free AI Reply Sentiment Intelligence</h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-subtle text-emerald-600 dark:text-emerald-400 border border-subtle">
                   Google Gemini 1.5 Flash (Free Tier)
                 </span>
               </div>
@@ -1401,13 +1401,13 @@ export default function SettingsView({ authStatus, refreshAuthStatus }) {
       <div className="bg-surface border border-subtle rounded-xl p-6 shadow-xs">
         <div className="flex items-center justify-between border-b border-subtle pb-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+            <div className="p-2.5 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">
               <Tag className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-semibold text-primary">Native Gmail Thread Organization</h2>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                <span className="text-[10px] font-bold font-mono uppercase tracking-wider px-2 py-0.5 rounded-md bg-subtle text-teal-600 dark:text-teal-400 border border-subtle">
                   X-GM-LABELS
                 </span>
               </div>

@@ -97,14 +97,14 @@ export default function DeliverabilityBeacon({
           {/* Header */}
           <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-subtle">
             <div className="flex items-center gap-1.5 min-w-0">
-              <div className="w-5 h-5 rounded-md bg-indigo-500/15 text-indigo-500 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <div className="w-5 h-5 rounded-md bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
                 <ShieldCheck className="w-3.5 h-3.5" />
               </div>
               <span className="text-xs font-semibold text-primary truncate">
                 {displayTitle}
               </span>
             </div>
-            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shrink-0">
+            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-subtle text-teal-600 dark:text-teal-400 border border-teal-500/30 shrink-0 font-mono">
               {displayBadge}
             </span>
           </div>

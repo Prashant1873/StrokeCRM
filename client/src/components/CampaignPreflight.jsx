@@ -237,7 +237,7 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
           <div className="bg-surface border border-subtle rounded-xl p-6 shadow-xs">
             <div className="flex items-center justify-between pb-3 border-b border-subtle mb-3">
               <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-sky-500" />
+                <Globe className="w-4 h-4 text-teal-500" />
                 <h2 className="text-sm font-bold text-primary uppercase tracking-wider">
                   Outreach Dispatch Gateway
                 </h2>
@@ -300,7 +300,7 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
           <div className="bg-surface border border-subtle rounded-xl p-6 shadow-xs">
             <div className="flex items-center justify-between pb-3 border-b border-subtle mb-3">
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-indigo-500" />
+                <Clock className="w-4 h-4 text-teal-500" />
                 <h2 className="text-sm font-bold text-primary uppercase tracking-wider">
                   Timing & Send Windows
                 </h2>
@@ -369,7 +369,7 @@ export default function CampaignPreflight({ campaignId, navigate, goBack }) {
           {/* Test Email Preflight Gate Card */}
           <div className="bg-surface border border-subtle rounded-xl p-6 shadow-xs space-y-4">
             <div className="flex items-center gap-2 pb-3 border-b border-subtle">
-              <Mail className="w-4 h-4 text-indigo-500" />
+              <Mail className="w-4 h-4 text-teal-500" />
               <h2 className="text-sm font-bold text-primary uppercase tracking-wider">
                 Preflight Deliverability Test
               </h2>

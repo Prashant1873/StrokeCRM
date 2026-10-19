@@ -139,7 +139,7 @@ export default function Breadcrumbs({ currentRoute, navigate, goBack, canGoBack,
                     {Icon && <Icon className="w-3.5 h-3.5 text-indigo-500" />}
                     <span>{crumb.label}</span>
                     {crumb.badge && (
-                      <span className="text-[10px] font-semibold tracking-wide uppercase px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      <span className="text-[10px] font-semibold tracking-wide uppercase px-1.5 py-0.5 rounded-md bg-subtle text-teal-600 dark:text-teal-400 border border-teal-500/30 font-mono">
                         {crumb.badge}
                       </span>
                     )}

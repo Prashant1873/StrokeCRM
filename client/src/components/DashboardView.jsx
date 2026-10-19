@@ -131,7 +131,8 @@ export default function DashboardView({ authStatus, setActiveTab }) {
         <div>
           <h1 className="text-2xl font-bold text-primary tracking-tight flex items-center gap-2.5">
             Outreach Command Center
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-subtle text-indigo-600 dark:text-indigo-400 border border-subtle font-semibold font-mono">
+            <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-0.5 rounded-md bg-subtle text-teal-600 dark:text-teal-400 border border-teal-500/30 font-semibold font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
               Live
             </span>
           </h1>
@@ -174,7 +175,7 @@ export default function DashboardView({ authStatus, setActiveTab }) {
         <div className="bg-surface border border-subtle rounded-xl p-5 shadow-xs hover:-translate-y-0.5 hover:shadow-xl transition-all duration-200">
           <div className="flex items-center justify-between text-secondary mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted">Dispatched Today</span>
-            <Send className="w-4 h-4 text-indigo-500" />
+            <Send className="w-4 h-4 text-teal-500" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-primary font-mono">{overview.sentToday}</span>
@@ -182,7 +183,7 @@ export default function DashboardView({ authStatus, setActiveTab }) {
           </div>
           <div className="w-full bg-subtle h-1.5 rounded-full mt-3 overflow-hidden border border-subtle">
             <div 
-              className="bg-indigo-500 h-full rounded-full transition-all duration-300"
+              className="bg-teal-500 h-full rounded-full transition-all duration-300"
               style={{ width: `${quotaPercent}%` }}
             />
           </div>
@@ -233,7 +234,7 @@ export default function DashboardView({ authStatus, setActiveTab }) {
         <div className="bg-surface border border-subtle rounded-xl p-5 shadow-xs hover:-translate-y-0.5 hover:shadow-xl transition-all duration-200">
           <div className="flex items-center justify-between text-secondary mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted">Delivery Success</span>
-            <TrendingUp className="w-4 h-4 text-indigo-500" />
+            <TrendingUp className="w-4 h-4 text-teal-500" />
           </div>
           <div className="text-2xl font-bold text-primary font-mono">{overview.deliveryRate}%</div>
           <div className="text-xs text-secondary mt-2">
@@ -251,7 +252,7 @@ export default function DashboardView({ authStatus, setActiveTab }) {
           <div className="flex items-center justify-between border-b border-subtle pb-4">
             <div>
               <h2 className="text-base font-semibold text-primary flex items-center gap-2">
-                <BarChart2 className="w-4 h-4 text-indigo-500" />
+                <BarChart2 className="w-4 h-4 text-teal-500" />
                 Day-Wise Outreach Volume (Last 14 Days)
               </h2>
               <p className="text-xs text-secondary mt-0.5">

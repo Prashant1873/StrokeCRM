@@ -44,7 +44,7 @@ const SENTIMENT_CONFIG = {
   },
   NOT_INTERESTED: {
     label: 'Not Interested',
-    badgeClass: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 border-zinc-500/30',
+    badgeClass: 'bg-subtle text-secondary border-subtle',
     icon: XCircle
   },
   UNSUBSCRIBE: {
@@ -417,7 +417,7 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-subtle pb-5">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 dark:text-indigo-400">
+            <div className="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400">
               <Database className="w-4 h-4" />
             </div>
             <h1 className="text-xl font-bold tracking-tight text-primary">Lead Audiences</h1>
@@ -523,14 +523,14 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                   {/* Attachment Status Badge */}
                   {dbItem.is_attached ? (
                     <span 
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shrink-0"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-subtle text-teal-600 dark:text-teal-400 border border-subtle shrink-0"
                       title={`Attached to Campaign: ${dbItem.campaign_name}`}
                     >
                       <Lock className="w-2.5 h-2.5" />
                       Dedicated
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-subtle text-emerald-600 dark:text-emerald-400 border border-subtle shrink-0">
                       <Unlock className="w-2.5 h-2.5" />
                       Available
                     </span>
@@ -595,7 +595,7 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                 <button
                   type="button"
                   onClick={() => handleOpenInspector(dbItem)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-subtle hover:bg-indigo-500/10 text-primary hover:text-indigo-600 dark:hover:text-indigo-400 text-[11px] font-medium transition-colors cursor-pointer"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-subtle hover:bg-teal-500/10 active:scale-95 text-primary hover:text-teal-500 text-[11px] font-medium transition-all cursor-pointer"
                 >
                   <Eye className="w-3 h-3 text-muted" />
                   Inspect Audience
@@ -604,7 +604,7 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                 <button
                   type="button"
                   onClick={() => handleDeleteDatabase(dbItem)}
-                  className="p-1.5 rounded-lg text-muted hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg text-muted hover:text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer"
                   title="Delete Audience"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -621,7 +621,7 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
           <div className="bg-surface border border-subtle rounded-2xl w-full max-w-lg shadow-2xl p-6 text-left">
             <div className="flex items-center justify-between border-b border-subtle pb-3 mb-4">
               <div className="flex items-center gap-2">
-                <UploadCloud className="w-5 h-5 text-indigo-500" />
+                <UploadCloud className="w-5 h-5 text-teal-500" />
                 <h3 className="text-sm font-bold text-primary">Import Prospect Audience</h3>
               </div>
               <button
@@ -806,14 +806,14 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
             <div className="flex items-center justify-between border-b border-subtle pb-3 mb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <Database className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                  <Database className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                   <h3 className="text-sm font-bold text-primary">{inspectDb.name}</h3>
                   {inspectDb.is_attached ? (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-subtle text-teal-600 dark:text-teal-400 border border-subtle">
                       Dedicated to: {inspectDb.campaign_name}
                     </span>
                   ) : (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-subtle text-emerald-600 dark:text-emerald-400 border border-subtle">
                       Available
                     </span>
                   )}
@@ -1018,7 +1018,7 @@ export default function DatabasesView({ setActiveTab, navigate, currentRoute }) 
                                           ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' 
                                           : r.sentiment_provider === 'manual'
                                           ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                                          : 'bg-zinc-500/10 text-zinc-500'
+                                          : 'bg-subtle text-muted'
                                       }`}>
                                         {r.sentiment_provider || 'rule'}
                                       </span>

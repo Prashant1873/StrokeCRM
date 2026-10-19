@@ -270,7 +270,7 @@ export default function ABTestingView({ setActiveTab, navigate }) {
         <div>
           <h1 className="text-2xl font-bold text-primary tracking-tight flex items-center gap-2.5">
             A/B Testing Studio
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-pink-500/10 text-pink-600 dark:text-pink-400 font-semibold border border-pink-500/20">
+            <span className="text-xs px-2.5 py-0.5 rounded-md bg-subtle text-rose-600 dark:text-rose-400 font-semibold border border-rose-500/30 font-mono">
               50/50 Cohort Split
             </span>
           </h1>
@@ -339,10 +339,10 @@ export default function ABTestingView({ setActiveTab, navigate }) {
       {abStats && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Variant A Scorecard */}
-          <div className="bg-surface border border-indigo-500/30 rounded-xl p-5 relative overflow-hidden shadow-xs space-y-4">
+          <div className="bg-surface border border-teal-500/30 rounded-xl p-5 relative overflow-hidden shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-subtle pb-3">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-md bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center justify-center border border-indigo-500/30">
+                <span className="w-6 h-6 rounded-md bg-teal-500/20 text-teal-600 dark:text-teal-400 font-bold text-xs flex items-center justify-center border border-teal-500/30 font-mono">
                   A
                 </span>
                 <div>
@@ -384,12 +384,12 @@ export default function ABTestingView({ setActiveTab, navigate }) {
             {/* Template Binding & Attachments Pill */}
             <div className="flex flex-wrap items-center justify-between text-xs gap-2 pt-1 border-t border-subtle">
               <span className="text-muted text-[11px]">Deliverability Risk:</span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase border ${
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase border font-mono ${
                 spamStatsA.score <= 20 
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' 
+                  ? 'bg-subtle text-emerald-600 dark:text-emerald-400 border-emerald-500/30' 
                   : spamStatsA.score <= 45 
-                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30' 
-                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                  ? 'bg-subtle text-amber-600 dark:text-amber-400 border-amber-500/30' 
+                  : 'bg-subtle text-rose-600 dark:text-rose-400 border-rose-500/30'
               }`}>
                 {spamStatsA.score <= 20 ? '✓ Clean Inbox Ready' : spamStatsA.score <= 45 ? '⚠️ Moderate Risk' : '⛔ High Spam Risk'}
               </span>
@@ -458,12 +458,12 @@ export default function ABTestingView({ setActiveTab, navigate }) {
             {/* Template Binding & Attachments Pill */}
             <div className="flex flex-wrap items-center justify-between text-xs gap-2 pt-1 border-t border-subtle">
               <span className="text-muted text-[11px]">Deliverability Risk:</span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase border ${
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase border font-mono ${
                 spamStatsB.score <= 20 
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' 
+                  ? 'bg-subtle text-emerald-600 dark:text-emerald-400 border-emerald-500/30' 
                   : spamStatsB.score <= 45 
-                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30' 
-                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                  ? 'bg-subtle text-amber-600 dark:text-amber-400 border-amber-500/30' 
+                  : 'bg-subtle text-rose-600 dark:text-rose-400 border-rose-500/30'
               }`}>
                 {spamStatsB.score <= 20 ? '✓ Clean Inbox Ready' : spamStatsB.score <= 45 ? '⚠️ Moderate Risk' : '⛔ High Spam Risk'}
               </span>

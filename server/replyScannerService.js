@@ -23,7 +23,11 @@ async function streamToString(stream, maxBytes = 16384) {
  * In-memory scan state tracking to prevent concurrent overlapping scans
  */
 let isScanning = false;
+let scanStartedAt = null;
+let activeScanPromise = null;
+let activeClient = null;
 let lastScanResult = null;
+const MAX_SCAN_DURATION_MS = 60 * 1000;
 
 /**
  * Resolves IMAP connection configuration based on active provider or campaign settings
@@ -245,358 +249,466 @@ function parseBounceNotification(envelope, headersMap = {}, bodyText = '') {
  * @returns {Promise<Object>} Scan results summary
  */
 async function scanInboxForReplies({ campaignId = null, lookbackDays = 14 } = {}) {
-  if (isScanning) {
-    return {
-      success: false,
-      message: 'Inbox scan is already in progress.',
-      scanned: 0,
-      matchedReplies: 0,
-      autoRepliesIgnored: 0,
-      alreadyRunning: true
-    };
+  const now = Date.now();
+
+  // 1. Watchdog: force-recover if a previous scan exceeded the 60s hard ceiling
+  if (isScanning && scanStartedAt && (now - scanStartedAt > MAX_SCAN_DURATION_MS)) {
+    console.warn('[StrokeCRM] Previous IMAP scan exceeded watchdog threshold. Forcing reset.');
+    if (activeClient) {
+      try { activeClient.close(); } catch {}
+      activeClient = null;
+    }
+    isScanning = false;
+    scanStartedAt = null;
+    activeScanPromise = null;
+  }
+
+  // 2. Coalescing: join in-flight scan if one is actively running instead of rejecting
+  if (isScanning && activeScanPromise) {
+    try {
+      return await activeScanPromise;
+    } catch (err) {
+      return {
+        success: false,
+        message: err.message || 'Scan in progress failed.',
+        scanned: 0,
+        matchedReplies: 0,
+        autoRepliesIgnored: 0
+      };
+    }
   }
 
   isScanning = true;
-  let client = null;
-  let lock = null;
+  scanStartedAt = Date.now();
 
-  try {
-    const imapConfig = resolveImapConfig(campaignId);
+  const runScan = async () => {
+    let client = null;
+    let lock = null;
 
-    client = new ImapFlow({
-      host: imapConfig.host,
-      port: imapConfig.port,
-      secure: imapConfig.secure,
-      auth: imapConfig.auth,
-      logger: false,
-      emitLogs: false
-    });
+    try {
+      const imapConfig = resolveImapConfig(campaignId);
 
-    await client.connect();
+      client = new ImapFlow({
+        host: imapConfig.host,
+        port: imapConfig.port,
+        secure: imapConfig.secure,
+        auth: imapConfig.auth,
+        logger: false,
+        emitLogs: false,
+        clientInfo: { name: 'StrokeCRM', version: '2.0.0' },
+        connectionTimeout: 20000,
+        greetingTimeout: 15000,
+        socketTimeout: 45000
+      });
+      activeClient = client;
 
-    // Acquire lock on INBOX (read-write to enable native Gmail thread labeling)
-    lock = await client.getMailboxLock('INBOX');
+      client.on('error', (err) => {
+        console.warn('[StrokeCRM] IMAP socket notice:', err.message);
+      });
 
-    const sinceDate = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000);
-    const messages = client.fetch(
-      { since: sinceDate },
-      {
-        envelope: true,
-        internalDate: true,
-        headers: ['auto-submitted', 'x-autoreply', 'precedence', 'content-type', 'diagnostic-code', 'action', 'final-recipient']
+      await client.connect();
+
+      lock = await client.getMailboxLock('INBOX');
+
+      if (!client.mailbox || client.mailbox.exists === 0) {
+        lastScanResult = {
+          success: true,
+          scanned: 0,
+          matchedReplies: 0,
+          matchedBounces: 0,
+          autoRepliesIgnored: 0,
+          lastScannedAt: new Date().toISOString()
+        };
+        return lastScanResult;
       }
-    );
 
-    let scannedCount = 0;
-    let matchedReplies = 0;
-    let matchedBounces = 0;
-    let autoRepliesIgnored = 0;
-    const nowIso = new Date().toISOString();
+      const sinceDate = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000);
+      const messages = client.fetch(
+        { since: sinceDate },
+        {
+          uid: true,
+          envelope: true,
+          internalDate: true,
+          headers: ['auto-submitted', 'x-autoreply', 'precedence', 'content-type', 'diagnostic-code', 'action', 'final-recipient']
+        }
+      );
 
-    for await (const message of messages) {
-      scannedCount++;
+      let scannedCount = 0;
+      let matchedReplies = 0;
+      let matchedBounces = 0;
+      let autoRepliesIgnored = 0;
+      const nowIso = new Date().toISOString();
 
-      const envelope = message.envelope || {};
-      const fromAddress = envelope.from?.[0]?.address ? envelope.from[0].address.toLowerCase().trim() : '';
-      if (!fromAddress) continue;
+      const candidateBounces = [];
+      const candidateAutoReplies = [];
+      const candidateHumanReplies = [];
 
-      const subject = envelope.subject || '';
-      const messageId = envelope.messageId ? envelope.messageId.trim() : '';
-      const inReplyTo = envelope.inReplyTo ? envelope.inReplyTo.trim() : '';
-      const receivedAt = message.internalDate ? new Date(message.internalDate).toISOString() : nowIso;
+      // PASS 1: Fast envelope & header scan. NEVER run overlapping IMAP commands or AI calls inside fetch stream!
+      for await (const message of messages) {
+        scannedCount++;
 
-      // Parse headers into key-value map
-      const headersMap = {};
-      if (message.headers) {
-        try {
-          const rawHeaders = message.headers.toString();
-          rawHeaders.split(/\r?\n/).forEach(line => {
-            const idx = line.indexOf(':');
-            if (idx > 0) {
-              const k = line.slice(0, idx).toLowerCase().trim();
-              const v = line.slice(idx + 1).trim();
-              headersMap[k] = v;
-            }
+        const envelope = message.envelope || {};
+        const fromAddress = envelope.from?.[0]?.address ? envelope.from[0].address.toLowerCase().trim() : '';
+        if (!fromAddress) continue;
+
+        const subject = envelope.subject || '';
+        const messageId = envelope.messageId ? envelope.messageId.trim() : '';
+        const inReplyTo = envelope.inReplyTo ? envelope.inReplyTo.trim() : '';
+        const receivedAt = message.internalDate ? new Date(message.internalDate).toISOString() : nowIso;
+
+        // Parse headers into key-value map
+        const headersMap = {};
+        if (message.headers) {
+          try {
+            const rawHeaders = message.headers.toString();
+            rawHeaders.split(/\r?\n/).forEach(line => {
+              const idx = line.indexOf(':');
+              if (idx > 0) {
+                const k = line.slice(0, idx).toLowerCase().trim();
+                const v = line.slice(idx + 1).trim();
+                headersMap[k] = v;
+              }
+            });
+          } catch {}
+        }
+
+        // Check if message is a Bounce / NDR
+        if (isBounceReport(envelope, headersMap)) {
+          candidateBounces.push({
+            seq: message.seq,
+            uid: message.uid,
+            envelope,
+            headersMap,
+            receivedAt
           });
-        } catch {
-          // ignore parsing error
+          continue;
+        }
+
+        // Match sender against campaigns database
+        let matchedRecord = null;
+        let matchedContact = null;
+        let effectiveCampaignId = campaignId;
+
+        if (campaignId) {
+          matchedRecord = db.prepare(`
+            SELECT dr.*, c.name as campaign_name 
+            FROM database_records dr
+            JOIN campaigns c ON dr.campaign_id = c.id
+            WHERE dr.campaign_id = ? AND lower(dr.email) = ?
+            LIMIT 1
+          `).get(campaignId, fromAddress);
+
+          if (!matchedRecord) {
+            matchedContact = db.prepare(`
+              SELECT co.*, c.name as campaign_name 
+              FROM contacts co
+              JOIN campaigns c ON co.campaign_id = c.id
+              WHERE co.campaign_id = ? AND lower(co.email) = ?
+              LIMIT 1
+            `).get(campaignId, fromAddress);
+          }
+        } else {
+          matchedRecord = db.prepare(`
+            SELECT dr.*, c.id as cid, c.name as campaign_name 
+            FROM database_records dr
+            JOIN campaigns c ON dr.campaign_id = c.id
+            WHERE lower(dr.email) = ? AND dr.status IN ('SENT', 'PENDING')
+            ORDER BY dr.sent_at DESC
+            LIMIT 1
+          `).get(fromAddress);
+
+          if (matchedRecord) {
+            effectiveCampaignId = matchedRecord.campaign_id || matchedRecord.cid;
+          } else {
+            matchedContact = db.prepare(`
+              SELECT co.*, c.id as cid, c.name as campaign_name 
+              FROM contacts co
+              JOIN campaigns c ON co.campaign_id = c.id
+              WHERE lower(co.email) = ? AND co.status IN ('SENT', 'PENDING')
+              ORDER BY co.sent_at DESC
+              LIMIT 1
+            `).get(fromAddress);
+            if (matchedContact) {
+              effectiveCampaignId = matchedContact.campaign_id || matchedContact.cid;
+            }
+          }
+        }
+
+        if (!matchedRecord && !matchedContact) {
+          continue; // Not a lead from our campaigns
+        }
+
+        // Check if reply already logged
+        const existingReply = db.prepare(`
+          SELECT id FROM reply_logs 
+          WHERE (message_id IS NOT NULL AND message_id != '' AND message_id = ?)
+             OR (sender_email = ? AND received_at = ?)
+          LIMIT 1
+        `).get(messageId, fromAddress, receivedAt);
+
+        if (existingReply) {
+          continue;
+        }
+
+        if (isAutoReply(envelope, headersMap)) {
+          candidateAutoReplies.push({
+            effectiveCampaignId,
+            matchedRecord,
+            matchedContact,
+            fromAddress,
+            subject,
+            inReplyTo,
+            messageId,
+            receivedAt
+          });
+        } else {
+          candidateHumanReplies.push({
+            seq: message.seq,
+            uid: message.uid,
+            effectiveCampaignId,
+            matchedRecord,
+            matchedContact,
+            fromAddress,
+            subject,
+            inReplyTo,
+            messageId,
+            receivedAt,
+            envelope,
+            headersMap,
+            campaignName: (matchedRecord && matchedRecord.campaign_name) || (matchedContact && matchedContact.campaign_name) || ''
+          });
         }
       }
 
-      // Check if this incoming message is a Mailer-Daemon Bounce / NDR
-      if (isBounceReport(envelope, headersMap)) {
+      // PASS 2: Download bodies sequentially now that fetch stream is completely done
+      for (const b of candidateBounces) {
         let bounceBody = '';
         try {
-          const download = await client.download(String(message.seq), '1', { maxBytes: 16384 });
+          const download = await client.download(String(b.seq), '1', { maxBytes: 16384 });
           if (download && download.content) {
             bounceBody = await streamToString(download.content, 16384);
           }
         } catch {
           try {
-            const download = await client.download(String(message.seq), null, { maxBytes: 16384 });
+            const download = await client.download(String(b.seq), null, { maxBytes: 16384 });
             if (download && download.content) {
               bounceBody = await streamToString(download.content, 16384);
             }
-          } catch {
-            // ignore download error
-          }
+          } catch {}
         }
+        b.bounceBody = bounceBody;
+      }
 
-        const parsedBounce = parseBounceNotification(envelope, headersMap, bounceBody);
-        if (parsedBounce) {
-          let bounceRecord = null;
-          let bounceContact = null;
-          let bounceCampaignId = campaignId;
+      for (const r of candidateHumanReplies) {
+        let bodyText = '';
+        try {
+          const download = await client.download(String(r.seq), '1', { maxBytes: 16384 });
+          if (download && download.content) {
+            bodyText = await streamToString(download.content, 16384);
+          }
+        } catch {
+          try {
+            const download = await client.download(String(r.seq), null, { maxBytes: 16384 });
+            if (download && download.content) {
+              bodyText = await streamToString(download.content, 16384);
+            }
+          } catch {}
+        }
+        r.bodyText = bodyText;
 
-          if (parsedBounce.recipientEmail) {
-            if (campaignId) {
-              bounceRecord = db.prepare(`
-                SELECT dr.*, c.name as campaign_name 
-                FROM database_records dr
-                JOIN campaigns c ON dr.campaign_id = c.id
-                WHERE dr.campaign_id = ? AND lower(dr.email) = ?
+        // Sync Gmail thread labels safely while still connected
+        try {
+          await gmailLabelService.syncLabelsForEvent(client, r.uid, {
+            campaignName: r.campaignName,
+            sentiment: null,
+            isBounce: false
+          });
+        } catch (lblErr) {
+          console.warn('[StrokeCRM Gmail Labels] Label notice:', lblErr.message);
+        }
+      }
+
+      // Immediate IMAP disconnect & lock release to free sockets and prevent timeouts
+      if (lock) {
+        try {
+          await Promise.race([
+            lock.release().catch(() => {}),
+            new Promise(res => setTimeout(res, 2000))
+          ]);
+        } catch {}
+        lock = null;
+      }
+      if (client) {
+        try {
+          await Promise.race([
+            client.logout().catch(() => {}),
+            new Promise(res => setTimeout(res, 2000))
+          ]);
+        } catch {}
+        try { client.close(); } catch {}
+        client = null;
+        activeClient = null;
+      }
+
+      // PASS 3: Database transactions & Sentiment Analysis (IMAP is now disconnected)
+      // 3A. Process Bounces
+      for (const b of candidateBounces) {
+        const parsedBounce = parseBounceNotification(b.envelope, b.headersMap, b.bounceBody || '');
+        if (!parsedBounce) continue;
+
+        let bounceRecord = null;
+        let bounceContact = null;
+        let bounceCampaignId = campaignId;
+
+        if (parsedBounce.recipientEmail) {
+          if (campaignId) {
+            bounceRecord = db.prepare(`
+              SELECT dr.*, c.name as campaign_name 
+              FROM database_records dr
+              JOIN campaigns c ON dr.campaign_id = c.id
+              WHERE dr.campaign_id = ? AND lower(dr.email) = ?
+              LIMIT 1
+            `).get(campaignId, parsedBounce.recipientEmail);
+
+            if (!bounceRecord) {
+              bounceContact = db.prepare(`
+                SELECT co.*, c.name as campaign_name 
+                FROM contacts co
+                JOIN campaigns c ON co.campaign_id = c.id
+                WHERE co.campaign_id = ? AND lower(co.email) = ?
                 LIMIT 1
               `).get(campaignId, parsedBounce.recipientEmail);
+            }
+          } else {
+            bounceRecord = db.prepare(`
+              SELECT dr.*, c.id as cid, c.name as campaign_name 
+              FROM database_records dr
+              JOIN campaigns c ON dr.campaign_id = c.id
+              WHERE lower(dr.email) = ? AND dr.status IN ('SENT', 'PENDING')
+              ORDER BY dr.sent_at DESC
+              LIMIT 1
+            `).get(parsedBounce.recipientEmail);
 
-              if (!bounceRecord) {
-                bounceContact = db.prepare(`
-                  SELECT co.*, c.name as campaign_name 
-                  FROM contacts co
-                  JOIN campaigns c ON co.campaign_id = c.id
-                  WHERE co.campaign_id = ? AND lower(co.email) = ?
-                  LIMIT 1
-                `).get(campaignId, parsedBounce.recipientEmail);
-              }
+            if (bounceRecord) {
+              bounceCampaignId = bounceRecord.campaign_id || bounceRecord.cid;
             } else {
-              bounceRecord = db.prepare(`
-                SELECT dr.*, c.id as cid, c.name as campaign_name 
-                FROM database_records dr
-                JOIN campaigns c ON dr.campaign_id = c.id
-                WHERE lower(dr.email) = ? AND dr.status IN ('SENT', 'PENDING')
-                ORDER BY dr.sent_at DESC
+              bounceContact = db.prepare(`
+                SELECT co.*, c.id as cid, c.name as campaign_name 
+                FROM contacts co
+                JOIN campaigns c ON co.campaign_id = c.id
+                WHERE lower(co.email) = ? AND co.status IN ('SENT', 'PENDING')
+                ORDER BY co.sent_at DESC
                 LIMIT 1
               `).get(parsedBounce.recipientEmail);
+              if (bounceContact) {
+                bounceCampaignId = bounceContact.campaign_id || bounceContact.cid;
+              }
+            }
+          }
+        }
 
+        // Fallback email candidate extraction from raw bounce text
+        if (!bounceRecord && !bounceContact && b.bounceBody) {
+          const candidates = b.bounceBody.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
+          for (const cand of candidates) {
+            const cLower = cand.toLowerCase();
+            if (/mailer-daemon|postmaster|googlemail|google\.com|gmail\.com/i.test(cLower)) continue;
+            if (campaignId) {
+              bounceRecord = db.prepare('SELECT * FROM database_records WHERE campaign_id = ? AND lower(email) = ? LIMIT 1').get(campaignId, cLower);
               if (bounceRecord) {
-                bounceCampaignId = bounceRecord.campaign_id || bounceRecord.cid;
-              } else {
-                bounceContact = db.prepare(`
-                  SELECT co.*, c.id as cid, c.name as campaign_name 
-                  FROM contacts co
-                  JOIN campaigns c ON co.campaign_id = c.id
-                  WHERE lower(co.email) = ? AND co.status IN ('SENT', 'PENDING')
-                  ORDER BY co.sent_at DESC
-                  LIMIT 1
-                `).get(parsedBounce.recipientEmail);
-                if (bounceContact) {
-                  bounceCampaignId = bounceContact.campaign_id || bounceContact.cid;
-                }
+                parsedBounce.recipientEmail = cLower;
+                break;
+              }
+              bounceContact = db.prepare('SELECT * FROM contacts WHERE campaign_id = ? AND lower(email) = ? LIMIT 1').get(campaignId, cLower);
+              if (bounceContact) {
+                parsedBounce.recipientEmail = cLower;
+                break;
+              }
+            } else {
+              bounceRecord = db.prepare("SELECT * FROM database_records WHERE lower(email) = ? AND status IN ('SENT', 'PENDING') ORDER BY sent_at DESC LIMIT 1").get(cLower);
+              if (bounceRecord) {
+                parsedBounce.recipientEmail = cLower;
+                bounceCampaignId = bounceRecord.campaign_id;
+                break;
+              }
+              bounceContact = db.prepare("SELECT * FROM contacts WHERE lower(email) = ? AND status IN ('SENT', 'PENDING') ORDER BY sent_at DESC LIMIT 1").get(cLower);
+              if (bounceContact) {
+                parsedBounce.recipientEmail = cLower;
+                bounceCampaignId = bounceContact.campaign_id;
+                break;
               }
             }
           }
+        }
 
-          // Fallback: search candidate emails found anywhere in bounce transcript
-          if (!bounceRecord && !bounceContact && bounceBody) {
-            const candidates = bounceBody.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
-            for (const cand of candidates) {
-              const cLower = cand.toLowerCase();
-              if (/mailer-daemon|postmaster|googlemail|google\.com|gmail\.com/i.test(cLower)) continue;
-              if (campaignId) {
-                bounceRecord = db.prepare('SELECT * FROM database_records WHERE campaign_id = ? AND lower(email) = ? LIMIT 1').get(campaignId, cLower);
-                if (bounceRecord) {
-                  parsedBounce.recipientEmail = cLower;
-                  break;
-                }
-                bounceContact = db.prepare('SELECT * FROM contacts WHERE campaign_id = ? AND lower(email) = ? LIMIT 1').get(campaignId, cLower);
-                if (bounceContact) {
-                  parsedBounce.recipientEmail = cLower;
-                  break;
-                }
-              } else {
-                bounceRecord = db.prepare("SELECT * FROM database_records WHERE lower(email) = ? AND status IN ('SENT', 'PENDING') ORDER BY sent_at DESC LIMIT 1").get(cLower);
-                if (bounceRecord) {
-                  parsedBounce.recipientEmail = cLower;
-                  bounceCampaignId = bounceRecord.campaign_id;
-                  break;
-                }
-                bounceContact = db.prepare("SELECT * FROM contacts WHERE lower(email) = ? AND status IN ('SENT', 'PENDING') ORDER BY sent_at DESC LIMIT 1").get(cLower);
-                if (bounceContact) {
-                  parsedBounce.recipientEmail = cLower;
-                  bounceCampaignId = bounceContact.campaign_id;
-                  break;
-                }
-              }
-            }
-          }
+        if (bounceRecord || bounceContact) {
+          const targetEmail = parsedBounce.recipientEmail || (bounceRecord ? bounceRecord.email : bounceContact.email);
+          const existingBounce = db.prepare(`
+            SELECT id FROM bounce_logs 
+            WHERE recipient_email = ? AND (campaign_id = ? OR campaign_id IS NULL)
+            LIMIT 1
+          `).get(targetEmail, bounceCampaignId);
 
-          if (bounceRecord || bounceContact) {
-            const targetEmail = parsedBounce.recipientEmail || (bounceRecord ? bounceRecord.email : bounceContact.email);
-            const existingBounce = db.prepare(`
-              SELECT id FROM bounce_logs 
-              WHERE recipient_email = ? AND (campaign_id = ? OR campaign_id IS NULL)
-              LIMIT 1
-            `).get(targetEmail, bounceCampaignId);
+          if (!existingBounce) {
+            const recordId = bounceRecord ? bounceRecord.id : null;
+            const contactId = bounceContact ? bounceContact.id : null;
 
-            if (!existingBounce) {
-              const recordId = bounceRecord ? bounceRecord.id : null;
-              const contactId = bounceContact ? bounceContact.id : null;
-
-              const recordBounceTx = db.transaction(() => {
-                if (bounceRecord) {
-                  db.prepare(`
-                    UPDATE database_records 
-                    SET status = 'BOUNCED',
-                        bounce_reason = ?,
-                        bounce_code = ?,
-                        bounce_type = ?,
-                        bounced_at = ?,
-                        next_step_scheduled_at = NULL,
-                        error_message = ?
-                    WHERE id = ?
-                  `).run(parsedBounce.bounceReason, parsedBounce.bounceCode, parsedBounce.bounceType, receivedAt, parsedBounce.bounceReason, recordId);
-                } else if (bounceContact) {
-                  db.prepare(`
-                    UPDATE contacts 
-                    SET status = 'BOUNCED',
-                        bounce_reason = ?,
-                        bounce_code = ?,
-                        bounce_type = ?,
-                        bounced_at = ?,
-                        next_step_scheduled_at = NULL,
-                        error_message = ?
-                    WHERE id = ?
-                  `).run(parsedBounce.bounceReason, parsedBounce.bounceCode, parsedBounce.bounceType, receivedAt, parsedBounce.bounceReason, contactId);
-                }
-
+            const recordBounceTx = db.transaction(() => {
+              if (bounceRecord) {
                 db.prepare(`
-                  INSERT INTO bounce_logs (
-                    campaign_id, database_record_id, contact_id, recipient_email,
-                    bounce_type, bounce_code, diagnostic_code, raw_reason, source, uid, created_at
-                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'mailer_daemon', ?, ?)
-                `).run(
-                  bounceCampaignId,
-                  recordId,
-                  contactId,
-                  targetEmail,
-                  parsedBounce.bounceType,
-                  parsedBounce.bounceCode,
-                  parsedBounce.bounceReason,
-                  parsedBounce.bounceReason,
-                  message.uid || null,
-                  nowIso
-                );
+                  UPDATE database_records 
+                  SET status = 'BOUNCED',
+                      bounce_reason = ?,
+                      bounce_code = ?,
+                      next_step_scheduled_at = NULL
+                  WHERE id = ?
+                `).run(parsedBounce.bounceReason, parsedBounce.bounceCode, recordId);
+              } else if (bounceContact) {
+                db.prepare(`
+                  UPDATE contacts 
+                  SET status = 'BOUNCED',
+                      bounce_reason = ?,
+                      bounce_code = ?,
+                      next_step_scheduled_at = NULL
+                  WHERE id = ?
+                `).run(parsedBounce.bounceReason, parsedBounce.bounceCode, contactId);
+              }
 
-                if (bounceCampaignId) {
-                  db.prepare(`
-                    UPDATE campaigns 
-                    SET bounced_count = (
-                      SELECT COUNT(DISTINCT coalesce(database_record_id, contact_id)) 
-                      FROM bounce_logs 
-                      WHERE campaign_id = ?
-                    ),
-                    failed_count = failed_count + 1
-                    WHERE id = ?
-                  `).run(bounceCampaignId, bounceCampaignId);
-                }
-              });
+              db.prepare(`
+                INSERT INTO bounce_logs (
+                  campaign_id, database_record_id, contact_id, recipient_email,
+                  bounce_reason, bounce_code, bounce_type, raw_bounce_snippet,
+                  created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `).run(
+                bounceCampaignId,
+                recordId,
+                contactId,
+                targetEmail,
+                parsedBounce.bounceReason,
+                parsedBounce.bounceCode,
+                parsedBounce.bounceType,
+                (b.bounceBody || '').slice(0, 1000),
+                nowIso
+              );
 
-              recordBounceTx();
-              matchedBounces++;
-
-              // Auto-label bounce in Gmail (GMAIL-02)
-              let bounceCampaignName = '';
               if (bounceCampaignId) {
-                const cRow = db.prepare('SELECT name FROM campaigns WHERE id = ?').get(bounceCampaignId);
-                bounceCampaignName = cRow?.name || '';
+                db.prepare(`
+                  UPDATE campaigns 
+                  SET bounce_count = (SELECT COUNT(*) FROM bounce_logs WHERE campaign_id = ?)
+                  WHERE id = ?
+                `).run(bounceCampaignId, bounceCampaignId);
               }
+            });
 
-              try {
-                await gmailLabelService.syncLabelsForEvent(client, message.uid, {
-                  campaignName: bounceCampaignName,
-                  isBounce: true
-                });
-              } catch (lblErr) {
-                console.warn('[Gmail Labels] Bounce tag notice:', lblErr.message);
-              }
-            }
-            continue; // Skip regular reply processing for this bounce notification
+            recordBounceTx();
+            matchedBounces++;
           }
         }
       }
 
-      // Check whether this message matches any active campaign leads
-      let matchedRecord = null;
-      let matchedContact = null;
-      let effectiveCampaignId = campaignId;
-
-      if (campaignId) {
-        // Query database_records for this specific campaign
-        matchedRecord = db.prepare(`
-          SELECT dr.*, c.name as campaign_name 
-          FROM database_records dr
-          JOIN campaigns c ON dr.campaign_id = c.id
-          WHERE dr.campaign_id = ? AND lower(dr.email) = ?
-          LIMIT 1
-        `).get(campaignId, fromAddress);
-
-        // Fallback to legacy contacts table
-        if (!matchedRecord) {
-          matchedContact = db.prepare(`
-            SELECT co.*, c.name as campaign_name 
-            FROM contacts co
-            JOIN campaigns c ON co.campaign_id = c.id
-            WHERE co.campaign_id = ? AND lower(co.email) = ?
-            LIMIT 1
-          `).get(campaignId, fromAddress);
-        }
-      } else {
-        // Query across all campaigns for this email
-        matchedRecord = db.prepare(`
-          SELECT dr.*, c.id as cid, c.name as campaign_name 
-          FROM database_records dr
-          JOIN campaigns c ON dr.campaign_id = c.id
-          WHERE lower(dr.email) = ? AND dr.status IN ('SENT', 'PENDING')
-          ORDER BY dr.sent_at DESC
-          LIMIT 1
-        `).get(fromAddress);
-
-        if (matchedRecord) {
-          effectiveCampaignId = matchedRecord.campaign_id || matchedRecord.cid;
-        } else {
-          matchedContact = db.prepare(`
-            SELECT co.*, c.id as cid, c.name as campaign_name 
-            FROM contacts co
-            JOIN campaigns c ON co.campaign_id = c.id
-            WHERE lower(co.email) = ? AND co.status IN ('SENT', 'PENDING')
-            ORDER BY co.sent_at DESC
-            LIMIT 1
-          `).get(fromAddress);
-          if (matchedContact) {
-            effectiveCampaignId = matchedContact.campaign_id || matchedContact.cid;
-          }
-        }
-      }
-
-      if (!matchedRecord && !matchedContact) {
-        continue; // Not a lead from our campaigns
-      }
-
-      // Check if this reply was already logged
-      const existingReply = db.prepare(`
-        SELECT id FROM reply_logs 
-        WHERE (message_id IS NOT NULL AND message_id != '' AND message_id = ?)
-           OR (sender_email = ? AND received_at = ?)
-        LIMIT 1
-      `).get(messageId, fromAddress, receivedAt);
-
-      if (existingReply) {
-        continue; // Already processed
-      }
-
-      const autoReply = isAutoReply(envelope, headersMap);
-
-      if (autoReply) {
-        // Log auto-reply without sequence disarm
+      // 3B. Process Auto-Replies
+      for (const a of candidateAutoReplies) {
         db.prepare(`
           INSERT INTO reply_logs (
             campaign_id, database_record_id, contact_id, sender_email, 
@@ -604,175 +716,157 @@ async function scanInboxForReplies({ campaignId = null, lookbackDays = 14 } = {}
             received_at, created_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
         `).run(
-          effectiveCampaignId,
-          matchedRecord ? matchedRecord.id : null,
-          matchedContact ? matchedContact.id : null,
-          fromAddress,
-          subject,
+          a.effectiveCampaignId,
+          a.matchedRecord ? a.matchedRecord.id : null,
+          a.matchedContact ? a.matchedContact.id : null,
+          a.fromAddress,
+          a.subject,
           'Auto-reply / Out-of-office detected',
-          inReplyTo,
-          messageId,
-          receivedAt,
+          a.inReplyTo,
+          a.messageId,
+          a.receivedAt,
           nowIso
         );
         autoRepliesIgnored++;
-        continue;
       }
 
-      // Extract reply body text for sentiment analysis
-      let bodyText = '';
-      try {
-        const download = await client.download(String(message.seq), '1', { maxBytes: 16384 });
-        if (download && download.content) {
-          bodyText = await streamToString(download.content, 16384);
-        }
-      } catch (dlErr) {
-        try {
-          const download = await client.download(String(message.seq), null, { maxBytes: 16384 });
-          if (download && download.content) {
-            bodyText = await streamToString(download.content, 16384);
-          }
-        } catch {
-          // ignore download error; fallback to subject-based classification
-        }
-      }
+      // 3C. Process Human Lead Replies
+      for (const r of candidateHumanReplies) {
+        let insertedReplyId = null;
 
-      let insertedReplyId = null;
-
-      // Valid human lead response -> Atomically disarm sequence!
-      const disarmTx = db.transaction(() => {
-        if (matchedRecord) {
-          db.prepare(`
-            UPDATE database_records 
-            SET status = 'REPLIED', replied_at = ?, next_step_scheduled_at = NULL 
-            WHERE id = ?
-          `).run(receivedAt, matchedRecord.id);
-        } else if (matchedContact) {
-          db.prepare(`
-            UPDATE contacts 
-            SET status = 'REPLIED', replied_at = ?, next_step_scheduled_at = NULL 
-            WHERE id = ?
-          `).run(receivedAt, matchedContact.id);
-        }
-
-        const insertInfo = db.prepare(`
-          INSERT INTO reply_logs (
-            campaign_id, database_record_id, contact_id, sender_email, 
-            subject, snippet, in_reply_to, message_id, is_auto_reply, uid,
-            received_at, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
-        `).run(
-          effectiveCampaignId,
-          matchedRecord ? matchedRecord.id : null,
-          matchedContact ? matchedContact.id : null,
-          fromAddress,
-          subject,
-          '',
-          inReplyTo,
-          messageId,
-          message.uid || null,
-          receivedAt,
-          nowIso
-        );
-
-        insertedReplyId = insertInfo.lastInsertRowid;
-
-        if (effectiveCampaignId) {
-          db.prepare(`
-            UPDATE campaigns 
-            SET reply_count = (
-              SELECT COUNT(DISTINCT coalesce(database_record_id, contact_id)) 
-              FROM reply_logs 
-              WHERE campaign_id = ? AND is_auto_reply = 0
-            )
-            WHERE id = ?
-          `).run(effectiveCampaignId, effectiveCampaignId);
-        }
-      });
-
-      disarmTx();
-      matchedReplies++;
-
-      // Trigger sentiment classification & update lead intelligence
-      const leadRecordId = matchedRecord ? matchedRecord.id : null;
-      const leadContactId = matchedContact ? matchedContact.id : null;
-      const leadCampName = (matchedRecord && matchedRecord.campaign_name) || (matchedContact && matchedContact.campaign_name) || '';
-      let classifiedSentiment = null;
-
-      try {
-        const res = await sentimentService.classifyReply(bodyText, subject);
-        classifiedSentiment = res.sentiment;
-
-        const updateSentimentTx = db.transaction(() => {
-          if (leadRecordId) {
+        const disarmTx = db.transaction(() => {
+          if (r.matchedRecord) {
             db.prepare(`
               UPDATE database_records 
-              SET sentiment = ?, sentiment_confidence = ?, sentiment_summary = ?, sentiment_provider = ?
-              WHERE id = ? AND (sentiment_provider != 'manual' OR sentiment IS NULL)
-            `).run(res.sentiment, res.confidence, res.summary, res.provider, leadRecordId);
-          } else if (leadContactId) {
+              SET status = 'REPLIED', replied_at = ?, next_step_scheduled_at = NULL 
+              WHERE id = ?
+            `).run(r.receivedAt, r.matchedRecord.id);
+          } else if (r.matchedContact) {
             db.prepare(`
               UPDATE contacts 
-              SET sentiment = ?, sentiment_confidence = ?, sentiment_summary = ?, sentiment_provider = ?
-              WHERE id = ? AND (sentiment_provider != 'manual' OR sentiment IS NULL)
-            `).run(res.sentiment, res.confidence, res.summary, res.provider, leadContactId);
+              SET status = 'REPLIED', replied_at = ?, next_step_scheduled_at = NULL 
+              WHERE id = ?
+            `).run(r.receivedAt, r.matchedContact.id);
           }
 
-          if (insertedReplyId) {
+          const insertInfo = db.prepare(`
+            INSERT INTO reply_logs (
+              campaign_id, database_record_id, contact_id, sender_email, 
+              subject, snippet, in_reply_to, message_id, is_auto_reply, uid,
+              received_at, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+          `).run(
+            r.effectiveCampaignId,
+            r.matchedRecord ? r.matchedRecord.id : null,
+            r.matchedContact ? r.matchedContact.id : null,
+            r.fromAddress,
+            r.subject,
+            (r.bodyText || '').slice(0, 300),
+            r.inReplyTo,
+            r.messageId,
+            r.uid || null,
+            r.receivedAt,
+            nowIso
+          );
+
+          insertedReplyId = insertInfo.lastInsertRowid;
+
+          if (r.effectiveCampaignId) {
             db.prepare(`
-              UPDATE reply_logs 
-              SET snippet = ?, sentiment = ?, sentiment_confidence = ?, sentiment_summary = ?, sentiment_provider = ?
-              WHERE id = ? AND (sentiment_provider != 'manual' OR sentiment IS NULL)
-            `).run(res.sanitizedSnippet || '', res.sentiment, res.confidence, res.summary, res.provider, insertedReplyId);
+              UPDATE campaigns 
+              SET reply_count = (
+                SELECT COUNT(DISTINCT coalesce(database_record_id, contact_id)) 
+                FROM reply_logs 
+                WHERE campaign_id = ? AND is_auto_reply = 0
+              )
+              WHERE id = ?
+            `).run(r.effectiveCampaignId, r.effectiveCampaignId);
           }
         });
-        updateSentimentTx();
-      } catch (err) {
-        console.warn('[Sentiment] Classification notice:', err.message);
+
+        disarmTx();
+        matchedReplies++;
+
+        // Sentiment Classification
+        const leadRecordId = r.matchedRecord ? r.matchedRecord.id : null;
+        const leadContactId = r.matchedContact ? r.matchedContact.id : null;
+
+        try {
+          const res = await sentimentService.classifyReply(r.bodyText, r.subject);
+
+          const updateSentimentTx = db.transaction(() => {
+            if (leadRecordId) {
+              db.prepare(`
+                UPDATE database_records 
+                SET sentiment = ?, sentiment_confidence = ?, sentiment_summary = ?, sentiment_provider = ?
+                WHERE id = ? AND (sentiment_provider != 'manual' OR sentiment IS NULL)
+              `).run(res.sentiment, res.confidence, res.summary, res.provider, leadRecordId);
+            } else if (leadContactId) {
+              db.prepare(`
+                UPDATE contacts 
+                SET sentiment = ?, sentiment_confidence = ?, sentiment_summary = ?, sentiment_provider = ?
+                WHERE id = ? AND (sentiment_provider != 'manual' OR sentiment IS NULL)
+              `).run(res.sentiment, res.confidence, res.summary, res.provider, leadContactId);
+            }
+
+            if (insertedReplyId) {
+              db.prepare(`
+                UPDATE reply_logs 
+                SET snippet = ?, sentiment = ?, sentiment_confidence = ?, sentiment_summary = ?, sentiment_provider = ?
+                WHERE id = ? AND (sentiment_provider != 'manual' OR sentiment IS NULL)
+              `).run(res.sanitizedSnippet || '', res.sentiment, res.confidence, res.summary, res.provider, insertedReplyId);
+            }
+          });
+          updateSentimentTx();
+        } catch (err) {
+          console.warn('[Sentiment] Classification notice:', err.message);
+        }
       }
 
-      // Auto-label reply thread in Gmail (GMAIL-01, GMAIL-02)
-      try {
-        await gmailLabelService.syncLabelsForEvent(client, message.uid, {
-          campaignName: leadCampName,
-          sentiment: classifiedSentiment,
-          isBounce: false
-        });
-      } catch (lblErr) {
-        console.warn('[Gmail Labels] Reply label sync notice:', lblErr.message);
+      lastScanResult = {
+        success: true,
+        scanned: scannedCount,
+        matchedReplies,
+        matchedBounces,
+        autoRepliesIgnored,
+        lastScannedAt: new Date().toISOString()
+      };
+
+      return lastScanResult;
+
+    } finally {
+      if (lock) {
+        try {
+          await Promise.race([
+            lock.release().catch(() => {}),
+            new Promise(res => setTimeout(res, 2000))
+          ]);
+        } catch {}
+        lock = null;
       }
+      if (client) {
+        try {
+          await Promise.race([
+            client.logout().catch(() => {}),
+            new Promise(res => setTimeout(res, 2000))
+          ]);
+        } catch {}
+        try { client.close(); } catch {}
+        client = null;
+      }
+      activeClient = null;
+      isScanning = false;
+      scanStartedAt = null;
     }
+  };
 
-    lastScanResult = {
-      success: true,
-      scanned: scannedCount,
-      matchedReplies,
-      matchedBounces,
-      autoRepliesIgnored,
-      lastScannedAt: new Date().toISOString()
-    };
-
-    return lastScanResult;
-
+  activeScanPromise = runScan();
+  try {
+    return await activeScanPromise;
   } finally {
-    if (lock) {
-      try {
-        await lock.release();
-      } catch (err) {
-        console.warn('Error releasing IMAP mailbox lock:', err.message);
-      }
-    }
-    if (client) {
-      try {
-        await client.logout();
-      } catch (err) {
-        // ignore logout errors
-      }
-    }
-    isScanning = false;
+    activeScanPromise = null;
   }
 }
-
 /**
  * Manually marks a lead as REPLIED and halts pending drip sequences
  */
@@ -948,8 +1042,14 @@ function getCampaignBounces(campaignId) {
  * Returns latest scanning status
  */
 function getScanStatus() {
+  const now = Date.now();
+  const lastScannedAt = lastScanResult?.lastScannedAt || null;
+  const secondsSinceLastScan = lastScannedAt ? Math.max(0, Math.round((now - new Date(lastScannedAt).getTime()) / 1000)) : null;
   return {
     isScanning,
+    scanStartedAt: scanStartedAt ? new Date(scanStartedAt).toISOString() : null,
+    lastScannedAt,
+    secondsSinceLastScan,
     lastScanResult
   };
 }

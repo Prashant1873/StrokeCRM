@@ -170,7 +170,7 @@ function TemplatesLibrary({ navigate }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-subtle pb-5">
         <div>
           <h1 className="text-2xl font-bold text-primary tracking-tight flex items-center gap-2.5">
-            <FileText className="w-6 h-6 text-indigo-500" />
+            <FileText className="w-6 h-6 text-teal-500" />
             Templates & Presets
           </h1>
           <p className="text-xs text-secondary mt-1">
@@ -181,19 +181,19 @@ function TemplatesLibrary({ navigate }) {
           <button
             type="button"
             onClick={() => setActiveTab(activeTab === 'presets' ? 'mine' : 'presets')}
-            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold border transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold border transition-all active:scale-95 ${
               activeTab === 'presets'
-                ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-600 dark:text-indigo-400'
+                ? 'bg-teal-500/15 border-teal-500/30 text-teal-600 dark:text-teal-400'
                 : 'bg-surface border-subtle text-secondary hover:text-primary hover:bg-subtle'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+            <Sparkles className="w-3.5 h-3.5 text-teal-500" />
             {activeTab === 'presets' ? 'View My Templates' : 'Explore Presets Gallery'}
           </button>
           <button
             type="button"
             onClick={() => navigate && navigate('#/templates/new')}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all spring-press focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-500 active:scale-95 text-white text-xs font-semibold shadow-md shadow-teal-600/20 transition-all spring-press focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
           >
             <Plus className="w-3.5 h-3.5" />
             New Template
@@ -208,13 +208,13 @@ function TemplatesLibrary({ navigate }) {
           onClick={() => setActiveTab('mine')}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
             activeTab === 'mine'
-              ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+              ? 'border-teal-500 text-teal-600 dark:text-teal-400'
               : 'border-transparent text-secondary hover:text-primary'
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
           My Templates
-          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-subtle text-muted">
+          <span className="text-[10px] px-1.5 py-0.5 rounded-md font-mono bg-subtle text-muted">
             {templates.length}
           </span>
         </button>
@@ -224,13 +224,13 @@ function TemplatesLibrary({ navigate }) {
           onClick={() => setActiveTab('presets')}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
             activeTab === 'presets'
-              ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+              ? 'border-teal-500 text-teal-600 dark:text-teal-400'
               : 'border-transparent text-secondary hover:text-primary'
           }`}
         >
-          <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+          <Sparkles className="w-3.5 h-3.5 text-teal-500" />
           Starter Presets Gallery
-          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/20">
+          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-subtle text-teal-600 dark:text-teal-400 font-mono font-bold border border-subtle">
             {STARTER_PRESETS.length} Presets
           </span>
         </button>
@@ -259,7 +259,7 @@ function TemplatesLibrary({ navigate }) {
           <div className="p-4 rounded-xl bg-surface border border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-bold text-primary flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-500" />
+                <Sparkles className="w-4 h-4 text-teal-500" />
                 Curated High-Converting Cold Outreach Sequences
               </h2>
               <p className="text-xs text-secondary mt-0.5">
@@ -281,7 +281,7 @@ function TemplatesLibrary({ navigate }) {
                   {/* Top Badges */}
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                      <span className="text-[10px] font-bold font-mono uppercase tracking-wider px-2 py-0.5 rounded-md bg-subtle text-teal-600 dark:text-teal-400 border border-subtle">
                         {preset.category}
                       </span>
                       <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-subtle text-secondary border border-subtle">
@@ -350,7 +350,7 @@ function TemplatesLibrary({ navigate }) {
         <>
           {templates.length === 0 ? (
             <div className="bg-surface border border-subtle rounded-2xl p-12 text-center max-w-2xl mx-auto space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 flex items-center justify-center mx-auto">
+              <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-500 border border-teal-500/20 flex items-center justify-center mx-auto">
                 <FileText className="w-6 h-6" />
               </div>
               <h3 className="text-base font-bold text-primary">No Active Templates Yet</h3>
@@ -361,9 +361,9 @@ function TemplatesLibrary({ navigate }) {
                 <button
                   type="button"
                   onClick={() => setActiveTab('presets')}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 text-xs font-semibold transition-all spring-press cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 text-teal-600 dark:text-teal-400 border border-teal-500/30 text-xs font-semibold transition-all spring-press cursor-pointer active:scale-95"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                  <Sparkles className="w-3.5 h-3.5 text-teal-500" />
                   Browse Starter Presets
                 </button>
                 <button
@@ -704,7 +704,7 @@ function TemplateComposer({ templateId, navigate }) {
           <AlertTriangle className="w-8 h-8 text-rose-500 mx-auto" />
           <h3 className="text-sm font-bold text-primary">Template Not Found</h3>
           <p className="text-xs text-secondary">{loadError}</p>
-          <button onClick={() => navigate && navigate('#/templates')} className="text-xs text-indigo-500 hover:underline">← Back to Templates</button>
+          <button onClick={() => navigate && navigate('#/templates')} className="text-xs text-teal-600 dark:text-teal-400 hover:underline">← Back to Templates</button>
         </div>
       </div>
     );
@@ -864,7 +864,7 @@ function TemplateComposer({ templateId, navigate }) {
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleInsertVariable(v)}
-                  className="px-2.5 py-1 rounded-full text-[11px] font-mono bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all cursor-pointer spring-press"
+                  className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-subtle text-teal-600 dark:text-teal-400 border border-subtle hover:bg-subtle/80 active:scale-95 transition-all cursor-pointer"
                 >
                   {`{{${v}}}`}
                 </button>
@@ -936,7 +936,7 @@ function TemplateComposer({ templateId, navigate }) {
           <div className="bg-surface border border-subtle rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold text-secondary uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                <Sparkles className="w-3.5 h-3.5 text-teal-500" />
                 Live Dynamic Preview
               </h3>
               {contacts.length > 1 && (

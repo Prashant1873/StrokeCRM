@@ -49,7 +49,7 @@ export default function AppShell({
             {authStatus?.connected ? (
               <div 
                 onClick={() => navigate('#/settings')}
-                className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 text-xs font-medium cursor-pointer hover:bg-emerald-500/20 transition-colors"
+                className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-surface border border-emerald-500/40 text-primary text-xs font-medium cursor-pointer hover:bg-subtle transition-all active:scale-95 shadow-sm"
                 title="Manage Email Settings"
               >
                 <span className="relative flex h-2 w-2">
@@ -62,7 +62,7 @@ export default function AppShell({
               <button
                 type="button"
                 onClick={() => navigate('#/settings')}
-                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-300 text-xs font-medium hover:bg-amber-500/20 transition-colors"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-amber-500/40 text-primary text-xs font-medium hover:bg-subtle transition-all active:scale-95 shadow-sm"
               >
                 <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
                 <span>Connect Mail</span>

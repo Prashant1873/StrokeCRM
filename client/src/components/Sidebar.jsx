@@ -53,7 +53,7 @@ export default function Sidebar({ currentRoute, navigate, isCollapsed, setIsColl
           }`}
           title="StrokeCRM Home"
         >
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shrink-0 shadow-md shadow-indigo-600/20">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center shrink-0 shadow-md shadow-teal-500/20">
             <Mail className="w-5 h-5 text-white" />
           </div>
 
@@ -61,7 +61,7 @@ export default function Sidebar({ currentRoute, navigate, isCollapsed, setIsColl
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-bold tracking-tight text-primary flex items-center gap-1.5 truncate">
                 StrokeCRM
-                <span className="text-[9px] font-semibold uppercase px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded-md bg-subtle text-teal-600 dark:text-teal-400 border border-teal-500/30 font-mono">
                   Local
                 </span>
               </span>

@@ -276,6 +276,10 @@ app.post('/api/auth/test-custom-imap', async (req, res) => {
       }
     });
 
+    client.on('error', (err) => {
+      console.warn('[StrokeCRM] IMAP test connection socket error:', err.message);
+    });
+
     const connectPromise = client.connect();
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('IMAP connection timed out after 12 seconds.')), 12000)
@@ -1618,6 +1622,7 @@ app.get('/api/campaigns/:id/funnel-stats', (req, res) => {
         step3: step3Rate,
         reply: replyRate
       },
+      lastScanStatus: replyScannerService.getScanStatus(),
       stepsConfigured: steps.map(s => ({
         stepNumber: s.step_number,
         delayDays: s.delay_days,
@@ -2422,7 +2427,7 @@ app.get('/api/analytics/export', (req, res) => {
   }
 });
 
-// Periodic background scan for inbound replies every 5 minutes when active campaigns exist
+// Periodic background scan for inbound replies every 3 minutes when active campaigns exist
 setInterval(async () => {
   try {
     const activeCount = db.prepare(
@@ -2430,12 +2435,17 @@ setInterval(async () => {
     ).get().count;
 
     if (activeCount > 0) {
+      const status = replyScannerService.getScanStatus();
+      // Skip background scan if manual or automated scan ran in the last 90 seconds
+      if (status.secondsSinceLastScan !== null && status.secondsSinceLastScan < 90) {
+        return;
+      }
       await replyScannerService.scanInboxForReplies();
     }
   } catch (pollErr) {
     console.warn('[StrokeCRM] Periodic IMAP reply check notice:', pollErr.message);
   }
-}, 5 * 60 * 1000);
+}, 3 * 60 * 1000);
 
 app.listen(PORT, () => {
   console.log(`[StrokeCRM] Server running on http://localhost:${PORT}`);

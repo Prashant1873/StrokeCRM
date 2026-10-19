@@ -37,7 +37,7 @@ const SENTIMENT_CONFIG = {
   },
   NOT_INTERESTED: {
     label: 'Not Interested',
-    badgeClass: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 border-zinc-500/30',
+    badgeClass: 'bg-subtle text-secondary border-subtle',
     icon: XCircle
   },
   UNSUBSCRIBE: {
@@ -54,12 +54,24 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
   const [loading, setLoading] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [scanNotice, setScanNotice] = useState(null);
+  const [lastScannedAt, setLastScannedAt] = useState(null);
   const [showRepliesList, setShowRepliesList] = useState(false);
   const [showBouncesList, setShowBouncesList] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingBounces, setIsExportingBounces] = useState(false);
   const [sentimentFilter, setSentimentFilter] = useState('ALL');
   const [updatingReplyId, setUpdatingReplyId] = useState(null);
+
+  const formatLastScanned = (iso) => {
+    if (!iso) return 'Not checked yet';
+    const diffSec = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+    if (diffSec < 15) return 'Just now';
+    if (diffSec < 60) return `${diffSec}s ago`;
+    const diffMin = Math.round(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.round(diffMin / 60);
+    return `${diffHr}h ago`;
+  };
 
   const handleOverrideSentiment = async (reply, newSentiment) => {
     if (!campaign?.id || !reply) return;
@@ -113,6 +125,12 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
       if (funnelRes.ok) {
         const fJson = await funnelRes.json();
         setFunnelData(fJson);
+        if (fJson.lastScanStatus?.lastScannedAt) {
+          setLastScannedAt(fJson.lastScanStatus.lastScannedAt);
+        }
+        if (fJson.lastScanStatus?.isScanning) {
+          setIsScanning(true);
+        }
       }
       if (repliesRes.ok) {
         const rJson = await repliesRes.json();
@@ -147,6 +165,11 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
 
       const data = await res.json();
       if (data.success) {
+        if (data.lastScannedAt) {
+          setLastScannedAt(data.lastScannedAt);
+        } else {
+          setLastScannedAt(new Date().toISOString());
+        }
         const bCount = data.matchedBounces || 0;
         const bounceMsg = bCount > 0 ? `, ${bCount} delivery failures identified` : '';
         setScanNotice({
@@ -240,20 +263,20 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
       {/* Header bar */}
       <div className="p-5 border-b border-subtle flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-canvas">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
-            <GitFork className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+          <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
+            <GitFork className="w-5 h-5 text-teal-600 dark:text-teal-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-primary tracking-wide">Sequence Conversion Funnel & Reply Radar</h3>
               <DeliverabilityBeacon preset="reply_disarm" />
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono font-medium">
-                IMAP Auto-Disarm
+              <span className="text-[10px] px-2 py-0.5 rounded-md bg-subtle text-teal-600 dark:text-teal-400 border border-teal-500/30 font-mono font-medium">
+                IMAP Auto-Disarm (3m)
               </span>
               {isScanning && (
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
                 </span>
               )}
             </div>
@@ -265,6 +288,13 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
 
         {/* Action Controls */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          {lastScannedAt && (
+            <span className="text-[11px] text-secondary bg-subtle/70 px-2.5 py-1.5 rounded-lg border border-subtle hidden sm:inline-flex items-center gap-1.5 font-mono">
+              <Clock className="w-3 h-3 text-emerald-500 shrink-0" />
+              Checked {formatLastScanned(lastScannedAt)}
+            </span>
+          )}
+
           {bounces.length > 0 && (
             <button
               type="button"
@@ -283,7 +313,7 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
             onClick={handleScanReplies}
             disabled={isScanning}
             className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition-all spring-press disabled:opacity-50 cursor-pointer"
-            title="Scan configured IMAP inbox for replies from active leads"
+            title="Scan configured IMAP inbox for replies from active leads (runs automatically every 3 mins)"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
             {isScanning ? 'Scanning Inbox...' : 'Scan Inbound Replies'}
@@ -475,7 +505,7 @@ export default function CampaignFunnelCard({ campaign, queueStatus, onUpdate }) 
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
                 <span className="font-semibold text-primary">Inaccurate & Delivery-Failed Leads</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-mono font-medium">
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-subtle text-rose-600 dark:text-rose-400 border border-rose-500/30 font-mono font-medium">
                   {bounces.length} Bounced • Cadences Halted
                 </span>
               </div>
